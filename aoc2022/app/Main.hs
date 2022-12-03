@@ -94,6 +94,9 @@ dayTwo inputLines = do
     let riggedGames = map reinterpretGame games
     --print $ take 5 games
     --print $ take 5 riggedGames
+    --I got my star but I'm not proud of how I handled this
+    --I wish I could abstrackt away some of the cases statements used to
+    --determine which choice beats, loses or draws to which choice
     print $ sum (map score riggedGames)
 
 

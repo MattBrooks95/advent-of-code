@@ -56,13 +56,13 @@ dayOne lines = do
     -- part1
     print $ findElfWithHighestCalories elves
     -- part2
-    let elvesCaloriesAscending = sortElvesByHighestCalories $ elvesWithTotalCalories elves
-    if length elvesCaloriesAscending > 3
+    let elvesCaloriesDescending = sortElvesByHighestCalories $ elvesWithTotalCalories elves
+    if length elvesCaloriesDescending > 3
         then do
-            let three = take 3 elvesCaloriesAscending
+            let three = take 3 elvesCaloriesDescending
             print "top 3 elves:"
             print three
-            let sumOfTopThree = sum $ map snd(take 3 elvesCaloriesAscending)
+            let sumOfTopThree = sum $ map snd(take 3 elvesCaloriesDescending)
             print sumOfTopThree 
         else do
             print "can't find top 3 elves with the most calories, not enough elves"

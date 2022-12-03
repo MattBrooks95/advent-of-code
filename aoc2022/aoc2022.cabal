@@ -46,6 +46,7 @@ executable aoc2022-exe
   build-depends:
       aoc2022
     , base >=4.7 && <5
+    , directory
   default-language: Haskell2010
 
 test-suite aoc2022-test

@@ -46,6 +46,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - aoc2022
+    - directory
 
 tests:
   aoc2022-test:

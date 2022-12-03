@@ -1,6 +1,56 @@
 module Main (main) where
 
-import Lib
+import Prelude hiding (
+    lines
+    )
+import qualified Prelude as P (
+    lines
+    )
+
+import System.Environment
+import System.Exit (
+    exitFailure
+    )
+import System.Directory (
+    makeAbsolute
+    )
+import System.IO (
+    readFile'
+    )
+
+import Day1 (
+    parseElf, findElfWithHighestCalories
+    )
+import Lib (
+    groupLines
+    )
+
+import Data.Maybe (
+    fromJust
+    )
 
 main :: IO ()
-main = someFunc
+main = do
+    args <- getArgs
+    case args of
+        [] -> do
+            print "must provide path to input file"
+            exitFailure
+        (x:_) -> print $ "using path:" ++ x
+    filePath <- makeAbsolute $ head args
+    print filePath
+    fileContents <- readFile' filePath
+    let fileLines = P.lines fileContents
+    print fileLines
+    dayOne fileLines
+    --print "using abs path:" ++ filePath ++ "for input"
+
+dayOne :: [String] -> IO()
+dayOne [] = print "error, no file contents"
+dayOne lines = do
+    let groupedLines = groupLines lines
+    print "grouped lines:"
+    print groupedLines
+    let elves = map parseElf groupedLines
+    --print elves
+    print $ findElfWithHighestCalories $ map fromJust (filter (\x -> case x of { Just e -> True; _ -> False }) elves)

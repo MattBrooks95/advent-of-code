@@ -21,10 +21,13 @@ getElfTotalCalories elf = sum (calories elf)
 
 findElfWithHighestCalories :: [Elf] -> Maybe (Elf, Int)
 findElfWithHighestCalories [] = Nothing
-findElfWithHighestCalories elves = Just $ head $ sortElvesByHighestCalories elvesWithTotalCalories
+findElfWithHighestCalories elves = Just $ head $ sortElvesByHighestCalories (elvesWithTotalCalories elves)
 --findElfWithHighestCalories elves = L.sortBy  (\x y -> max (snd x) (snd y)) elvesWithTotalCalories
-    where
-        elvesWithTotalCalories = map (\x -> (x, getElfTotalCalories x)) elves :: [(Elf, Int)]
+    --where
+    --    elvesWithTotalCalories = map (\x -> (x, getElfTotalCalories x)) elves :: [(Elf, Int)]
+
+elvesWithTotalCalories :: [Elf] -> [(Elf, Int)]
+elvesWithTotalCalories elves = map (\x -> (x, getElfTotalCalories x)) elves :: [(Elf, Int)]
 
 sortElvesByHighestCalories :: [(Elf, Int)] -> [(Elf, Int)]
 sortElvesByHighestCalories elvesWithCalories = L.sortBy(\(_, a) (_, b) -> compare (Down a) (Down b)) elvesWithCalories

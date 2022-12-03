@@ -19,7 +19,7 @@ import System.IO (
     )
 
 import Day1 (
-    parseElf, findElfWithHighestCalories
+    parseElf, findElfWithHighestCalories, sortElvesByHighestCalories, elvesWithTotalCalories
     )
 import Lib (
     groupLines
@@ -41,7 +41,7 @@ main = do
     print filePath
     fileContents <- readFile' filePath
     let fileLines = P.lines fileContents
-    print fileLines
+    --print fileLines
     dayOne fileLines
     --print "using abs path:" ++ filePath ++ "for input"
 
@@ -51,6 +51,20 @@ dayOne lines = do
     let groupedLines = groupLines lines
     print "grouped lines:"
     print groupedLines
-    let elves = map parseElf groupedLines
-    --print elves
-    print $ findElfWithHighestCalories $ map fromJust (filter (\x -> case x of { Just e -> True; _ -> False }) elves)
+    let parsedElves = map parseElf groupedLines
+    let elves = map fromJust (filter (\x -> case x of { Just e -> True; _ -> False }) parsedElves)
+    -- part1
+    print $ findElfWithHighestCalories elves
+    -- part2
+    let elvesCaloriesAscending = sortElvesByHighestCalories $ elvesWithTotalCalories elves
+    if length elvesCaloriesAscending > 3
+        then do
+            let three = take 3 elvesCaloriesAscending
+            print "top 3 elves:"
+            print three
+            let sumOfTopThree = sum $ map snd(take 3 elvesCaloriesAscending)
+            print sumOfTopThree 
+        else do
+            print "can't find top 3 elves with the most calories, not enough elves"
+            exitFailure
+

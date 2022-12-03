@@ -1,2 +1,7 @@
+import Test.Hspec
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = print "TODO figure out how to execute tests"
+--main = hspec $ do
+--    it "rock beats scissors" $ do
+--        gameResult (Game (Rock _) (Scissors _)) `shouldBe` Win

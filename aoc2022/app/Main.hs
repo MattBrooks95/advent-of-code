@@ -21,12 +21,21 @@ import System.IO (
 import Day1 (
     parseElf, findElfWithHighestCalories, sortElvesByHighestCalories, elvesWithTotalCalories
     )
+
+import Day2 (
+    read
+    , score
+    )
+
 import Lib (
     groupLines
     )
 
 import Data.Maybe (
     fromJust
+    , mapMaybe
+    , isJust
+    , catMaybes
     )
 
 main :: IO ()
@@ -42,7 +51,8 @@ main = do
     fileContents <- readFile' filePath
     let fileLines = P.lines fileContents
     --print fileLines
-    dayOne fileLines
+    --dayOne fileLines
+    dayTwo fileLines
     --print "using abs path:" ++ filePath ++ "for input"
 
 dayOne :: [String] -> IO()
@@ -67,4 +77,16 @@ dayOne lines = do
         else do
             print "can't find top 3 elves with the most calories, not enough elves"
             exitFailure
+
+dayTwo :: [String] -> IO ()
+dayTwo inputLines = do
+    --print "TODO day two"
+    --print inputLines
+    let potentialGames = map Day2.read inputLines
+    print potentialGames
+    let games = catMaybes potentialGames
+    let gameScores = map score games
+    print gameScores
+    print $ sum gameScores
+
 

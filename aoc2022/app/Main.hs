@@ -25,6 +25,8 @@ import Day1 (
 import Day2 (
     read
     , score
+    , Game(..)
+    , reinterpretGame
     )
 
 import Lib (
@@ -59,8 +61,8 @@ dayOne :: [String] -> IO()
 dayOne [] = print "error, no file contents"
 dayOne lines = do
     let groupedLines = groupLines lines
-    print "grouped lines:"
-    print groupedLines
+    --print "grouped lines:"
+    --print groupedLines
     let parsedElves = map parseElf groupedLines
     let elves = map fromJust (filter (\x -> case x of { Just e -> True; _ -> False }) parsedElves)
     -- part1
@@ -83,10 +85,15 @@ dayTwo inputLines = do
     --print "TODO day two"
     --print inputLines
     let potentialGames = map Day2.read inputLines
-    print potentialGames
+    --print potentialGames
     let games = catMaybes potentialGames
     let gameScores = map score games
-    print gameScores
+    --print gameScores
     print $ sum gameScores
+    -- below is part 2
+    let riggedGames = map reinterpretGame games
+    --print $ take 5 games
+    --print $ take 5 riggedGames
+    print $ sum (map score riggedGames)
 
 

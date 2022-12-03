@@ -12,10 +12,47 @@ data Player = Me | Enemy deriving (Show)
 data Choice = Rock Player | Paper Player | Scissors Player deriving (Show)
 
 data Game = Game Choice Choice deriving (Show)
-opponentChoice (Game x _) = x
-myChoice (Game _ x) = x
+--opponentChoice (Game x _) = x
+--myChoice (Game _ x) = x
 
 data GameResult = Win | Loss | Draw
+
+--returns the choice y that beats choice x
+beats :: Choice -> Choice
+beats x = case x of
+    Rock _ -> Paper Me
+    Paper _ -> Scissors Me
+    Scissors _ -> Rock Me
+
+draws :: Choice -> Choice
+draws x = x
+
+loses :: Choice -> Choice
+loses x = case x of
+    Rock _ -> Scissors Me
+    Paper _ -> Rock Me
+    Scissors _ -> Paper Me
+
+reinterpretGame :: Game -> Game
+reinterpretGame (Game oppChoice myChoice) = Game oppChoice (choiceToRigGame reinterpretedChoice oppChoice)
+    where
+        reinterpretedChoice = reinterpretChoice myChoice
+--(\(Game oppChoice myChoice) ->
+--(Game oppChoice (choiceToRigGame (reinterpret myChoice) oppChoice) games)
+
+reinterpretChoice :: Choice -> GameResult
+reinterpretChoice choice = case choice of
+    Rock _ -> Loss
+    Paper _ -> Draw
+    Scissors _ -> Win
+
+-- returns the choice that needs to be made to get the desired game result
+-- desired result, opponent's choice -> choice needed for desired result
+choiceToRigGame :: GameResult -> Choice -> Choice
+choiceToRigGame result oppChoice = case result of
+    Win -> beats oppChoice
+    Loss -> loses oppChoice
+    Draw -> draws oppChoice
 
 gameResult :: Game -> GameResult
 gameResult game = case game of
@@ -49,9 +86,9 @@ scoreMove mv = case mv of
     Scissors _ -> 3
 
 score :: Game -> Int
-score game = winPoints + movePoints
+score game@(Game _ myChoice) = winPoints + movePoints
     where
-        movePoints = scoreMove $ myChoice game
+        movePoints = scoreMove myChoice
         winPoints = scoreResult $ gameResult game
 
 -- TODO rewrite this with do notation instead of nesting cases

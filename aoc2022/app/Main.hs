@@ -29,6 +29,12 @@ import Day2 (
     , reinterpretGame
     )
 
+import Day3 (
+    parseRucksack
+    , Rucksack(..)
+    , findDuplicates
+    )
+
 import Lib (
     groupLines
     )
@@ -54,8 +60,9 @@ main = do
     let fileLines = P.lines fileContents
     --print fileLines
     --dayOne fileLines
-    dayTwo fileLines
+    --dayTwo fileLines
     --print "using abs path:" ++ filePath ++ "for input"
+    dayThree fileLines
 
 dayOne :: [String] -> IO()
 dayOne [] = print "error, no file contents"
@@ -100,3 +107,8 @@ dayTwo inputLines = do
     print $ sum (map score riggedGames)
 
 
+dayThree :: [String] -> IO ()
+dayThree inputLines = do
+    let rucksacks = map parseRucksack inputLines
+    let rucksacksWithDupes = map (\r@(Rucksack left right) -> (r, findDuplicates left right)) rucksacks
+    mapM_ print rucksacksWithDupes

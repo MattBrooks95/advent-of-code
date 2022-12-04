@@ -47,6 +47,7 @@ executables:
     dependencies:
     - aoc2022
     - directory
+    - containers
 
 tests:
   aoc2022-test:

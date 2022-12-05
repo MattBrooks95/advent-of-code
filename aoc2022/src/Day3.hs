@@ -2,6 +2,7 @@ module Day3 where
 
 import Data.List (
     intersect
+    , nub
     )
 
 import Data.Char (
@@ -27,7 +28,7 @@ parseRucksack chars = Rucksack leftItems rightItems
 findSameItems :: Rucksack -> (Rucksack, [Char])
 findSameItems sack@(Rucksack left right) = (sack, dupes)
     where
-        dupes = left `intersect` right
+        dupes = nub left `intersect` right
 
 -- use list comprehensions to make the map for looking up
 -- what priority value is given to each character

@@ -28,10 +28,7 @@ fn main() {
 }
 
 fn read_file_as_strings(path: &String) -> Result<Vec<String>, std::io::Error> {
-    let file = match File::open(path) {
-        Err(e) => return Err(e),
-        Ok(res) => res
-    };
+    let file = File::open(path)?;
 
     Ok(BufReader::new(file).lines().collect::<Result<_, _>>().unwrap())
 }

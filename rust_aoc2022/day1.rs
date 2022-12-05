@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::env;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Lines};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -18,17 +18,21 @@ fn main() {
 
     let fileLines = read_file_as_strings(&path);
     match fileLines {
-        Err(e) => panic!("couldn't open file:{}, error:{}", path, e),
-        Ok(lines) => {
-            for line in lines {
-                println!("{}", line);
-            }
-        }
+        Err(e) => panic!("{}", e),
+        Ok(lns) => for ln in lns { println!("{}", ln.unwrap()) }
     }
+    //match fileLines {
+    //    Err(e) => panic!("couldn't open file:{}, error:{}", path, e),
+    //    Ok(lines) => {
+    //        for line in lines {
+    //            println!("{}", line.unwrap());
+    //        }
+    //    }
+    //}
 }
 
-fn read_file_as_strings(path: &String) -> Result<Vec<String>, std::io::Error> {
+fn read_file_as_strings(path: &String) -> Result<Lines<BufReader<File>>, std::io::Error> {
     let file = File::open(path)?;
 
-    Ok(BufReader::new(file).lines().collect::<Result<_, _>>().unwrap())
+    Ok(BufReader::new(file).lines())
 }

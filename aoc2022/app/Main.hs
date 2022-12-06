@@ -22,12 +22,9 @@ import qualified Data.Map as M (
     lookup
     )
 
-import Data.Maybe (
-    fromMaybe
+import Data.Either (
+    rights
     )
-
-
-
 
 import Day1 (
     parseElf, findElfWithHighestCalories, sortElvesByHighestCalories, elvesWithTotalCalories
@@ -42,12 +39,16 @@ import Day2 (
 
 import Day3 (
     parseRucksack
-    , Rucksack(..), findSameItems
+    , Rucksack(..)
+    , findSameItems
+    , prioritiesMap
+    , getMatchingItemsForRucksacks
     , prioritiesMap
     )
 
 import Lib (
     groupLines
+    , chunk
     )
 
 import Data.Maybe (
@@ -55,6 +56,7 @@ import Data.Maybe (
     , mapMaybe
     , isJust
     , catMaybes
+    , fromMaybe
     )
 
 main :: IO ()
@@ -123,9 +125,18 @@ dayThree inputLines = do
     let rucksacks = map parseRucksack inputLines
     print rucksacks
     let rucksacksWithDupes = map findSameItems rucksacks
-    mapM_ print rucksacksWithDupes
+    --mapM_ print rucksacksWithDupes
     --let rucksacksWithDupes = map (\r@(Rucksack left right) -> (r, findDuplicates left right)) rucksacks
     --mapM_ print rucksacksWithDupes
     let dupes = map (head . snd) rucksacksWithDupes
     let dupePriorities = foldr (\item acc -> acc + fromMaybe 0 (M.lookup item prioritiesMap)) 0 dupes :: Int
     print dupePriorities
+    let rucksackGroups = chunk 3 rucksacksWithDupes
+    case rucksackGroups of
+        Left err -> print err
+        Right groups -> do
+            let badgesForGroup = map (\x -> getMatchingItemsForRucksacks (map fst x)) groups
+            let prioritiesForBadges = map (\x -> M.lookup (head x) prioritiesMap) (rights badgesForGroup)
+            let prioritiesSum = sum (catMaybes prioritiesForBadges)
+            print prioritiesSum
+            --mapM_ (putStrLn . \(x:_) -> "badgeLetter: " ++ x ++ " priority:" ++ (rights badgesForGroup)

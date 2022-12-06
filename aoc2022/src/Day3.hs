@@ -13,6 +13,7 @@ import qualified Data.Map as M (
     fromList
     , Map(..)
     )
+import Data.IntMap (intersection)
 
 data Rucksack = Rucksack String String deriving (Show)
 
@@ -44,3 +45,8 @@ priorities = lowerCasePriorities ++ upperCasePriorities
 
 prioritiesMap :: M.Map Char Int
 prioritiesMap = M.fromList priorities
+
+getMatchingItemsForRucksacks :: [Rucksack] -> Either String String
+getMatchingItemsForRucksacks [] = Left "empty list"
+getMatchingItemsForRucksacks [Rucksack xl xr, Rucksack yl yr, Rucksack zl zr] = Right $ intersect ((xl++xr) `intersect` (yl++yr)) (zl++zr)
+getMatchingItemsForRucksacks _ = Left "list does not contain 3 elements"

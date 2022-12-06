@@ -17,7 +17,22 @@ groupLines lines = reverse $ go [] [] lines
         go groupsAcc groupAcc (x:xs) = case x of
             "" -> go (groupAcc:groupsAcc) [] xs
             line -> go groupsAcc (line:groupAcc) xs
---groupLines lines = 
 
--- returns one group of consecutive non-empty lines up to an empty line
--- and then returns the rest of the input without the empty line
+chunk :: Int -> [a] -> Either String [[a]] 
+chunk sizeOfGroups origList
+    | sizeOfGroups <= 0 || not dividesEvenly = Left errMsg
+    | otherwise = Right $ chunk' sizeOfGroups origList 0 []
+    where
+        lenList = length origList
+        errMsg = "list of length: " ++ show lenList ++ " cannot be evenly split into chunks of size:" ++ show sizeOfGroups
+        dividesEvenly = lenList `mod` sizeOfGroups == 0
+
+-- sizeOfGroups inputList counter accumulator
+chunk' :: Int -> [a] -> Int -> [[a]] -> [[a]]
+chunk' _ [] _ acc = acc
+chunk' sizeOfGroups (x:xs) count [] = chunk' sizeOfGroups xs (count + 1) [[x]]
+chunk' sizeOfGroups (x:xs) count (y:ys) = if startNewGroup
+    then chunk' sizeOfGroups xs 0 ([x]:y:ys) 
+    else chunk' sizeOfGroups xs (count + 1) ((x:y):ys)
+    where
+        startNewGroup = length (x:xs) `mod` sizeOfGroups == 0

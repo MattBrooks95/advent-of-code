@@ -46,6 +46,13 @@ import Day3 (
     , prioritiesMap
     )
 
+import Day4 (
+    lineToRangePair
+    , aContainsB
+    , bContainsA
+    , rangeOverlaps
+    )
+
 import Lib (
     groupLines
     , chunk
@@ -75,7 +82,8 @@ main = do
     --dayOne fileLines
     --dayTwo fileLines
     --print "using abs path:" ++ filePath ++ "for input"
-    dayThree fileLines
+    --dayThree fileLines
+    dayFour fileLines
 
 dayOne :: [String] -> IO()
 dayOne [] = print "error, no file contents"
@@ -140,3 +148,20 @@ dayThree inputLines = do
             let prioritiesSum = sum (catMaybes prioritiesForBadges)
             print prioritiesSum
             --mapM_ (putStrLn . \(x:_) -> "badgeLetter: " ++ x ++ " priority:" ++ (rights badgesForGroup)
+
+dayFour :: [String] -> IO ()
+dayFour lines = do
+    let rangePairs = mapMaybe lineToRangePair lines
+    print "PART ONE==================="
+    print $ take 5 rangePairs
+    print $ "total num of pairs:" ++ showLength rangePairs
+    let rangesWithSuperset = filter (\x -> aContainsB x || bContainsA x) rangePairs
+    print $ take 5 rangesWithSuperset
+    print $ "num of pairs with superset:" ++ showLength rangesWithSuperset
+    --print overlappingRanges
+    print "PART TWO ================="
+    let overlappingRanges = filter rangeOverlaps rangePairs
+    print $ take 5 overlappingRanges
+    print $ "num of pairs that overlap at all:" ++ showLength overlappingRanges
+    where
+        showLength = show . length

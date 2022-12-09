@@ -13,9 +13,10 @@ groupLines lines = reverse $ go [] [] lines
     where
         -- groups currentGroup inputs result
         go :: [[String]] -> [String] -> [String] -> [[String]]
-        go groupsAcc _ [] = groupsAcc
+        go groupsAcc [] [] = groupsAcc
+        go groupsAcc groupAcc [] = groupAcc:groupsAcc
         go groupsAcc groupAcc (x:xs) = case x of
-            "" -> go (groupAcc:groupsAcc) [] xs
+            "" -> go (reverse groupAcc:groupsAcc) [] xs
             line -> go groupsAcc (line:groupAcc) xs
 
 chunk :: Int -> [a] -> Either String [[a]] 

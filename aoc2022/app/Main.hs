@@ -53,6 +53,10 @@ import Day4 (
     , rangeOverlaps
     )
 
+import Day5 (
+    run
+    )
+
 import Lib (
     groupLines
     , chunk
@@ -83,7 +87,8 @@ main = do
     --dayTwo fileLines
     --print "using abs path:" ++ filePath ++ "for input"
     --dayThree fileLines
-    dayFour fileLines
+    --dayFour fileLines
+    Day5.run fileLines
 
 dayOne :: [String] -> IO()
 dayOne [] = print "error, no file contents"

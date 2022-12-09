@@ -48,8 +48,8 @@ parseDay5 inputLines = CratesSimulation { stacks=parsedStacks, moves = parsedMov
     where
         (crateLines, stackIdLine, moveLines) = organizeLines inputLines
         parsedMoves = parseMoves moveLines
-        parsedIdLine = parseIdLine stackIdLine
-        parsedCrates = concatMap parseCrates crateLines
+        parsedIdLine = trace (show $ parseIdLine stackIdLine) (parseIdLine stackIdLine)
+        parsedCrates = trace (show $ concatMap parseCrates crateLines) (concatMap parseCrates crateLines)
         parsedStacks = map (`buildStackFromCrates` parsedCrates) parsedIdLine
 
 buildStackFromCrates :: Int -> [(Maybe Char, Int)] -> Stack
@@ -57,8 +57,6 @@ buildStackFromCrates parsedId potentialCrates = Stack { stackId=parsedId, stackC
     where
         justCrates = mapMaybe fst cratesForStackId
         cratesForStackId = filter (\(_, sid) -> sid == parsedId) potentialCrates
-
-
 
 organizeLines :: [String] -> ([String], String, [String])
 organizeLines [] = ([], "", [])
@@ -72,7 +70,7 @@ organizeLines input = (crateLines, stackIdLine, moveLines)
         moveLines = last splitOnEmptyLine
 
 parseCrate :: String -> Maybe Char
-parseCrate input = if length input > 3 && secondElem /= ' ' then
+parseCrate input = if length input >= 3 && secondElem /= ' ' then
     Just secondElem
     else Nothing
     where

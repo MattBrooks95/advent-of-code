@@ -2,7 +2,15 @@ module Day5 (
     run
     , parseMove
     , getIntsFromMoveLine
+    , takeFromFrontOfString
     ) where
+
+import Data.List (
+    find
+    , sortBy
+    )
+
+import Prelude hiding (id)
 
 import qualified Data.Text as T (
     pack
@@ -13,6 +21,7 @@ import qualified Data.Text as T (
 
 import Data.Maybe (
     mapMaybe
+    , fromJust
     )
 
 import Text.Regex.TDFA
@@ -28,34 +37,93 @@ import Lib (
 data Stack = Stack {
     stackContents :: String
     , stackId :: Int
-    } deriving (Show)
+    }
+instance Show Stack where
+    show (Stack { stackContents=c, stackId=i} ) = show i ++ "|" ++ c
 
-data Move = Move { from::Int, to::Int, number::Int } deriving (Show)
+data Move = Move { from::Int, to::Int, number::Int }
+instance Show Move where
+    show (Move { from=f, to=t, number=n }) = show f ++ "->" ++ show t ++ "(" ++ show n ++ ")"
 
 data CratesSimulation = CratesSimulation {
     stacks :: [Stack]
     , moves :: [Move]
-    } deriving (Show)
+    }
+instance Show CratesSimulation where
+    show (CratesSimulation {stacks=s, moves=m }) = (show $ sortBy (\x y -> compare (stackId x) (stackId y)) s) ++ "\n" ++ (show $ m)
+
+runSimulation :: CratesSimulation -> CratesSimulation
+runSimulation sim@(CratesSimulation _ []) = sim
+runSimulation sim = runSimulation (applyMove sim)
+
+applyMove :: CratesSimulation -> CratesSimulation
+applyMove sim@(CratesSimulation _ []) = sim
+applyMove sim@(CratesSimulation simStacks (mv:mvs)) =
+    let (remainingCrates, takenCrates) = takeFromFrontOfString (stackContents fromStack) numCratesToMove in
+    let newSim = sim {
+        stacks =
+            otherStacks
+            ++ [(fromStack { stackContents = remainingCrates })]
+            ++ [(toStack { stackContents = (reverse takenCrates) ++ (stackContents toStack) })]
+        , moves = mvs
+    } in
+    --trace (show (remainingCrates, takenCrates)) newSim
+    trace (show newSim) newSim
+    where
+        -- I'm using fromJust because the stacks should always exist
+        fromStack = fromJust $ find (\x -> stackId x == from mv) simStacks
+        toStack = fromJust $ find (\x -> stackId x == to mv) simStacks
+        otherStacks = filter (\x -> stackId x /= stackId fromStack && stackId x /= stackId toStack) simStacks
+        numCratesToMove = number mv
+
+takeFromFrontOfString :: String -> Int -> (String, String)
+takeFromFrontOfString str num = (drop num str, take num str)
 
 run :: [String] -> IO ()
 run inputLines = do
     let cratesSimulation = parseDay5 inputLines
     print "day5"
-    print (stacks cratesSimulation)
+    print "before:"
+    print cratesSimulation
+    --print (stacks cratesSimulation)
+    let result = runSimulation cratesSimulation
+    let topCratesPerStack = map (\x -> (stackId x, getTopCrate x)) (stacks result)
+    print "after:"
+    print result
+    print "top crates:"
+    print $ sortBy (\(x,_) (y,_) -> compare x y) topCratesPerStack
+
+getTopCrate :: Stack -> Maybe Char
+getTopCrate (Stack contents _) = topCrate
+    where
+        topCrate = if length contents >= 1 then Just $ head contents else Nothing
+        --topCrate = case contents of
+        --    [_, x] -> Just x
+        --    [x] -> Just x
+        --    [] -> Nothing
+
 
 parseDay5 :: [String] -> CratesSimulation
 parseDay5 inputLines = CratesSimulation { stacks=parsedStacks, moves = parsedMoves }
     where
         (crateLines, stackIdLine, moveLines) = organizeLines inputLines
-        parsedMoves = parseMoves moveLines
-        parsedIdLine = trace (show $ parseIdLine stackIdLine) (parseIdLine stackIdLine)
-        parsedCrates = trace (show $ concatMap parseCrates crateLines) (concatMap parseCrates crateLines)
+        parsedMoves = reverse $ parseMoves moveLines
+        parsedIdLine = parseIdLine stackIdLine
+        --parsedIdLine = trace (show $ parseIdLine stackIdLine) (parseIdLine stackIdLine)
+        parsedCrates = concatMap parseCrates crateLines
+        --parsedCrates = trace (show $ concatMap parseCrates crateLines) (concatMap parseCrates crateLines)
+        -- parsedStacks is fine, problem is after this somewhere
         parsedStacks = map (`buildStackFromCrates` parsedCrates) parsedIdLine
 
 buildStackFromCrates :: Int -> [(Maybe Char, Int)] -> Stack
-buildStackFromCrates parsedId potentialCrates = Stack { stackId=parsedId, stackContents=justCrates}
+buildStackFromCrates parsedId potentialCrates =
+    Stack {
+        stackId=parsedId
+        , stackContents=justCrates
+        }
     where
-        justCrates = mapMaybe fst cratesForStackId
+        justCrates = mapMaybe fst printCrates
+        printCrates = trace (show cratesForStackId) cratesForStackId
         cratesForStackId = filter (\(_, sid) -> sid == parsedId) potentialCrates
 
 organizeLines :: [String] -> ([String], String, [String])

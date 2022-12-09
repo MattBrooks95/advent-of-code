@@ -11,6 +11,10 @@ import qualified Data.Text as T (
     , Text(..)
     )
 
+import Data.Maybe (
+    mapMaybe
+    )
+
 import Text.Regex.TDFA
 
 import Debug.Trace (
@@ -22,8 +26,8 @@ import Lib (
     )
 
 data Stack = Stack {
-    contents :: String
-    , id :: Int
+    stackContents :: String
+    , stackId :: Int
     } deriving (Show)
 
 data Move = Move { from::Int, to::Int, number::Int } deriving (Show)
@@ -37,16 +41,24 @@ run :: [String] -> IO ()
 run inputLines = do
     let cratesSimulation = parseDay5 inputLines
     print "day5"
-    print cratesSimulation
+    print (stacks cratesSimulation)
 
 parseDay5 :: [String] -> CratesSimulation
-parseDay5 inputLines = CratesSimulation { stacks=[], moves = parsedMoves }
+parseDay5 inputLines = CratesSimulation { stacks=parsedStacks, moves = parsedMoves }
     where
         (crateLines, stackIdLine, moveLines) = organizeLines inputLines
         parsedMoves = parseMoves moveLines
         parsedIdLine = parseIdLine stackIdLine
-        --parsedCrates = map parseCrates crateLines
-        --parsedStacks = []
+        parsedCrates = concatMap parseCrates crateLines
+        parsedStacks = map (`buildStackFromCrates` parsedCrates) parsedIdLine
+
+buildStackFromCrates :: Int -> [(Maybe Char, Int)] -> Stack
+buildStackFromCrates parsedId potentialCrates = Stack { stackId=parsedId, stackContents=justCrates}
+    where
+        justCrates = mapMaybe fst cratesForStackId
+        cratesForStackId = filter (\(_, sid) -> sid == parsedId) potentialCrates
+
+
 
 organizeLines :: [String] -> ([String], String, [String])
 organizeLines [] = ([], "", [])
@@ -61,7 +73,7 @@ organizeLines input = (crateLines, stackIdLine, moveLines)
 
 parseCrate :: String -> Maybe Char
 parseCrate input = if length input > 3 && secondElem /= ' ' then
-    Just $ input !! 2
+    Just secondElem
     else Nothing
     where
         secondElem = input !! 1

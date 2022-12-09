@@ -52,19 +52,19 @@ data CratesSimulation = CratesSimulation {
 instance Show CratesSimulation where
     show (CratesSimulation {stacks=s, moves=m }) = (show $ sortBy (\x y -> compare (stackId x) (stackId y)) s) ++ "\n" ++ (show $ m)
 
-runSimulation :: CratesSimulation -> CratesSimulation
-runSimulation sim@(CratesSimulation _ []) = sim
-runSimulation sim = runSimulation (applyMove sim)
+runSimulation :: Bool -> CratesSimulation -> CratesSimulation
+runSimulation needsReversed sim@(CratesSimulation _ []) = sim
+runSimulation needsReversed sim = runSimulation needsReversed (applyMove needsReversed sim)
 
-applyMove :: CratesSimulation -> CratesSimulation
-applyMove sim@(CratesSimulation _ []) = sim
-applyMove sim@(CratesSimulation simStacks (mv:mvs)) =
+applyMove :: Bool -> CratesSimulation -> CratesSimulation
+applyMove needsReversed sim@(CratesSimulation _ []) = sim
+applyMove needsReversed sim@(CratesSimulation simStacks (mv:mvs)) =
     let (remainingCrates, takenCrates) = takeFromFrontOfString (stackContents fromStack) numCratesToMove in
     let newSim = sim {
         stacks =
             otherStacks
             ++ [(fromStack { stackContents = remainingCrates })]
-            ++ [(toStack { stackContents = (reverse takenCrates) ++ (stackContents toStack) })]
+            ++ [(toStack { stackContents = (if needsReversed then reverse takenCrates else takenCrates) ++ (stackContents toStack) })]
         , moves = mvs
     } in
     --trace (show (remainingCrates, takenCrates)) newSim
@@ -86,12 +86,19 @@ run inputLines = do
     print "before:"
     print cratesSimulation
     --print (stacks cratesSimulation)
-    let result = runSimulation cratesSimulation
+    -- part one moves crates one at a time, so their post-move ordering is the opposite
+    -- of what it was before the move
+    -- part two, all the crates are moved at once so they no longer need reversed
+    let result = runSimulation True cratesSimulation
     let topCratesPerStack = map (\x -> (stackId x, getTopCrate x)) (stacks result)
     print "after:"
     print result
-    print "top crates:"
+    print "top crates part one:"
     print $ sortBy (\(x,_) (y,_) -> compare x y) topCratesPerStack
+    print "top crates part two:"
+    let partTwoResult = runSimulation False cratesSimulation
+    let partTwoTopCrates = map (\x -> (stackId x, getTopCrate x)) (stacks partTwoResult)
+    print $ sortBy (\(x,_) (y,_) -> compare x y) partTwoTopCrates
 
 getTopCrate :: Stack -> Maybe Char
 getTopCrate (Stack contents _) = topCrate

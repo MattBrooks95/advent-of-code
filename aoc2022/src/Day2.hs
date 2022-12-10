@@ -6,6 +6,7 @@ import Prelude hiding (
 
 import Data.Maybe (
     fromJust
+    , catMaybes
     )
 
 data Player = Me | Enemy deriving (Show)
@@ -103,4 +104,23 @@ read line =
     where
         opponentMove = readMove $ head line
         myMove = readMove $ last line
+
+dayTwo :: [String] -> IO ()
+dayTwo inputLines = do
+    --print "TODO day two"
+    --print inputLines
+    let potentialGames = map Day2.read inputLines
+    --print potentialGames
+    let games = catMaybes potentialGames
+    let gameScores = map score games
+    --print gameScores
+    print $ sum gameScores
+    -- below is part 2
+    let riggedGames = map reinterpretGame games
+    --print $ take 5 games
+    --print $ take 5 riggedGames
+    --I got my star but I'm not proud of how I handled this
+    --I wish I could abstract away some of the cases statements used to
+    --determine which choice beats, loses or draws to which choice
+    print $ sum (map score riggedGames)
 

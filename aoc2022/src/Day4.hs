@@ -11,6 +11,12 @@ import qualified Data.Text as T (
     , Text(..)
     )
 
+import Data.Maybe (
+    mapMaybe
+    )
+
+import Prelude hiding (lines)
+
 data RangePair = RangePair (Int, Int) (Int, Int) deriving (Show)
 
 lineToRangePair :: String -> Maybe RangePair
@@ -53,3 +59,20 @@ aContainsB (RangePair (sa, ea) (sb, eb)) = and [
 
 bContainsA :: RangePair -> Bool
 bContainsA (RangePair left right) = aContainsB (RangePair right left)
+
+dayFour :: [String] -> IO ()
+dayFour lines = do
+    let rangePairs = mapMaybe lineToRangePair lines
+    print "PART ONE==================="
+    print $ take 5 rangePairs
+    print $ "total num of pairs:" ++ showLength rangePairs
+    let rangesWithSuperset = filter (\x -> aContainsB x || bContainsA x) rangePairs
+    print $ take 5 rangesWithSuperset
+    print $ "num of pairs with superset:" ++ showLength rangesWithSuperset
+    --print overlappingRanges
+    print "PART TWO ================="
+    let overlappingRanges = filter rangeOverlaps rangePairs
+    print $ take 5 overlappingRanges
+    print $ "num of pairs that overlap at all:" ++ showLength overlappingRanges
+    where
+        showLength = show . length

@@ -12,7 +12,20 @@ import Data.Char (
 import qualified Data.Map as M (
     fromList
     , Map(..)
+    , lookup
     )
+
+import Data.Maybe (
+    fromMaybe
+    , catMaybes
+    )
+
+import Data.Either
+
+import Lib (
+    chunk
+    )
+
 import Data.IntMap (intersection)
 
 data Rucksack = Rucksack String String deriving (Show)
@@ -50,3 +63,25 @@ getMatchingItemsForRucksacks :: [Rucksack] -> Either String String
 getMatchingItemsForRucksacks [] = Left "empty list"
 getMatchingItemsForRucksacks [Rucksack xl xr, Rucksack yl yr, Rucksack zl zr] = Right $ intersect ((xl++xr) `intersect` (yl++yr)) (zl++zr)
 getMatchingItemsForRucksacks _ = Left "list does not contain 3 elements"
+
+dayThree :: [String] -> IO ()
+dayThree inputLines = do
+    let rucksacks = map parseRucksack inputLines
+    print rucksacks
+    let rucksacksWithDupes = map findSameItems rucksacks
+    --mapM_ print rucksacksWithDupes
+    --let rucksacksWithDupes = map (\r@(Rucksack left right) -> (r, findDuplicates left right)) rucksacks
+    --mapM_ print rucksacksWithDupes
+    let dupes = map (head . snd) rucksacksWithDupes
+    let dupePriorities = foldr (\item acc -> acc + fromMaybe 0 (M.lookup item prioritiesMap)) 0 dupes :: Int
+    print dupePriorities
+    let rucksackGroups = chunk 3 rucksacksWithDupes
+    case rucksackGroups of
+        Left err -> print err
+        Right groups -> do
+            let badgesForGroup = map (\x -> getMatchingItemsForRucksacks (map fst x)) groups
+            let prioritiesForBadges = map (\x -> M.lookup (head x) prioritiesMap) (rights badgesForGroup)
+            let prioritiesSum = sum (catMaybes prioritiesForBadges)
+            print prioritiesSum
+            --mapM_ (putStrLn . \(x:_) -> "badgeLetter: " ++ x ++ " priority:" ++ (rights badgesForGroup)
+

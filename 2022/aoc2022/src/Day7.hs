@@ -12,6 +12,7 @@ import Data.Maybe (
 
 import Data.List (
     intercalate
+    , find
     )
 
 import Text.Regex.TDFA
@@ -45,13 +46,42 @@ getName :: Node -> String
 getName (FileNode (File name _)) = name
 getName (DirNode (Dir name _ _ _)) = name
 
+getChildren :: Node -> [Node]
+getChildren (FileNode (File _ _)) = []
+getChildren (DirNode (Dir _ children _ _)) = children
+
+-- traverse from a node upwards to the root directory
+toTop :: Node -> Node
+toTop node@(DirNode (Dir _ _ _ parent)) = maybe node toTop parent
+-- I really hate that I can't specify in the type signature that this HAS
+-- to be a DirNode. I should ask for help in this regard
+toTop node@(FileNode (File _ _)) = trace "toTop was given a file node..." node
+--case parent of
+--    Nothing -> node
+--    Just parent -> toTop parent
+--data Dir = Dir String [Node] (Maybe Int) (Maybe Node)
+
 run :: [String] -> IO ()
 run inputLines = do
     print "day7"
     let commands = parseLines inputLines
     print commands
 
---evalCommands :: [Command]
+evalCommands :: [Command] -> Node -> Node
+evalCommands [] fileTree = toTop fileTree
+evalCommands (c:cs) fileTree = case c of
+    CD GoParent -> evalCommands cs (toTop fileTree)
+    CD (GoDir str) -> evalCommands cs (fromMaybe fileTree (find ((== str) . getName) (getChildren fileTree)))
+    LS strings -> evalCommands cs (
+        case fileTree of
+            FileNode _ -> trace "LS command in a file node..." fileTree
+            DirNode (Dir name children size parent) -> DirNode (Dir name (parseLs parent strings) size parent)
+        )
+        
+    
+--data Dir = Dir String [Node] (Maybe Int) (Maybe Node)
+--data CDTarget = GoParent | GoDir String | GoRoot deriving (Show)
+--data Command = CD CDTarget | LS [String]  deriving (Show)
 
 buildFileSystem :: [String] -> Node
 buildFileSystem inputs = DirNode $ Dir "/" [] Nothing Nothing
@@ -88,3 +118,14 @@ parseCommandOutputs input@(x:xs) linesForCommand = if isCommand x
 
 isCommand :: String -> Bool
 isCommand input = not (null input) && head input == '$'
+
+parseLs :: Maybe Node -> [String] -> [Node]
+parseLs parent inputStrings = map (parseNode parent) inputStrings
+
+parseNode :: Maybe Node -> String -> Node
+parseNode parent input = if length input >= 4 && take 3 input == "dir"
+    then DirNode (Dir (drop 4 input) [] Nothing parent)
+    else FileNode (File (matches !! 2) (read (matches !! 1) :: Int))
+        where
+            matches = getAllTextSubmatches (input =~ "[0-9]+ [a-z.]") :: [String]
+

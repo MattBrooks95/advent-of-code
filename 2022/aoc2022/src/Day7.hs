@@ -4,6 +4,8 @@ import Prelude hiding (
     lines
     )
 
+import Debug.Trace
+
 import Data.Maybe (
     fromMaybe
     )
@@ -11,6 +13,8 @@ import Data.Maybe (
 import Data.List (
     intercalate
     )
+
+import Text.Regex.TDFA
 
 -- a node in the tree is a leaf (file) or a node (dir)
 data Node = FileNode File | DirNode Dir
@@ -26,8 +30,8 @@ data File = File String Int
 -- because it's in the 'same recursive group'
 data Dir = Dir String [Node] (Maybe Int) (Maybe Node)
 
-data CDTarget = GoParent | GoDir String | GoRoot String
-data Command = CD CDTarget | LS [String]
+data CDTarget = GoParent | GoDir String | GoRoot deriving (Show)
+data Command = CD CDTarget | LS [String]  deriving (Show)
 
 instance (Show Node) where
     show (FileNode (File name size)) = "(file:" ++ name ++ " size:" ++ show size
@@ -44,6 +48,10 @@ getName (DirNode (Dir name _ _ _)) = name
 run :: [String] -> IO ()
 run inputLines = do
     print "day7"
+    let commands = parseLines inputLines
+    print commands
+
+--evalCommands :: [Command]
 
 buildFileSystem :: [String] -> Node
 buildFileSystem inputs = DirNode $ Dir "/" [] Nothing Nothing
@@ -53,4 +61,30 @@ parseLines = parseLines' []
 
 parseLines' :: [Command] -> [String] -> [Command]
 parseLines' acc [] = reverse acc
-parseLines' acc (l:ls) = [CD (GoRoot "\\")]
+parseLines' acc (l:ls) = parseLines' (command:acc) remainingInput
+    where
+        (command, remainingInput) = parseCommand l ls
+
+parseCommand :: String -> [String] -> (Command, [String])
+parseCommand input nextInputs = if length input >= 4 && take 4 input == "$ ls"
+    then (LS commandLines, remainingInput)
+    else case cdTargetMatch !! 1 of
+        ".." -> (CD GoParent, nextInputs)
+        "/" -> (CD GoRoot, nextInputs)
+        _ -> (CD (GoDir (cdTargetMatch !! 1)), nextInputs)
+    where
+        cdTargetMatch = getAllTextSubmatches (input =~ "\\$ cd (.*)") :: [String]
+        (commandLines, remainingInput) = parseCommandOutputs nextInputs []
+
+-- read lines for a command until end of list
+-- or the beginning of another command
+-- returns the strings that represent the outputs of the parsed command,
+-- and the remaining input
+parseCommandOutputs :: [String] -> [String] -> ([String], [String])
+parseCommandOutputs [] linesForCommand = (reverse linesForCommand, [])
+parseCommandOutputs input@(x:xs) linesForCommand = if isCommand x
+    then (linesForCommand, input)
+    else parseCommandOutputs xs (x:linesForCommand)
+
+isCommand :: String -> Bool
+isCommand input = not (null input) && head input == '$'

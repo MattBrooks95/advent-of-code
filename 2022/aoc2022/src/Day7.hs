@@ -31,6 +31,10 @@ data File = File String Int
 -- because it's in the 'same recursive group'
 data Dir = Dir String [Node] (Maybe Int) (Maybe Node)
 
+getParent :: Node -> Node
+getParent me@(DirNode (Dir _ _ _ parent)) = fromMaybe me parent
+getParent me@(FileNode _) = me
+
 data CDTarget = GoParent | GoDir String | GoRoot deriving (Show)
 data Command = CD CDTarget | LS [String]  deriving (Show)
 
@@ -40,7 +44,7 @@ instance (Show Node) where
         "(dir:" ++ name
         ++ " size:" ++ show size
         ++ " parent:" ++ maybe "nil" getName parent
-        ++ " children:" ++ intercalate "," (map getName children)
+        ++ " children:(" ++ intercalate "," (map show children) ++ ")"
 
 getName :: Node -> String
 getName (FileNode (File name _)) = name
@@ -66,19 +70,20 @@ run inputLines = do
     print "day7"
     let commands = parseLines inputLines
     print commands
+    print $ toTop $ evalCommands commands (DirNode (Dir "/" [] Nothing Nothing))
 
 evalCommands :: [Command] -> Node -> Node
 evalCommands [] fileTree = toTop fileTree
 evalCommands (c:cs) fileTree = case c of
-    CD GoParent -> evalCommands cs (toTop fileTree)
+    CD GoRoot -> evalCommands cs (toTop fileTree)
+    CD GoParent -> evalCommands cs (getParent fileTree)
     CD (GoDir str) -> evalCommands cs (fromMaybe fileTree (find ((== str) . getName) (getChildren fileTree)))
     LS strings -> evalCommands cs (
         case fileTree of
             FileNode _ -> trace "LS command in a file node..." fileTree
-            DirNode (Dir name children size parent) -> DirNode (Dir name (parseLs parent strings) size parent)
+            me@(DirNode (Dir name children size parent)) -> DirNode (Dir name (parseLs parent strings) size (Just me))
         )
-        
-    
+
 --data Dir = Dir String [Node] (Maybe Int) (Maybe Node)
 --data CDTarget = GoParent | GoDir String | GoRoot deriving (Show)
 --data Command = CD CDTarget | LS [String]  deriving (Show)
@@ -127,5 +132,5 @@ parseNode parent input = if length input >= 4 && take 3 input == "dir"
     then DirNode (Dir (drop 4 input) [] Nothing parent)
     else FileNode (File (matches !! 2) (read (matches !! 1) :: Int))
         where
-            matches = getAllTextSubmatches (input =~ "[0-9]+ [a-z.]") :: [String]
+            matches = getAllTextSubmatches (input =~ "([0-9]+) ([a-z.]+)") :: [String]
 

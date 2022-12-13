@@ -51,7 +51,11 @@ import Day6 (
     run
     )
 
-import Day7 (
+--import Day7 (
+--    run
+--    )
+
+import Day8 (
     run
     )
 
@@ -76,5 +80,6 @@ main = do
     --dayFour fileLines
     --Day5.run fileLines
     --Day6.run fileLines
-    Day7.run fileLines
+    --Day7.run fileLines
+    Day8.run fileLines
 

@@ -1,3 +1,4 @@
+-- {-# LANGUAGE RecordWildCards #-}
 module Day7 where
 
 import Prelude hiding (
@@ -17,10 +18,8 @@ import Data.List (
 
 import Text.Regex.TDFA
 
--- a node in the tree is a leaf (file) or a node (dir)
-data Node = FileNode File | DirNode Dir
 -- a file is a name and a size
-data File = File String Int
+data File = File String Int deriving (Show)
 -- a dir is a name, a list of child nodes(files or subdirs) a size(may or may not have been calculated alread)
 -- and a reference to the parent node (which does not exist for the root directory '/'
 -- the parent must be a DirNode, how do I convey that with the type system?
@@ -29,67 +28,70 @@ data File = File String Int
 -- the DataKinds language extension: https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/data_kinds.html
 -- even with the extension, it becomes an error, something about not being able to use it
 -- because it's in the 'same recursive group'
-data Dir = Dir String [Node] (Maybe Int) (Maybe Node)
+--data Dir = Dir String [Int] [File] (Maybe Int) Int Int
 
-getParent :: Node -> Node
-getParent me@(DirNode (Dir _ _ _ parent)) = fromMaybe me parent
-getParent me@(FileNode _) = me
+data Dir = Dir { dirName::String, dirFiles::[File] } deriving (Show)
+
+data DirTree = DirTree (Dir, [DirTree]) | EmptyDirTree
 
 data CDTarget = GoParent | GoDir String | GoRoot deriving (Show)
 data Command = CD CDTarget | LS [String]  deriving (Show)
 
-instance (Show Node) where
-    show (FileNode (File name size)) = "(file:" ++ name ++ " size:" ++ show size
-    show (DirNode (Dir name children size parent)) =
-        "(dir:" ++ name
-        ++ " size:" ++ show size
-        ++ " parent:" ++ maybe "nil" getName parent
-        ++ " children:(" ++ intercalate "," (map show children) ++ ")"
+data CommandResult = NewSubTree DirTree | NewFiles [File]
 
-getName :: Node -> String
-getName (FileNode (File name _)) = name
-getName (DirNode (Dir name _ _ _)) = name
+--instance (Show Dir) where
+--    --show (FileNode (File name size)) = "(file:" ++ name ++ " size:" ++ show size
+--    show (Dir name children size files parent dirId) =
+--        "(dir:" ++ name
+--        ++ " id:" ++ show dirId
+--        ++ " size:" ++ show size
+--        ++ "files:" ++ show files
+--        ++ " parent id:" ++ show parent
+--        ++ " children:(" ++ intercalate "," (map show children) ++ ")"
 
-getChildren :: Node -> [Node]
-getChildren (FileNode (File _ _)) = []
-getChildren (DirNode (Dir _ children _ _)) = children
-
--- traverse from a node upwards to the root directory
-toTop :: Node -> Node
-toTop node@(DirNode (Dir _ _ _ parent)) = maybe node toTop parent
--- I really hate that I can't specify in the type signature that this HAS
--- to be a DirNode. I should ask for help in this regard
-toTop node@(FileNode (File _ _)) = trace "toTop was given a file node..." node
---case parent of
---    Nothing -> node
---    Just parent -> toTop parent
---data Dir = Dir String [Node] (Maybe Int) (Maybe Node)
+--getDirName :: Dir -> String
+--getDirName (Dir name _ _ _ _ _) = name
+--
+--getParentId :: Dir -> Int
+--getParentId (Dir _ _ _ _ dirId _) = dirId
+--
+--getFileName :: File -> String
+--getFileName (File name _) = name
+--
+--getChildren :: Dir -> [Int]
+--getChildren (Dir _ childrenIds _ _ _ _) = childrenIds
 
 run :: [String] -> IO ()
 run inputLines = do
     print "day7"
     let commands = parseLines inputLines
     print commands
-    print $ toTop $ evalCommands commands (DirNode (Dir "/" [] Nothing Nothing))
+    --print $ evalCommands commands [Dir "/" [] [] Nothing 0 1]
+    print $ evalCommands commands 
 
-evalCommands :: [Command] -> Node -> Node
-evalCommands [] fileTree = toTop fileTree
-evalCommands (c:cs) fileTree = case c of
-    CD GoRoot -> evalCommands cs (toTop fileTree)
-    CD GoParent -> evalCommands cs (getParent fileTree)
-    CD (GoDir str) -> evalCommands cs (fromMaybe fileTree (find ((== str) . getName) (getChildren fileTree)))
-    LS strings -> evalCommands cs (
-        case fileTree of
-            FileNode _ -> trace "LS command in a file node..." fileTree
-            me@(DirNode (Dir name children size parent)) -> DirNode (Dir name (parseLs parent strings) size (Just me))
-        )
+evalCommands :: [Command] -> DirTree -> (DirTree, Bool, [Command])
+evalCommands [] dirTree = (dirTree, False, [])
+evalCommands (c:cs) wholeTree@(DirTree (me@Dir { }, children)) =
+        case commandResult of
+            ((DirTree (Dir {}, newChildren@(_))), True, commands) -> (DirTree (me, children ++ newChildren), True, commands)
+    where 
+        commandResult = case c of
+            CD GoRoot -> (EmptyDirTree, True, cs) -- unwind to top
+            CD GoParent -> (EmptyDirTree, False, cs) -- unwind one directory
+            CD (GoDir str) -> evalCommands cs (fromMaybe fileTree (find ((== str) . getName) (getChildren fileTree)))
+            LS strings -> evalCommands cs 
+                ---(
+                ---    me@(DirNode (Dir name children size parent)) -> DirNode (Dir name (parseLs parent strings) size (Just me))
+                ---)
+
+--evalCommand :: Command -> (DirTree, Bool, 
 
 --data Dir = Dir String [Node] (Maybe Int) (Maybe Node)
 --data CDTarget = GoParent | GoDir String | GoRoot deriving (Show)
 --data Command = CD CDTarget | LS [String]  deriving (Show)
 
-buildFileSystem :: [String] -> Node
-buildFileSystem inputs = DirNode $ Dir "/" [] Nothing Nothing
+--buildFileSystem :: [String] -> Node
+--buildFileSystem inputs = DirNode $ Dir "/" [] Nothing Nothing
 
 parseLines :: [String] -> [Command]
 parseLines = parseLines' []
@@ -124,13 +126,13 @@ parseCommandOutputs input@(x:xs) linesForCommand = if isCommand x
 isCommand :: String -> Bool
 isCommand input = not (null input) && head input == '$'
 
-parseLs :: Maybe Node -> [String] -> [Node]
-parseLs parent inputStrings = map (parseNode parent) inputStrings
+--parseLs :: [String] -> [Dir]
+--parseLs inputStrings = map parseNode inputStrings
 
-parseNode :: Maybe Node -> String -> Node
-parseNode parent input = if length input >= 4 && take 3 input == "dir"
-    then DirNode (Dir (drop 4 input) [] Nothing parent)
-    else FileNode (File (matches !! 2) (read (matches !! 1) :: Int))
-        where
-            matches = getAllTextSubmatches (input =~ "([0-9]+) ([a-z.]+)") :: [String]
+--parseNode :: String -> DirTree
+--parseNode input = if length input >= 4 && take 3 input == "dir"
+--    then DirNode (Dir (drop 4 input) [] Nothing parent)
+--    else FileNode (File (matches !! 2) (read (matches !! 1) :: Int))
+--        where
+--            matches = getAllTextSubmatches (input =~ "([0-9]+) ([a-z.]+)") :: [String]
 

@@ -1,9 +1,109 @@
+{-# LANGUAGE LambdaCase #-}
 ---- {-# LANGUAGE RecordWildCards #-}
-module Day7 where
+module Day7 (
+    run
+    ) where
+
+import Prelude hiding (
+    lines
+    )
+
+import Data.List (
+    find
+    )
+
+import Text.Regex.TDFA
+
+run :: [String] -> IO ()
+run lines = do
+    mapM_ putStrLn lines
+    print $ runSim (SimState { simTree=Node (Dir "/") [], currDirPath=["/"], inputLines=lines })
+
+data SimState = SimState { simTree :: Tree Dir File , currDirPath :: [String], inputLines :: [String] } deriving (Show)
+
+data Tree a b = Node a [Tree a b] | Leaf b | Null deriving (Show)
+
+data File = File String Int deriving (Show)
+data Dir = Dir String deriving (Show)
+
+-- I had no idea how to update an immutable tree
+-- referenced this: https://stackoverflow.com/questions/52787042/update-a-tree-based-on-index-haskell
+-- I guess the gist of it is you recursively call the constructor, and then when you've found the node that
+-- needs replaced you return the new node instead of the old one
+runSim :: SimState -> SimState
+runSim ss = do
+    --let currDir = findNode (simTree ss) (currDirPath ss)
+    let inputs = inputLines ss
+    case inputs of
+        (x:xs) -> let (command, remainingInputs) = parseCommand x xs in
+            case command of
+                CdRoot -> runSim (ss { currDirPath=take 1 (currDirPath ss), inputLines=remainingInputs })
+                CdUp -> runSim (ss { currDirPath=init (currDirPath ss), inputLines=remainingInputs })
+                CdDown str -> runSim (ss { currDirPath=currDirPath ss ++ [str], inputLines=remainingInputs } )
+                Ls lsInputs -> runSim (ss {
+                    inputLines=remainingInputs
+                    , simTree=updateSimTree (simTree ss) (makeSubTree lsInputs (last $ currDirPath ss)) (currDirPath ss)
+                    })
+        [] -> ss
+
+data Command = CdRoot | CdUp | CdDown String | Ls [String]
+
+makeSubTree :: [String] -> String -> Tree Dir File 
+makeSubTree [] rootDirName = Node (Dir rootDirName) []
+makeSubTree inputs rootDirName = let newNodes = map makeNewNode inputs in
+    Node (Dir rootDirName) newNodes
+
+makeNewNode :: String -> Tree Dir File
+makeNewNode line =
+    if length line > 3 && take 3 line == "dir"
+    then Node (Dir (drop 4 line)) []
+    else Leaf (File (matches !! 2) (read (matches !! 1) :: Int))
+    where
+        matches = getAllTextSubmatches (line =~ "([0-9]+) ([a-z.]+)") :: [String]
+
+updateSimTree :: Tree Dir File -> Tree Dir File -> [String] -> Tree Dir File
+updateSimTree Null _ _ = Null
+updateSimTree wholeTree@(Leaf (File _ _)) _ _ = wholeTree
+updateSimTree wholeTree _ [] = wholeTree
+updateSimTree _ newSubTree [_] = newSubTree
+updateSimTree wholeTree@(Node (Dir name) children) newSubTree (x:xs) =
+    if name == x then Node (Dir name) (map (\oldChild -> updateSimTree oldChild newSubTree xs) children)
+    else wholeTree
+
+--updateSimTree wholeTree@(Node (Dir name) children) newSubTree insertLocation = if 
+
+parseCommand :: String -> [String] -> (Command, [String])
+parseCommand input nextInputs = if length input >= 4 && take 4 input == "$ ls"
+    then (Ls commandLines, remainingInput)
+    else case cdTargetMatch !! 1 of
+        ".." -> (CdUp, nextInputs)
+        "/" -> (CdRoot, nextInputs)
+        _ -> (CdDown (cdTargetMatch !! 1), nextInputs)
+    where
+        cdTargetMatch = getAllTextSubmatches (input =~ "\\$ cd (.*)") :: [String]
+        (commandLines, remainingInput) = getInputsTillCommand ([], nextInputs)
+
+getInputsTillCommand :: ([String], [String]) -> ([String], [String])
+getInputsTillCommand result@(_, []) = result
+getInputsTillCommand (currCommandInputs, x:xs) =
+    if not (null x) && head x == '$'
+    then (currCommandInputs, x:xs)
+    else getInputsTillCommand (currCommandInputs ++ [x], xs)
+
+findNode :: Tree Dir File -> [String] -> Maybe (Tree Dir File)
+findNode tree [] = Just tree
+findNode tree (dirName:dirNames) = case tree of
+    (Node (Dir name) children) ->
+        if name == dirName
+        then Nothing
+        else do
+            let nextDir = find (\case { (Node (Dir nm) _)-> nm == dirName; Leaf _ -> False; }) children
+            case nextDir of
+                Just next -> findNode next dirNames
+                Nothing -> Nothing
+    Leaf _ -> Nothing
+
 --
---import Prelude hiding (
---    lines
---    )
 --
 --import Debug.Trace
 --
@@ -135,4 +235,3 @@ module Day7 where
 ----    else FileNode (File (matches !! 2) (read (matches !! 1) :: Int))
 ----        where
 ----            matches = getAllTextSubmatches (input =~ "([0-9]+) ([a-z.]+)") :: [String]
---

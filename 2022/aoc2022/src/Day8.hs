@@ -84,19 +84,21 @@ getVisibleTrees [] = []
 getVisibleTrees allTrees = do
     let eastDone = map markTrees allTrees
     let westDone = map (markTrees . reverse) eastDone
-    let northDone = colsAsRows False $ map markTrees (rowsAsCols False westDone)
-    let southDone = colsAsRows True $ map markTrees (rowsAsCols True northDone)
+    let northDone = colsAsRows True $ map markTrees (rowsAsCols False westDone)
+    let southDone = colsAsRows False $ map markTrees (rowsAsCols True northDone)
     southDone
     where
         markTrees = markTreesVisible (-1)
 
 rowsAsCols :: Bool -> [[Tree]] -> [[Tree]]
 rowsAsCols flipColElemOrder trees =
-    let filterResult = [ reverse $ filter (\x -> tCol x == colIdx) (concat trees) | colIdx <- [1..length (head trees)]] in
+    let filterResult = [ filter (\x -> tCol x == colIdx) (concat trees) | colIdx <- [1..length (head trees)]] in
     if flipColElemOrder then map reverse filterResult else filterResult
 
 colsAsRows :: Bool -> [[Tree]] -> [[Tree]]
-colsAsRows flipRowElemOrder trees =  [ filter (\x -> (tRow x) == rowIdx) (concat trees) | rowIdx <- [1..length trees]]
+colsAsRows flipRowElemOrder trees =  
+    let filterResult = [ filter (\x -> tRow x == rowIdx) (concat trees) | rowIdx <- [1..length trees]] in
+    if flipRowElemOrder then map reverse filterResult else filterResult
 
 markTreesVisible :: Int -> [Tree] -> [Tree]
 markTreesVisible _ [] = []

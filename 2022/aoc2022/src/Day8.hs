@@ -70,21 +70,25 @@ createGrid' (x:xs) row acc = createGrid' xs (row + 1) (acc ++ [newTrees])
         newTrees = [ mkTree h row idx False | (idx, h) <- zip [1..] treeHeights]
         treeHeights = map digitToInt x
 
+-- for row of trees, mark all the trees that are taller
+-- than all of the previous trees in that row as visible (able to be seen from the edge)
+-- left to right, top to bottom (East -> West)
+-- reverse the rows, then do the marking again (West -> East)
+-- turn the cols into rows, do the marking again (North -> South)
+-- reverse the cols, do the marking again (South -> North)
+-- at the end of each operation, undo the row/col translation, so that the trees
+-- can be visually compared to the solution when they are printed to the console
+-- (they are put back into their original order)
 getVisibleTrees :: [[Tree]] -> [[Tree]]
-getVisibleTrees trees = getVisibleTrees' trees
-
--- requires the list of trees to already by sorted by height
-getVisibleTrees' :: [[Tree]] -> [[Tree]]
-getVisibleTrees' [] = [] 
-getVisibleTrees' allTrees = do
-    let eastDone = filterEast allTrees
-    let westDone = map reverse $ filterEast (map reverse eastDone)
-    let northDone = rowsAsCols False $ filterEast (rowsAsCols False westDone)
-    let southDone = rowsAsCols True $ filterEast (rowsAsCols True northDone)
+getVisibleTrees [] = [] 
+getVisibleTrees allTrees = do
+    let eastDone = map markTrees allTrees
+    let westDone = map (markTrees . reverse) eastDone
+    let northDone = colsAsRows False $ map markTrees (rowsAsCols False westDone)
+    let southDone = colsAsRows True $ map markTrees (rowsAsCols True northDone)
     southDone
-
-filterEast :: [[Tree]] -> [[Tree]]
-filterEast trees = map (markTreesVisible (-1)) trees
+    where
+        markTrees = markTreesVisible (-1)
 
 rowsAsCols :: Bool -> [[Tree]] -> [[Tree]]
 rowsAsCols flipColElemOrder trees =

@@ -90,21 +90,26 @@ getInputsTillCommand (currCommandInputs, x:xs) =
     then (currCommandInputs, x:xs)
     else getInputsTillCommand (currCommandInputs ++ [x], xs)
 
-findNode :: Tree Dir File -> [String] -> Maybe (Tree Dir File)
-findNode tree [] = Just tree
-findNode tree (dirName:dirNames) = case tree of
-    (Node (Dir name) children) ->
-        if name == dirName
-        then Nothing
-        else do
-            let nextDir = find (\case { (Node (Dir nm) _)-> nm == dirName; Leaf _ -> False; }) children
-            case nextDir of
-                Just next -> findNode next dirNames
-                Nothing -> Nothing
-    Leaf _ -> Nothing
+--findNode :: Tree Dir File -> [String] -> Maybe (Tree Dir File)
+--findNode tree [] = Just tree
+--findNode tree (dirName:dirNames) = case tree of
+--    (Node (Dir name) children) ->
+--        if name == dirName
+--        then Nothing
+--        else do
+--            let nextDir = find (\case { (Node (Dir nm) _)-> nm == dirName; Leaf _ -> False; }) children
+--            case nextDir of
+--                Just next -> findNode next dirNames
+--                Nothing -> Nothing
+--    Leaf _ -> Nothing
 
---
---
+-- I need to make it so that files aren't nodes
+-- they actually aren't, there just a list of files held by a dir node
+-- but because the type exists my pattern matches are getting complicated
+--sumNode :: Tree Dir File -> (String, Int)
+--sumNode (Leaf (File _ _)) = ("", 0)
+--sumNode (Node (Dir name children)) = ("
+
 --import Debug.Trace
 --
 --import Data.Maybe (

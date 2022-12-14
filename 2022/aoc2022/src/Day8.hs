@@ -2,6 +2,10 @@ module Day8 (
     run
     ) where
 
+import Prelude hiding (
+    max
+    )
+
 import Lib (
     chunk
     )
@@ -26,9 +30,10 @@ run inputLines = do
     --    Right cf -> mapM_ (print . reverse) (reverse cf)
     --let visibleTrees = getVisibleTrees forest
     --print $ "# visible trees:" ++ show (length visibleTrees)
-
-sqrtForest :: Int -> Int
-sqrtForest forestLength = (round . sqrt . fromIntegral) forestLength
+    putStrLn "trees marked visible:"
+    let forestMarkedVisibleTrees = getVisibleTrees forest
+    mapM_ print forestMarkedVisibleTrees
+    putStrLn ("# of visible trees:" ++ show (length (filter isVisible (concat forestMarkedVisibleTrees))))
 
 data Tree = Tree {
     tHeight :: Int
@@ -46,7 +51,7 @@ numDirections :: Int
 numDirections = length directions
 
 instance Show Tree where
-    show (Tree h r c _) = "(h:" ++ show h ++ " r:" ++ show r ++ " c:" ++ show c ++ ")"
+    show (Tree h r c v) = "(h:" ++ show h ++ " r:" ++ show r ++ " c:" ++ show c ++ " v:" ++ show v ++ ")"
 
 mkTree :: Int -> Int -> Int -> Bool -> Tree
 mkTree th r c isVis = Tree { tHeight = th, tRow = r, tCol = c , isVisible = isVis }
@@ -65,16 +70,35 @@ createGrid' (x:xs) row acc = createGrid' xs (row + 1) (acc ++ [newTrees])
         newTrees = [ mkTree h row idx False | (idx, h) <- zip [1..] treeHeights]
         treeHeights = map digitToInt x
 
-getVisibleTrees :: [Tree] -> [Tree]
+getVisibleTrees :: [[Tree]] -> [[Tree]]
 getVisibleTrees trees = getVisibleTrees' trees
 
 -- requires the list of trees to already by sorted by height
-getVisibleTrees' :: [Tree] -> [Tree]
+getVisibleTrees' :: [[Tree]] -> [[Tree]]
 getVisibleTrees' [] = [] 
 getVisibleTrees' allTrees = do
-    filterNorth allTrees
+    let eastDone = filterEast allTrees
+    let westDone = map reverse $ filterEast (map reverse eastDone)
+    let northDone = rowsAsCols False $ filterEast (rowsAsCols False westDone)
+    let southDone = rowsAsCols True $ filterEast (rowsAsCols True northDone)
+    southDone
 
-filterNorth :: [Tree] -> [Tree]
-filterNorth trees = do
-    let colLength = sqrtForest (length trees)
-    trees
+filterEast :: [[Tree]] -> [[Tree]]
+filterEast trees = map (markTreesVisible (-1)) trees
+
+rowsAsCols :: Bool -> [[Tree]] -> [[Tree]]
+rowsAsCols flipColElemOrder trees =
+    let filterResult = [ reverse $ filter (\x -> tCol x == colIdx) (concat trees) | colIdx <- [1..length (head trees)]] in
+    if flipColElemOrder then map reverse filterResult else filterResult
+
+colsAsRows :: Bool -> [[Tree]] -> [[Tree]]
+colsAsRows flipRowElemOrder trees =  [ filter (\x -> (tRow x) == rowIdx) (concat trees) | rowIdx <- [1..length trees]]
+
+markTreesVisible :: Int -> [Tree] -> [Tree]
+markTreesVisible _ [] = []
+markTreesVisible max (x@(Tree h r c _):xs) =
+    if h <= max
+    then x:markTreesVisible max xs
+    else Tree h r c True:markTreesVisible h xs
+
+

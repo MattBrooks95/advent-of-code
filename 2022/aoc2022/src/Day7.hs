@@ -1,4 +1,4 @@
---{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE LambdaCase #-}
 ---- {-# LANGUAGE RecordWildCards #-}
 module Day7 (
     run
@@ -22,7 +22,14 @@ import Text.Regex.TDFA
 run :: [String] -> IO ()
 run lines = do
     mapM_ putStrLn lines
-    print $ runSim (SimState { simTree=Node (Dir "/" []) [], currDirPath=["/"], inputLines=lines })
+    let finalTree = runSim (SimState { simTree=Node (Dir "/" []) [], currDirPath=["/"], inputLines=lines })
+    print finalTree
+    let sumTree = sumDirs (simTree finalTree)
+    print sumTree
+    let dirSizes = nodesAsList sumTree
+    print dirSizes
+    print $ "dirs with size less than or equal 100000: " ++ show dirSizes
+    print $ "sum of dirs with size less than or equal to 100000: " ++ show (sum (filter (<= 100000) (map snd dirSizes)))
 
 data SimState = SimState {
     simTree :: Tree Dir
@@ -71,6 +78,18 @@ runSim ss = do
                     })
                     where newSubTree = makeSubTree lsInputs (last $ currDirPath ss)
         [] -> ss
+
+nodesAsList :: Tree (String, Int) -> [(String, Int)]
+nodesAsList Null = []
+nodesAsList (Node (name, size) children) = (name, size) : concatMap nodesAsList children
+
+sumDirs :: Tree Dir -> Tree (String, Int)
+sumDirs Null = Null
+sumDirs (Node (Dir name files) children) = Node (name, fileSizeSum + childrenNodesSum) newChildrenNodes
+    where
+        fileSizeSum = sum (map (\(File _ size) -> size) files)
+        newChildrenNodes = map sumDirs children
+        childrenNodesSum = sum (map (\case { Node (_, size) _ -> size; Null -> 0; }) newChildrenNodes)
 
 data Command = CdRoot | CdUp | CdDown String | Ls [String]
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE LambdaCase #-}
+--{-# LANGUAGE LambdaCase #-}
 ---- {-# LANGUAGE RecordWildCards #-}
 module Day7 (
     run
@@ -10,21 +10,45 @@ import Prelude hiding (
 
 import Data.List (
     find
+    , intercalate
     )
+
+import Debug.Trace
+
+import Data.Either
 
 import Text.Regex.TDFA
 
 run :: [String] -> IO ()
 run lines = do
     mapM_ putStrLn lines
-    print $ runSim (SimState { simTree=Node (Dir "/") [], currDirPath=["/"], inputLines=lines })
+    print $ runSim (SimState { simTree=Node (Dir "/" []) [], currDirPath=["/"], inputLines=lines })
 
-data SimState = SimState { simTree :: Tree Dir File , currDirPath :: [String], inputLines :: [String] } deriving (Show)
+data SimState = SimState {
+    simTree :: Tree Dir
+    , currDirPath :: [String]
+    , inputLines :: [String]
+    }
 
-data Tree a b = Node a [Tree a b] | Leaf b | Null deriving (Show)
+instance Show SimState where
+    show (SimState tree path lines) =
+        "currDirPath:"
+        ++ show path
+        ++ " inputLines:" ++ intercalate "," lines
+        ++ "tree:" ++ showSimTree tree 0
+
+showSimTree :: Tree Dir -> Int -> String
+showSimTree Null _ = ""
+showSimTree (Node (Dir name files) children) depth =
+    "\n" ++ replicate depth '\t' ++ "dir:"
+    ++ name ++ " files:" ++ concatMap show files
+    ++ concatMap (\x -> showSimTree x (depth + 1)) children
+
+data Tree a = Node a [Tree a] | Null deriving (Show)
 
 data File = File String Int deriving (Show)
-data Dir = Dir String deriving (Show)
+data Dir = Dir String [File] deriving (Show)
+dirName (Dir name _) = name
 
 -- I had no idea how to update an immutable tree
 -- referenced this: https://stackoverflow.com/questions/52787042/update-a-tree-based-on-index-haskell
@@ -42,33 +66,41 @@ runSim ss = do
                 CdDown str -> runSim (ss { currDirPath=currDirPath ss ++ [str], inputLines=remainingInputs } )
                 Ls lsInputs -> runSim (ss {
                     inputLines=remainingInputs
-                    , simTree=updateSimTree (simTree ss) (makeSubTree lsInputs (last $ currDirPath ss)) (currDirPath ss)
+                    , simTree=updateSimTree (simTree ss) newSubTree (currDirPath ss)
+                    --, simTree=updateSimTree (simTree ss) (trace ("new tree:" ++ show newSubTree) newSubTree) (currDirPath ss)
                     })
+                    where newSubTree = makeSubTree lsInputs (last $ currDirPath ss)
         [] -> ss
 
 data Command = CdRoot | CdUp | CdDown String | Ls [String]
 
-makeSubTree :: [String] -> String -> Tree Dir File 
-makeSubTree [] rootDirName = Node (Dir rootDirName) []
+makeSubTree :: [String] -> String -> Tree Dir
+makeSubTree [] rootDirName = Node (Dir rootDirName []) []
 makeSubTree inputs rootDirName = let newNodes = map makeNewNode inputs in
-    Node (Dir rootDirName) newNodes
+    Node (Dir rootDirName (rights newNodes)) (lefts newNodes)
 
-makeNewNode :: String -> Tree Dir File
+makeNewNode :: String -> Either (Tree Dir) File
 makeNewNode line =
     if length line > 3 && take 3 line == "dir"
-    then Node (Dir (drop 4 line)) []
-    else Leaf (File (matches !! 2) (read (matches !! 1) :: Int))
+    then Left (Node (Dir (drop 4 line) []) [])
+    else Right (File (matches !! 2) (read (matches !! 1) :: Int))
     where
         matches = getAllTextSubmatches (line =~ "([0-9]+) ([a-z.]+)") :: [String]
 
-updateSimTree :: Tree Dir File -> Tree Dir File -> [String] -> Tree Dir File
+updateSimTree :: Tree Dir -> Tree Dir -> [String] -> Tree Dir 
 updateSimTree Null _ _ = Null
-updateSimTree wholeTree@(Leaf (File _ _)) _ _ = wholeTree
-updateSimTree wholeTree _ [] = wholeTree
-updateSimTree _ newSubTree [_] = newSubTree
-updateSimTree wholeTree@(Node (Dir name) children) newSubTree (x:xs) =
-    if name == x then Node (Dir name) (map (\oldChild -> updateSimTree oldChild newSubTree xs) children)
+updateSimTree wholeTree _ [] = trace (show "returned whole tree, empty dirpath") wholeTree
+updateSimTree wholeTree@(Node (Dir name _) _) newSubTree [dp] =
+    if name == dp
+    then newSubTree
     else wholeTree
+--updateSimTree wholeTree@(Node (Dir name _) _) newSubTree [dp] = trace (show "returned new sub tree, dirpath:" ++ dp ++ " prev:" ++ name) newSubTree
+updateSimTree wholeTree@(Node (Dir name files) children) newSubTree (x:xs) =
+    if name == x
+    then Node (Dir name files) (map (\oldChild -> updateSimTree oldChild newSubTree xs) children)
+    else wholeTree
+    -- then trace (show $ "name:" ++ name ++ " matched x:" ++ x) (Node (Dir name files) (map (\oldChild -> updateSimTree oldChild newSubTree xs) children))
+    -- else trace (show "name:" ++ " did not match dirname:" ++ x ++ "returning whole tree") wholeTree
 
 --updateSimTree wholeTree@(Node (Dir name) children) newSubTree insertLocation = if 
 

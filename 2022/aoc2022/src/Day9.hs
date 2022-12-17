@@ -7,6 +7,8 @@ import Prelude hiding (
     , Right
     )
 
+import Debug.Trace
+
 import System.Exit (
     exitFailure
     )
@@ -69,22 +71,22 @@ runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (_, 0) = (Rope (Head (hx, 
 runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (direction, magnitude) =
     let newHeadPos = updatePos (hx, hy) (direction, 1) in
     let distance = getDirectDistance newHeadPos (tx, ty) in
-    if distance == 1
+    if trace (show distance) distance == 1
     then runMotion (Head newHeadPos) (Tail (tx, ty)) positionAcc (direction, magnitude - 1)
     else
-        if distance <= 2
+        if distance >= 2
         then runMotion (Head newHeadPos) (Tail (hx, hy)) (insert (hx, hy) positionAcc) (direction, magnitude - 1)
         else runMotion (Head newHeadPos) (Tail (tx, ty)) positionAcc (direction, magnitude - 1)
 
 updatePos :: Position -> (Direction, Int) -> Position
-updatePos pos motion = case motion of
-    (Left, num) -> (fst pos - num, snd pos)
-    (Right, num) -> (fst pos + num, snd pos)
-    (Up, num) -> (fst pos, snd pos + num)
-    (Down, num) -> (fst pos, snd pos - num)
+updatePos (x, y) motion = case motion of
+    (Left, num) -> (x - num, y)
+    (Right, num) -> (x + num, y)
+    (Up, num) -> (x, y + num)
+    (Down, num) -> (x, y - num)
 
 getDistance :: Position -> Position -> (Int, Int)
-getDistance (hx, hy) (tx, ty) = (hx - hy, tx - ty)
+getDistance (hx, hy) (tx, ty) = (hx - tx, hy - ty)
 
 getDirectDistance :: Position -> Position -> Float
 getDirectDistance pos1 pos2 = let (distX, distY) = getDistance pos1 pos2 in sqrt $ (fromIntegral distX ** 2) + (fromIntegral distY ** 2)

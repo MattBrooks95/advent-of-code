@@ -91,18 +91,14 @@ drawCrt tickInfo = do
     print $ "drawCrt, num ticks:" ++ show numTicks
      -- there are 241 inputs, my chunk function only works if it divides evenly
      -- the crt won't draw that 241st frame so, hopefully throwing it away is okay
-    let ticksChunked = chunk 40 (init tickInfo)
-    case ticksChunked of
-        Left msg -> print msg
-        Right chunked -> do
-            --mapM_ print chunked
-            let crtDisplayString = drawLine (init tickInfo)
-            putStrLn crtDisplayString
-            case chunk 40 crtDisplayString of
-                Left err -> putStrLn err
-                -- the function chunk that ordered the symbols into groups of 40
-                -- reversed the groups and their contents, so they need reversed again
-                Right chunked' -> mapM_ (putStrLn . reverse) (reverse chunked')
+        --mapM_ print chunked
+    let crtDisplayString = drawLine (init tickInfo)
+    --putStrLn crtDisplayString
+    case chunk 40 crtDisplayString of
+        Left err -> putStrLn err
+        -- the function chunk that ordered the symbols into groups of 40
+        -- reversed the groups and their contents, so they need reversed again
+        Right chunked' -> mapM_ (putStrLn . reverse) (reverse chunked')
 
 drawLine :: [(Int, Register, Instruction)] -> String
 drawLine ticks = drawLine' ticks 0

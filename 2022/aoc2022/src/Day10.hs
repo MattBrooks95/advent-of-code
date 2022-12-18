@@ -26,10 +26,13 @@ run inputLines = do
     --mapM_ print parseSuccesses 
     --putStrLn "instructions:"
     --print instructions
-    let simResult = runProgram instructions 1 0
-    --print simResult
-    print "special cycles:"
-    mapM_ print ([simResult !! 20] ++ [ simResult !! takeCycle | takeCycle <- [60, 100..220]])
+    let simResult = runProgram instructions 1 1
+    if length simResult > 220 then do
+        print $ take 20 $ drop 210 simResult
+        print "special cycles:"
+        mapM_ print (simResult !! 20:[ simResult !! (takeCycle - 1) | takeCycle <- [60, 100..220]])
+    else
+        print simResult
     where
         actions = map parse inputLines
 
@@ -44,7 +47,7 @@ runProgram [] _ _ = []
 runProgram (thisIns@(Instruction action remainingTicks):inss) register tick = case remainingTicks of
     1 ->
         if null inss
-        then [(nextTick, newRegValue, thisIns)]
+        then [(tick, register, thisIns), (nextTick, newRegValue, thisIns)]
         else (tick, register, thisIns):runProgram inss newRegValue nextTick
             where
                 newRegValue = applyAction register action

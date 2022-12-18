@@ -14,8 +14,15 @@ import Data.Char (
     digitToInt
     )
 
+import qualified Data.Ord as O (
+    Down(..)
+    , max
+    )
+
 import Data.List (
     sort
+    , sortBy
+    , sortOn
     )
 
 run :: [String] -> IO ()
@@ -34,6 +41,18 @@ run inputLines = do
     let forestMarkedVisibleTrees = getVisibleTrees forest
     mapM_ print forestMarkedVisibleTrees
     putStrLn ("# of visible trees:" ++ show (length (filter isVisible (concat forestMarkedVisibleTrees))))
+    putStrLn "part2============================="
+    --let visibleFromTestTree = (getPossibleTreesVisableFromTree forest ((forest !! 2) !! 2))
+    --print $ show visibleFromTestTree
+    --print $ show (getTreesVisibleFromTree visibleFromTestTree)
+    let treesWithNeighbors = map (getPossibleTreesVisableFromTree forest) (concat forest)
+    --print $ "with neighbors" ++ show treesWithNeighbors
+    let treesWithVisibleNeighbors = map getTreesVisibleFromTree treesWithNeighbors
+    --print $ "with visible trees:"
+    mapM_ print treesWithVisibleNeighbors
+    let withScenicTotals = map getScenicScore treesWithVisibleNeighbors
+    --print $ "scenic totals:" ++ show withScenicTotals
+    print $ "best scenic total:" ++ show (maximum (map snd withScenicTotals))
 
 data Tree = Tree {
     tHeight :: Int
@@ -108,3 +127,37 @@ markTreesVisible max (x@(Tree h r c _):xs) =
     else Tree h r c True:markTreesVisible h xs
 
 
+-- (NorthTrees, STrees, ETrees, WTrees)
+getPossibleTreesVisableFromTree :: [[Tree]] -> Tree -> (Tree, [Tree], [Tree], [Tree], [Tree])
+getPossibleTreesVisableFromTree forest base@(Tree _ tr tc _) = (base, northTrees, southTrees, eastTrees, westTrees)
+    where
+        northTrees = filter (\(Tree _ row col _) -> tc == col && row < tr) flatForest
+        southTrees = filter (\(Tree _ row col _) -> tc == col && row > tr) flatForest
+        eastTrees = filter (\(Tree _ row col _) -> tr == row && tc < col) flatForest
+        westTrees = filter(\(Tree _ row col _) -> tr == row && tc > col) flatForest
+        flatForest = concat forest
+
+getTreesVisibleFromTree :: (Tree, [Tree], [Tree], [Tree], [Tree]) -> (Tree, [Tree], [Tree], [Tree], [Tree])
+getTreesVisibleFromTree (base@(Tree bh br bc _), nts, sts, ets, wts) = (base, vn, vs, ve, vw)
+    where
+        --vn = takeTillTaller (sortBy (\(Tree _ r1 _ _) (Tree _ r2 _ _) -> r1 > r2) nts) -- filter (\(Tree h r c _) -> True) []
+        -- it says that the sortOn (Data.Ord.Down x) pattern is better
+        --vn = takeTillTaller (reverse $ sortOn tCol nts) -- filter (\(Tree h r c _) -> True) []
+        vn = takeTillTaller (sortOn (O.Down . tRow) nts) -- filter (\(Tree h r c _) -> True) []
+        vs = takeTillTaller (sortOn tRow sts)
+        ve = takeTillTaller (sortOn tCol ets)
+        vw = takeTillTaller (sortOn (O.Down . tCol) wts)
+        takeTillTaller = takeTreeTillTaller base
+
+takeTreeTillTaller :: Tree -> [Tree] -> [Tree]
+takeTreeTillTaller _ [] = []
+takeTreeTillTaller base@(Tree bh br bc _) (add@(Tree h r c _):ts) =
+    if bh <= h
+    then [add]
+    else add:takeTreeTillTaller base ts
+
+getScenicScore :: (Tree, [Tree], [Tree], [Tree], [Tree]) -> (Tree, Int)
+-- I thought that the 0's needed to be turned into ones, so that trees on the edge don't get screwed (one zero will ruin their score)
+-- but from looking at their sample for part 2, I guess we're supposed to let it go to 0
+--getScenicScore (baseTree, nts, sts, ets, wts) = (baseTree, foldr (*) 1 (map (max 1 . length) [nts, sts, ets, wts]))
+getScenicScore (baseTree, nts, sts, ets, wts) = (baseTree, foldr (*) 1 (map length [nts, sts, ets, wts]))

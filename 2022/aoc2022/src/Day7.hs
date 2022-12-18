@@ -30,6 +30,17 @@ run lines = do
     print dirSizes
     print $ "dirs with size less than or equal 100000: " ++ show dirSizes
     print $ "sum of dirs with size less than or equal to 100000: " ++ show (sum (filter (<= 100000) (map snd dirSizes)))
+    print "part 2=============="
+    let biggestDirSize = maximum (map snd dirSizes)
+    print $ "biggest dir size:" ++ show biggestDirSize
+    let needToFreeSpace = (biggestDirSize + neededSpaceForUpdate) - totalDiscSpace
+    print $ "need to delete:" ++ show totalDiscSpace ++ " - " ++ show biggestDirSize ++ " = " ++ show needToFreeSpace ++ " bytes"
+    let deletionCandidates = filter (\(_, size) -> size >= needToFreeSpace) dirSizes
+    print $ "deletion candidates:" ++ show deletionCandidates
+    print $ "smallest deletion candidate:" ++ show (minimum (map snd deletionCandidates))
+
+totalDiscSpace = 7 * ((10 :: Int) ^ (7 :: Int))
+neededSpaceForUpdate = 3 * ((10 :: Int) ^ (7 :: Int))
 
 data SimState = SimState {
     simTree :: Tree Dir
@@ -55,7 +66,7 @@ data Tree a = Node a [Tree a] | Null deriving (Show)
 
 data File = File String Int deriving (Show)
 data Dir = Dir String [File] deriving (Show)
-dirName (Dir name _) = name
+--dirName (Dir name _) = name
 
 -- I had no idea how to update an immutable tree
 -- referenced this: https://stackoverflow.com/questions/52787042/update-a-tree-based-on-index-haskell
@@ -78,6 +89,11 @@ runSim ss = do
                     })
                     where newSubTree = makeSubTree lsInputs (last $ currDirPath ss)
         [] -> ss
+
+--getDirSizeEntry :: Tree (String, Int) -> [String] -> Maybe (Tree (String, Int))
+--getDirSizeEntry Null _ = Nothing
+--getDirSizeEntry _ [] = Nothing
+--getDirSizeEntry (Node (name, size)) ((Dir dname:ds) = if 
 
 nodesAsList :: Tree (String, Int) -> [(String, Int)]
 nodesAsList Null = []

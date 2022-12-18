@@ -85,6 +85,6 @@ main = do
     --Day5.run fileLines
     --Day6.run fileLines
     --Day7.run fileLines
-    --Day8.run fileLines
-    Day9.run fileLines
+    Day8.run fileLines
+    --Day9.run fileLines
 

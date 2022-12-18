@@ -21,6 +21,7 @@ run inputLines = do
     print $ "num parse failures:" ++ show (length parseFailures)
     mapM_ print parseFailures
     let parseSuccesses = rights actions
+    print $ "num instructions parsed:" ++ show (length parseSuccesses)
     let instructions = map makeInstruction parseSuccesses
     --print "parse successes:"
     --mapM_ print parseSuccesses 

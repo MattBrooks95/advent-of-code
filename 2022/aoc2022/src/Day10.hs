@@ -30,7 +30,11 @@ run inputLines = do
     if length simResult > 220 then do
         print $ take 20 $ drop 210 simResult
         print "special cycles:"
-        mapM_ print (simResult !! 20:[ simResult !! (takeCycle - 1) | takeCycle <- [60, 100..220]])
+        let specialCycles = simResult !! 19:[ simResult !! (takeCycle - 1) | takeCycle <- [60, 100..220]]
+        mapM_ print specialCycles
+        let signalStrengths = map calcSignalStrength specialCycles
+        print "signal strengths:"
+        print $ show (sum signalStrengths)
     else
         print simResult
     where
@@ -71,3 +75,6 @@ parse ln = let parts = splitLine in
 applyAction :: Register -> Action -> Register
 applyAction reg Noop = reg
 applyAction reg (AddX addVal) = reg + addVal
+
+calcSignalStrength :: (Int, Register, Instruction) -> Int
+calcSignalStrength (tick, register, _) = tick * register

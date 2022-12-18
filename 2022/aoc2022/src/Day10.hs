@@ -14,6 +14,10 @@ import Data.Text (
     , unpack
     )
 
+import Lib (
+    chunk
+    )
+
 run :: [String] -> IO ()
 run inputLines = do
     --print inputLines
@@ -36,6 +40,7 @@ run inputLines = do
         let signalStrengths = map calcSignalStrength specialCycles
         print "signal strengths:"
         print $ show (sum signalStrengths)
+        drawCrt simResult
     else
         print simResult
     where
@@ -79,3 +84,42 @@ applyAction reg (AddX addVal) = reg + addVal
 
 calcSignalStrength :: (Int, Register, Instruction) -> Int
 calcSignalStrength (tick, register, _) = tick * register
+
+drawCrt :: [(Int, Register, Instruction)] -> IO ()
+drawCrt tickInfo = do
+    let numTicks = length tickInfo
+    print $ "drawCrt, num ticks:" ++ show numTicks
+     -- there are 241 inputs, my chunk function only works if it divides evenly
+     -- the crt won't draw that 241st frame so, hopefully throwing it away is okay
+    let ticksChunked = chunk 40 (init tickInfo)
+    case ticksChunked of
+        Left msg -> print msg
+        Right chunked -> do
+            --mapM_ print chunked
+            let crtDisplayString = drawLine (init tickInfo)
+            putStrLn crtDisplayString
+            case chunk 40 crtDisplayString of
+                Left err -> putStrLn err
+                -- the function chunk that ordered the symbols into groups of 40
+                -- reversed the groups and their contents, so they need reversed again
+                Right chunked' -> mapM_ (putStrLn . reverse) (reverse chunked')
+
+drawLine :: [(Int, Register, Instruction)] -> String
+drawLine ticks = drawLine' ticks 0
+
+drawLine' :: [(Int, Register, Instruction)] -> Int -> String
+drawLine' [] _ = []
+drawLine' ((_, regVal, _):ticks) crtTick = 
+    let symbol = if rangeStart <= moddedCrtTick && moddedCrtTick <= rangeEnd
+        then '#'
+        else '.'
+        in
+        symbol:drawLine' ticks (crtTick + 1)
+    --if rangeStart >= moddedCrtTick && moddedCrtTick <= rangeEnd
+    --then '#':drawLine' ticks (crtTick + 1)
+    --else '.':drawLine' ticks (crtTick + 1)
+    where
+        moddedCrtTick = crtTick `mod` 40
+        rangeStart = regVal - 1
+        rangeEnd = regVal + 1
+

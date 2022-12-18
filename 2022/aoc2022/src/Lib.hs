@@ -19,6 +19,7 @@ groupLines lines = reverse $ go [] [] lines
             "" -> go (reverse groupAcc:groupsAcc) [] xs
             line -> go groupsAcc (line:groupAcc) xs
 
+-- this will reverse the order of the groups, and the order of their contents
 chunk :: Int -> [a] -> Either String [[a]] 
 chunk sizeOfGroups origList
     | sizeOfGroups <= 0 || not dividesEvenly = Left errMsg

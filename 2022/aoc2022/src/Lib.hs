@@ -4,6 +4,8 @@ import Prelude hiding (
     lines
     )
 
+import qualified Data.Text as T
+
 -- when data is demarcated by newlines, and related data is demarcated
 -- by empty lines, this function will throw away the empty lines and
 -- return the lines of related data as lists
@@ -14,10 +16,23 @@ groupLines lines = reverse $ go [] [] lines
         -- groups currentGroup inputs result
         go :: [[String]] -> [String] -> [String] -> [[String]]
         go groupsAcc [] [] = groupsAcc
-        go groupsAcc groupAcc [] = groupAcc:groupsAcc
-        go groupsAcc groupAcc (x:xs) = case x of
+        -- it took weeks for this to pop up, but there was a bug here
+        -- where the last group would remain reversed (because I failed to use reverse to put it back in order)
+        --go groupsAcc groupAcc [] = reverse groupAcc:groupsAcc
+        go groupsAcc groupAcc [] = reverse groupAcc:groupsAcc
+        go groupsAcc groupAcc (x:xs) = case dropLeadingWhitespace x of
             "" -> go (reverse groupAcc:groupsAcc) [] xs
             line -> go groupsAcc (line:groupAcc) xs
+
+dropLeadingWhitespace :: String -> String
+dropLeadingWhitespace [] = ""
+dropLeadingWhitespace (x:xs) =
+    if x == ' '
+    then dropLeadingWhitespace xs
+    else x:xs
+
+dropLeadingWhitespaceTxt :: T.Text -> T.Text
+dropLeadingWhitespaceTxt txt = T.pack $ dropLeadingWhitespace (T.unpack txt)
 
 -- this will reverse the order of the groups, and the order of their contents
 chunk :: Int -> [a] -> Either String [[a]] 

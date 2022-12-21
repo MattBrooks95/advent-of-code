@@ -53,3 +53,15 @@ chunk' sizeOfGroups (x:xs) count (y:ys) = if startNewGroup
     else chunk' sizeOfGroups xs (count + 1) ((x:y):ys)
     where
         startNewGroup = length (x:xs) `mod` sizeOfGroups == 0
+
+-- find an item from the list, and remove it
+-- returning the list of length N - 1 and the found item
+getItemFromList :: (a -> Bool) -> [a] -> (Maybe a, [a])
+getItemFromList _ [] = (Nothing, [])
+getItemFromList p list = go [] list
+    where
+        go prevCheckedItems [] = (Nothing, prevCheckedItems)
+        go prevCheckedItems (x:xs) =
+            if p x
+            then (Just x, prevCheckedItems++xs)
+            else go (prevCheckedItems++[x]) xs

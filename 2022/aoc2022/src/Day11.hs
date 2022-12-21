@@ -6,7 +6,12 @@ module Day11 (
 import Lib (
     groupLines
     , dropLeadingWhitespaceTxt
+    , getItemFromList
     )
+
+import Debug.Trace
+
+import System.Exit
 
 import Text.Regex.TDFA
 import Text.Read (
@@ -14,17 +19,23 @@ import Text.Read (
     )
 import Data.List (
     intercalate
+    --, sortBy
+    , sortOn
+    , find
     )
 import Data.Maybe (
     isNothing
     , fromJust
     )
 import Data.Either
+import Data.Ord
 import qualified Data.Text as T (
     pack
     , unpack
     , splitOn
+    , Text
     )
+import qualified Data.Map as M
 --import Debug.Trace
 
 run :: [String] -> IO ()
@@ -36,8 +47,9 @@ run inputLines = do
     if not $ null $ lefts monkeys then putStrLn $ "monkey parsing failures!:" ++ intercalate "\n" (lefts monkeys)
     else do
         print "parsed monkeys:"
-        mapM_ print monkeys
-
+        mapM_ print (rights monkeys)
+        print "####################"
+        print $ runSimulation (rights monkeys) 1
 
 type ItemWorry = Int
 type MonkeyId = Int
@@ -48,6 +60,7 @@ data Monkey = Monkey { mId::MonkeyId
     , onTrue::MonkeyId
     , onFalse::MonkeyId
     }
+
 instance Show Monkey where
     show (Monkey { .. }) = intercalate "\n" [
         "monkeyId:" ++ show mId
@@ -55,6 +68,49 @@ instance Show Monkey where
         , "throw to monkey:" ++ show onTrue ++ " when condition is true"
         , "throw to monkey:" ++ show onFalse ++ " when condition is false"
         ]
+
+-- outermost loop runs for 20 rounds
+-- inner loop runs a function that simulates the inspections of the active monkey
+-- this function returns (finishedInspectingMonkey, [rest of updated monkeys]
+-- when the inner loop finishes, round count is increased by one
+-- recurse, with the parameter list of monkeys being the (monkeyWhoFinishedInspectionLast, [list of update monkeys]
+runSimulation :: [Monkey] -> Int -> ([Monkey], M.Map MonkeyId Int)
+runSimulation [] _ = ([], M.empty)
+runSimulation monkeys 0 = (monkeys, M.empty)
+runSimulation monkeys roundCount = runSimulation' (sortOn mId monkeys) roundCount 0 (initMonkeyInspectCountMap monkeys)
+
+initMonkeyInspectCountMap :: [Monkey] -> M.Map MonkeyId Int
+initMonkeyInspectCountMap monkeys = M.fromList (map (\x -> (mId x, 0)) monkeys)
+
+runSimulation' :: [Monkey] -> Int -> MonkeyId -> M.Map MonkeyId Int -> ([Monkey], M.Map MonkeyId Int)
+runSimulation' monkeys 0 _ inspectCounts = (monkeys, inspectCounts)
+runSimulation' monkeys roundCount activeMonkeyId inspectCounts =
+    let (newActiveMonkey, otherMonkeys) = getItemFromList (\x -> mId x == activeMonkeyId) monkeys in
+        case newActiveMonkey of
+            Just m -> let (updatedActiveMonkey, updatedMonkeys, inspectionCount) = doInspectionLoop otherMonkeys m 0 (length (items m) - 1) in
+                runSimulation' (sortOn mId $ updatedActiveMonkey:updatedMonkeys) roundCount (activeMonkeyId + 1) (M.adjust (+ inspectionCount) activeMonkeyId inspectCounts)
+            Nothing -> runSimulation' monkeys (roundCount - 1) 0 inspectCounts
+
+doInspectionLoop :: [Monkey] -> Monkey -> Int -> Int -> (Monkey, [Monkey], Int)
+doInspectionLoop otherMonkeys activeMonkey inspectCount inspectIndex = do
+    -- TODO make sure inspect item is the new worry value
+    if inspectIndex < 0 then (activeMonkey, otherMonkeys, inspectCount)
+    else
+        let inspectItem = items activeMonkey !! inspectIndex in 
+        let newInspectItemValue = lessenWorry (inspectOperation activeMonkey inspectItem) in
+        let testResult = test activeMonkey inspectItem in
+        let targetMonkeyId = if testResult then onTrue activeMonkey else onFalse activeMonkey in
+        let updateTargetMonkeyOperation = addItemToMonkey targetMonkeyId newInspectItemValue in
+        doInspectionLoop (map updateTargetMonkeyOperation otherMonkeys) (activeMonkey { items=init (items activeMonkey) }) (inspectCount + 1) (inspectIndex - 1)
+
+lessenWorry :: Int -> Int
+lessenWorry worry = floor ((fromIntegral worry :: Double) / 3)
+
+addItemToMonkey :: MonkeyId -> ItemWorry -> Monkey -> Monkey
+addItemToMonkey targetMonkeyId itemVal monkey =
+    if mId monkey == targetMonkeyId
+    then trace ("add item:" ++ show itemVal ++ " to monkey:" ++ show (mId monkey)) (monkey { items=items monkey++[itemVal] })
+    else monkey
 
 parseMonkey :: [String] -> Either String Monkey
 parseMonkey inputLines = do
@@ -73,7 +129,6 @@ parseMonkey inputLines = do
         , onFalse=throwOnFalse
     }
 
-
 parseMonkeyId :: String -> Either String MonkeyId
 parseMonkeyId str = let splitResults = T.splitOn (T.pack " ") (T.pack str) in
     if length splitResults /= 2 then Left $ "monkey id line wasn't able to be split:" ++ str
@@ -89,18 +144,26 @@ parseItemsList str = let readInts = map readMaybe matches :: [Maybe Int] in
         matches = getAllTextMatches (str =~ "[[:digit:]]+") :: [String]
 
 parseOperation :: String -> Either String (ItemWorry -> ItemWorry)
-parseOperation str = let matches = T.splitOn (T.pack "=") (T.pack str) in
-    if length matches < 2
-    then Left ("not enough matches:" ++ str)
-    else let splitOp = T.splitOn (T.pack " ") (dropLeadingWhitespaceTxt (last matches)) in
-        if length splitOp /= 3
-        then Left ("operation split did not yield three results:" ++ ((T.unpack . last) matches))
-        else let operator = splitOp !! 1 in
-            let operand2 = read (T.unpack (last splitOp)) in
-                case T.unpack operator of
-                    "+" -> Right (+ operand2)
-                    "*" -> Right (* operand2)
-                    _ -> Left "bad operator"
+parseOperation str = do
+    matches <- if length firstSplitResult < 2 then Left ("not enough results after split:" ++ str) else Right firstSplitResult
+    splitOp <- splitOperationLine (matches !! 1)
+    operator <- case T.unpack $ splitOp !! 1 of
+        "+" -> Right (+)
+        "*" -> Right (*)
+        failed -> Left ("couldn't parse operator:" ++ failed)
+    let operand2ReadTarget = T.unpack (last splitOp)
+    case readMaybe operand2ReadTarget :: Maybe Int of
+        Just literalValue -> Right $ operator literalValue
+        Nothing -> if operand2ReadTarget == "old"
+            then Right (\x -> x `operator` x)
+            else Left "bad operand 2"
+
+    where
+        firstSplitResult = T.splitOn (T.pack "=") (T.pack str)
+
+splitOperationLine :: T.Text -> Either String [T.Text]
+splitOperationLine str = let splitOp = T.splitOn (T.pack " ") (dropLeadingWhitespaceTxt str) in
+    if length splitOp /= 3 then Left ("not enough matches:" ++ T.unpack str) else Right splitOp
 
 parseTest :: String -> Either String (ItemWorry -> Bool)
 parseTest str = let numberMatch = str =~ "[[:digit:]]+" :: String in
@@ -113,4 +176,3 @@ parseTargetMonkeyId :: String -> Either String MonkeyId
 parseTargetMonkeyId str = case readMaybe (str =~ "[[:digit:]]+") :: Maybe Int of
     Just monkeyId -> Right monkeyId
     Nothing -> Left $ "couldn't get target monkeyId from:" ++ str
-    

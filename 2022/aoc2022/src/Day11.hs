@@ -87,21 +87,21 @@ runSimulation' monkeys 0 _ inspectCounts = (monkeys, inspectCounts)
 runSimulation' monkeys roundCount activeMonkeyId inspectCounts =
     let (newActiveMonkey, otherMonkeys) = getItemFromList (\x -> mId x == activeMonkeyId) monkeys in
         case newActiveMonkey of
-            Just m -> let (updatedActiveMonkey, updatedMonkeys, inspectionCount) = doInspectionLoop otherMonkeys m 0 (length (items m) - 1) in
+            Just m -> let (updatedActiveMonkey, updatedMonkeys, inspectionCount) = doInspectionLoop otherMonkeys m 0 in
                 runSimulation' (sortOn mId $ updatedActiveMonkey:updatedMonkeys) roundCount (activeMonkeyId + 1) (M.adjust (+ inspectionCount) activeMonkeyId inspectCounts)
             Nothing -> runSimulation' monkeys (roundCount - 1) 0 inspectCounts
 
-doInspectionLoop :: [Monkey] -> Monkey -> Int -> Int -> (Monkey, [Monkey], Int)
-doInspectionLoop otherMonkeys activeMonkey inspectCount inspectIndex = do
+doInspectionLoop :: [Monkey] -> Monkey -> Int -> (Monkey, [Monkey], Int)
+doInspectionLoop otherMonkeys activeMonkey@(Monkey { items=itemsList }) inspectCount = do
     -- TODO make sure inspect item is the new worry value
-    if inspectIndex < 0 then (activeMonkey, otherMonkeys, inspectCount)
+    if null itemsList then (activeMonkey, otherMonkeys, inspectCount)
     else
-        let inspectItem = items activeMonkey !! inspectIndex in 
+        let inspectItem = trace("monkey:" ++ show (mId activeMonkey) ++ " inspects item:" ++ show (head itemsList)) head itemsList in 
         let newInspectItemValue = lessenWorry (inspectOperation activeMonkey inspectItem) in
-        let testResult = test activeMonkey inspectItem in
+        let testResult = test activeMonkey newInspectItemValue in
         let targetMonkeyId = if testResult then onTrue activeMonkey else onFalse activeMonkey in
         let updateTargetMonkeyOperation = addItemToMonkey targetMonkeyId newInspectItemValue in
-        doInspectionLoop (map updateTargetMonkeyOperation otherMonkeys) (activeMonkey { items=init (items activeMonkey) }) (inspectCount + 1) (inspectIndex - 1)
+        doInspectionLoop (map updateTargetMonkeyOperation otherMonkeys) (activeMonkey { items=tail itemsList }) (inspectCount + 1) 
 
 lessenWorry :: Int -> Int
 lessenWorry worry = floor ((fromIntegral worry :: Double) / 3)

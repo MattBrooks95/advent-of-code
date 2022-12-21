@@ -21,7 +21,9 @@ import Data.List (
     intercalate
     --, sortBy
     , sortOn
+    , sortBy
     , find
+    , sort
     )
 import Data.Maybe (
     isNothing
@@ -49,7 +51,11 @@ run inputLines = do
         print "parsed monkeys:"
         mapM_ print (rights monkeys)
         print "####################"
-        print $ runSimulation (rights monkeys) 1
+        let result@(monkeyList, countMap) = runSimulation (rights monkeys) 20
+        print $ result
+        let twoMostInspections = take 2 $ sortBy (\x y -> Down x `compare` Down y) (map snd (M.toList countMap))
+        print $ "two mostInspections:" ++ show twoMostInspections
+        print $ "monkey business:" ++ show (product twoMostInspections)
 
 type ItemWorry = Int
 type MonkeyId = Int

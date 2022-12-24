@@ -24,6 +24,7 @@ dependencies:
 - containers == 0.6.4.1
 - text == 1.2.5.0
 - regex-tdfa
+- vector
 
 ghc-options:
 - -Wall

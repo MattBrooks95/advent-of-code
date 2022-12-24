@@ -65,3 +65,11 @@ getItemFromList p list = go [] list
             if p x
             then (Just x, prevCheckedItems++xs)
             else go (prevCheckedItems++[x]) xs
+
+indexedList :: [a] -> [(a, Int)]
+indexedList [] = []
+indexedList origList@(_:_) = go origList 0 []
+    where
+        go :: [a] -> Int -> [(a, Int)] -> [(a, Int)]
+        go [] _ acc = reverse acc 
+        go (x:xs) currIdx acc = go xs (currIdx + 1) ((x, currIdx):acc)

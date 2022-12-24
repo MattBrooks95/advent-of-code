@@ -48,6 +48,7 @@ library
     , containers ==0.6.4.1
     , regex-tdfa
     , text ==1.2.5.0
+    , vector
   default-language: Haskell2010
 
 executable aoc2022-exe
@@ -64,6 +65,7 @@ executable aoc2022-exe
     , directory
     , regex-tdfa
     , text ==1.2.5.0
+    , vector
   default-language: Haskell2010
 
 test-suite aoc2022-test
@@ -81,4 +83,5 @@ test-suite aoc2022-test
     , containers ==0.6.4.1
     , regex-tdfa
     , text ==1.2.5.0
+    , vector
   default-language: Haskell2010

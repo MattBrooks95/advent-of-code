@@ -63,7 +63,7 @@ findEnd :: V.Vector Node -> Char -> [Index] -> Index -> Maybe [Index]
 findEnd graph endChar visitedList startIdx = case thisNode of
     Nothing -> trace ("bad node idx:" ++ show startIdx) Nothing
     Just (Node c _ idx neighbors) ->
-        if startIdx `elem` visitedList then Nothing
+        if startIdx `elem` trace ("num visitedNodes:" ++ show (length visitedList)) visitedList then Nothing
         else
             if c == endChar
             then Just [idx]

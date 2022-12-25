@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module Day12 (
     run
     ) where
@@ -13,6 +14,8 @@ import Data.Char (
 import Data.Maybe
 
 import Debug.Trace
+
+import qualified Data.Set as S
 
 import Lib (
     indexedList
@@ -44,10 +47,10 @@ run inputLines = do
             -- TODO some nodes are having their height values swapped with
             -- the index somewhere...
             print nodesWithNeighbors
-            let path = findEnd nodesWithNeighbors 'E' [] sIdx
+            let path = findEnd nodesWithNeighbors 'E' S.empty sIdx
             case path of
-                Just p -> print $ "found path:" ++ show p ++ " of length:" ++ show (length p - 1)
-                Nothing -> print "couldn't find a path!!!!"
+                Right (_, p) -> print $ "found path:" ++ show p ++ " of length:" ++ show (length p - 1)
+                Left checkedNodes -> print ("couldn't find a path!!!!, checked:" ++ show checkedNodes)
             --print path
 
 -- I had to re-read the problem:
@@ -59,20 +62,42 @@ evaluateCharacter c = case c of
     'S' -> ord 'a'
     normLetter -> ord normLetter
 
-findEnd :: V.Vector Node -> Char -> [Index] -> Index -> Maybe [Index]
+-- Left -> didn't find a path, returns inspected nodes
+-- Right -> found the path, returns the indices of the path
+-- TODO visited list isn't really a visited list, it needs to be a "this is a dead-end" list
+findEnd :: V.Vector Node -> Char -> S.Set Index -> Index -> Either (S.Set Index) (S.Set Index, [Index])
 findEnd graph endChar visitedList startIdx = case thisNode of
-    Nothing -> trace ("bad node idx:" ++ show startIdx) Nothing
+    Nothing -> trace ("bad node idx:" ++ show startIdx) Left (S.insert startIdx visitedList)
     Just (Node c _ idx neighbors) ->
-        if startIdx `elem` trace ("num visitedNodes:" ++ show (length visitedList)) visitedList then Nothing
+        let canCheckNeighbors = filter (not . flip S.member visitedList) neighbors in
+        if trace ("checking:" ++ [c] ++ " " ++ show idx ++ " w/checkable neighbors" ++ show canCheckNeighbors ++ " already checked list:" ++ show visitedList) startIdx `elem` visitedList then Left visitedList
         else
             if c == endChar
-            then Just [idx]
-            else let possibleSolutions = map (findEnd graph endChar (idx:visitedList)) neighbors in
-                let solutions = L.sortOn length (catMaybes possibleSolutions) in
-                    if null solutions then Nothing else Just $ idx:head solutions
-                --Just $ idx:head 
+            then Right (visitedList, [idx])
+            else 
+                --let possibleSolutions = foldr (\x (deadEndIndices, foundPaths) -> case findEnd graph endChar (S.union deadEndIndices (S.union visitedList (S.fromList $ L.delete x canCheckNeighbors))) x of {
+                let possibleSolutions = foldr (\x (deadEndIndices, foundPaths) -> case findEnd graph endChar (S.union deadEndIndices visitedList) x of {
+                    Left newDeadEnds -> (S.union visitedList newDeadEnds, foundPaths);
+                    Right (oldDeadEnds, pathToAnswer) -> (S.insert x oldDeadEnds, foundPaths++[x:pathToAnswer]);
+                    }) (S.insert startIdx visitedList, []) canCheckNeighbors in
+                if not $ didSolutionExist possibleSolutions then Left (S.union visitedList (fst possibleSolutions))
+                else Right (S.insert startIdx (fst possibleSolutions), getShortestList (snd possibleSolutions))
+
     where
         thisNode = getNodeFromGraph graph startIdx
+        numVisitedNodes = show $ length visitedList
+
+didSolutionExist :: (S.Set Index, [[Index]]) -> Bool
+--didSolutionExist possibleSolutions = trace traceMsg (numPossibleSolutions /= 0)
+didSolutionExist possibleSolutions = numPossibleSolutions /= 0
+    where
+        traceMsg = show $ "num possible solutions:" ++ show numPossibleSolutions
+        numPossibleSolutions = (sum . map length . snd) possibleSolutions
+
+getShortestList :: Show a => [[a]] -> [a]
+getShortestList lists = trace ("sol length" ++ show (length (head lists)) ++ " solution lists:"++show sortedLists ++ "num lists" ++ show (length sortedLists)) (head sortedLists)
+    where
+        sortedLists = L.sortOn length lists
 
 makeGraph :: Int -> V.Vector LabeledChar -> V.Vector Node
 makeGraph numItemsPerRow labeledNodes = findNeighbors numItemsPerRow 0 labeledNodes V.empty

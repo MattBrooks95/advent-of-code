@@ -27,6 +27,22 @@ import qualified Data.List as L
 type LabeledChar = (Char, Int, Index)
 type Index = Int
 data Node = Node Char Int Index [Index] deriving (Show)
+nIndex (Node _ _ idx _) = idx
+
+-- a node with it's distance to the endpoint and which path to take
+data PathNode = PathNode Node (Int, Index) | Null | Unchecked deriving (Show)
+pNodeIsNull (PathNode _ _) = False
+pNodeIsNull Unchecked = False
+pNodeIsNull Null = True
+
+pNodeIdx (PathNode (Node _ _ idx _) _) = Just idx
+pNodeIdx Unchecked = Nothing
+pNodeIdx Null = Nothing
+
+pathNodeLength :: PathNode -> Maybe Int
+pathNodeLength Null = Nothing
+pathNodeLength Unchecked = Nothing
+pathNodeLength (PathNode _ (len, _)) = Just len
 
 run :: [String] -> IO ()
 run inputLines = do
@@ -47,11 +63,48 @@ run inputLines = do
             -- TODO some nodes are having their height values swapped with
             -- the index somewhere...
             print nodesWithNeighbors
-            let path = findEnd nodesWithNeighbors 'E' S.empty sIdx
-            case path of
-                Right (_, p) -> print $ "found path:" ++ show p ++ " of length:" ++ show (length p - 1)
-                Left checkedNodes -> print ("couldn't find a path!!!!, checked:" ++ show checkedNodes)
+            let graphWithDistances = makeGraphWithDistances nodesWithNeighbors (V.replicate (length nodesWithNeighbors) Unchecked) 'E' (trace ("starting with:" ++ show sIdx) sIdx) S.empty
+            print graphWithDistances
+            print $ "shortest path length:" ++ show (pathNodeLength $ graphWithDistances V.! sIdx)
+            --let path = findEnd nodesWithNeighbors 'E' S.empty sIdx
+            --case path of
+            --    Right (_, p) -> print $ "found path:" ++ show p ++ " of length:" ++ show (length p - 1)
+            --    Left checkedNodes -> print ("couldn't find a path!!!!, checked:" ++ show checkedNodes)
             --print path
+
+makeGraphWithDistances :: V.Vector Node -> V.Vector PathNode -> Char -> Int -> S.Set Int -> V.Vector PathNode
+makeGraphWithDistances graphIn graphOut endChar startIndex alreadyVisited =
+    let thisNode@(Node c _ idx neighbors) = graphIn V.! startIndex in
+    let thisPathNode = graphOut V.! startIndex in
+        case thisPathNode of
+            Null -> graphOut
+            PathNode _ _ -> graphOut
+            Unchecked ->
+                if trace (show alreadyVisited) c == endChar then V.update graphOut $ V.singleton (idx, PathNode thisNode (0, idx))
+                else
+                    let unvisitedNeighbors = filter (\x -> not (S.member x alreadyVisited)) neighbors in
+                    if null unvisitedNeighbors then V.update graphOut $ V.singleton (idx, trace ("no unvisited for node: " ++ show idx ++ " " ++ [c]) Null)
+                    else
+                        let updatedSubGraph = foldr (\x y -> makeGraphWithDistances graphIn y endChar x (S.union alreadyVisited (S.fromList (startIndex:L.delete x neighbors)))) graphOut neighbors in
+                        --let updatedSubGraph = foldr (\x y -> makeGraphWithDistances graphIn y endChar x (S.insert idx alreadyVisited)) graphOut neighbors in
+                        let shortestPathNeighbor = getShortestPathNeighbor neighbors updatedSubGraph in
+                            case trace ("looking at idx: " ++ show startIndex ++ "'s shortestNeighbor" ++ show shortestPathNeighbor) shortestPathNeighbor of
+                                Nothing -> V.update updatedSubGraph $ V.singleton (idx, Null)
+                                Just shortest ->
+                                    V.update updatedSubGraph $ V.singleton (idx, (PathNode thisNode ((fromJust . pathNodeLength) shortest + 1, (fromJust . pNodeIdx) shortest)))
+
+getShortestPathNeighbor :: [Index] -> V.Vector PathNode -> Maybe PathNode
+getShortestPathNeighbor neighborIndices graph = let neighborNodes = map (graph V.!) neighborIndices in
+    if null $ filter (not . pNodeIsNull) neighborNodes then Nothing
+    else 
+        --head $ L.sortBy compareNodeLengths (filter (\case { PathNode _ _ -> True; Null -> False; }) neighborNodes)
+        Just $ head $ L.sortBy compareNodeLengths (filter (\case { PathNode _ _ -> True; Null -> False; }) neighborNodes)
+
+
+compareNodeLengths :: PathNode -> PathNode -> Ordering
+compareNodeLengths Null (PathNode _ _) = GT
+compareNodeLengths (PathNode _ _) Null = LT
+compareNodeLengths (PathNode _ (pathA, _)) (PathNode _ (pathB, _)) = pathA `compare` pathB
 
 -- I had to re-read the problem:
 --    "Your current position (S) has elevation a, and the location that
@@ -65,27 +118,27 @@ evaluateCharacter c = case c of
 -- Left -> didn't find a path, returns inspected nodes
 -- Right -> found the path, returns the indices of the path
 -- TODO visited list isn't really a visited list, it needs to be a "this is a dead-end" list
-findEnd :: V.Vector Node -> Char -> S.Set Index -> Index -> Either (S.Set Index) (S.Set Index, [Index])
-findEnd graph endChar visitedList startIdx = case thisNode of
-    Nothing -> trace ("bad node idx:" ++ show startIdx) Left (S.insert startIdx visitedList)
-    Just (Node c _ idx neighbors) ->
-        let canCheckNeighbors = filter (not . flip S.member visitedList) neighbors in
-        if trace ("checking:" ++ [c] ++ " " ++ show idx ++ " w/checkable neighbors" ++ show canCheckNeighbors ++ " already checked list:" ++ show visitedList) startIdx `elem` visitedList then Left visitedList
-        else
-            if c == endChar
-            then Right (visitedList, [idx])
-            else 
-                --let possibleSolutions = foldr (\x (deadEndIndices, foundPaths) -> case findEnd graph endChar (S.union deadEndIndices (S.union visitedList (S.fromList $ L.delete x canCheckNeighbors))) x of {
-                let possibleSolutions = foldr (\x (deadEndIndices, foundPaths) -> case findEnd graph endChar (S.union deadEndIndices visitedList) x of {
-                    Left newDeadEnds -> (S.union visitedList newDeadEnds, foundPaths);
-                    Right (oldDeadEnds, pathToAnswer) -> (S.insert x oldDeadEnds, foundPaths++[x:pathToAnswer]);
-                    }) (S.insert startIdx visitedList, []) canCheckNeighbors in
-                if not $ didSolutionExist possibleSolutions then Left (S.union visitedList (fst possibleSolutions))
-                else Right (S.insert startIdx (fst possibleSolutions), getShortestList (snd possibleSolutions))
+--findEnd :: V.Vector Node -> Char -> S.Set Index -> Index -> Either (S.Set Index) (S.Set Index, [Index])
+--findEnd graph endChar visitedList startIdx = case thisNode of
+--    Nothing -> trace ("bad node idx:" ++ show startIdx) Left (S.insert startIdx visitedList)
+--    Just (Node c _ idx neighbors) ->
+--        let canCheckNeighbors = filter (not . flip S.member visitedList) neighbors in
+--        if trace ("checking:" ++ [c] ++ " " ++ show idx ++ " w/checkable neighbors" ++ show canCheckNeighbors ++ " already checked list:" ++ show visitedList) startIdx `elem` visitedList then Left visitedList
+--        else
+--            if c == endChar
+--            then Right (visitedList, [idx])
+--            else 
+--                --let possibleSolutions = foldr (\x (deadEndIndices, foundPaths) -> case findEnd graph endChar (S.union deadEndIndices (S.union visitedList (S.fromList $ L.delete x canCheckNeighbors))) x of {
+--                let possibleSolutions = foldr (\x (deadEndIndices, foundPaths) -> case findEnd graph endChar (S.union deadEndIndices visitedList) x of {
+--                    Left newDeadEnds -> (S.union visitedList newDeadEnds, foundPaths);
+--                    Right (oldDeadEnds, pathToAnswer) -> (S.insert x oldDeadEnds, foundPaths++[x:pathToAnswer]);
+--                    }) (S.insert startIdx visitedList, []) canCheckNeighbors in
+--                if not $ didSolutionExist possibleSolutions then Left (S.union visitedList (fst possibleSolutions))
+--                else Right (S.insert startIdx (fst possibleSolutions), getShortestList (snd possibleSolutions))
 
-    where
-        thisNode = getNodeFromGraph graph startIdx
-        numVisitedNodes = show $ length visitedList
+--    where
+--        thisNode = getNodeFromGraph graph startIdx
+--        numVisitedNodes = show $ length visitedList
 
 didSolutionExist :: (S.Set Index, [[Index]]) -> Bool
 --didSolutionExist possibleSolutions = trace traceMsg (numPossibleSolutions /= 0)

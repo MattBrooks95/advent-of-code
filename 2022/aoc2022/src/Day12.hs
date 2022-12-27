@@ -31,9 +31,11 @@ nIndex (Node _ _ idx _) = idx
 
 -- a node with it's distance to the endpoint and which path to take
 data PathNode = PathNode Node (Int, Index) | Null | Unchecked deriving (Show)
-pNodeIsNull (PathNode _ _) = False
-pNodeIsNull Unchecked = False
 pNodeIsNull Null = True
+pNodeIsNull _ = False
+
+pNodeIsChecked (PathNode _ _) = True
+pNodeIsChecked _ = False
 
 pNodeIdx (PathNode (Node _ _ idx _) _) = Just idx
 pNodeIdx Unchecked = Nothing
@@ -66,42 +68,58 @@ run inputLines = do
             let graphWithDistances = makeGraphWithDistances nodesWithNeighbors (V.replicate (length nodesWithNeighbors) Unchecked) 'E' (trace ("starting with:" ++ show sIdx) sIdx) S.empty
             print graphWithDistances
             print $ "shortest path length:" ++ show (pathNodeLength $ graphWithDistances V.! sIdx)
-            --let path = findEnd nodesWithNeighbors 'E' S.empty sIdx
-            --case path of
-            --    Right (_, p) -> print $ "found path:" ++ show p ++ " of length:" ++ show (length p - 1)
-            --    Left checkedNodes -> print ("couldn't find a path!!!!, checked:" ++ show checkedNodes)
-            --print path
+            --let shortestPath = getShortestPath 'E' graphWithDistances sIdx
+            let shortestPath = getShortestPath 'E' graphWithDistances 17
+            case shortestPath of 
+                Nothing -> print "no shortest path!"
+                Just sPath -> do
+                    print sPath
+                    print $ "shortest path length" ++ show (length sPath)
+
+getShortestPath :: Char -> V.Vector PathNode -> Int -> Maybe [Index]
+getShortestPath endChar graph sIdx = let (PathNode (Node c _ _ _) (dist, nextNode)) = graph V.! sIdx in
+    if endChar == c then Just [sIdx]
+    else 
+        let nextNodes = getShortestPath endChar graph nextNode in
+        case nextNodes of
+            Nothing -> Nothing
+            Just nextIndices -> Just $ sIdx:nextIndices
 
 makeGraphWithDistances :: V.Vector Node -> V.Vector PathNode -> Char -> Int -> S.Set Int -> V.Vector PathNode
 makeGraphWithDistances graphIn graphOut endChar startIndex alreadyVisited =
     let thisNode@(Node c _ idx neighbors) = graphIn V.! startIndex in
+    let neighborNodes = map (graphOut V.!) neighbors in
     let thisPathNode = graphOut V.! startIndex in
-        case thisPathNode of
+        case trace ("visiting idx:" ++ show startIndex ++ " node:" ++ show thisPathNode ++ " neighbors:" ++ show neighborNodes ++ " visited list:" ++ show alreadyVisited) thisPathNode of
             Null -> graphOut
             PathNode _ _ -> graphOut
             Unchecked ->
-                if trace (show alreadyVisited) c == endChar then V.update graphOut $ V.singleton (idx, PathNode thisNode (0, idx))
+                if c == endChar then V.update graphOut $ V.singleton (idx, PathNode thisNode (0, idx))
                 else
                     let unvisitedNeighbors = filter (\x -> not (S.member x alreadyVisited)) neighbors in
-                    if null unvisitedNeighbors then V.update graphOut $ V.singleton (idx, trace ("no unvisited for node: " ++ show idx ++ " " ++ [c]) Null)
+                    if null unvisitedNeighbors then V.update graphOut $ V.singleton (idx, Null)
                     else
                         let updatedSubGraph = foldr (\x y -> makeGraphWithDistances graphIn y endChar x (S.union alreadyVisited (S.fromList (startIndex:L.delete x neighbors)))) graphOut neighbors in
+                        --I don't understand why this infinite loops, the neighbors should be adding themselves to the alreadyVisited list during the fold
+                        --let updatedSubGraph = foldr (\x y -> makeGraphWithDistances graphIn y endChar x (S.insert startIndex alreadyVisited)) graphOut unvisitedNeighbors in
                         --let updatedSubGraph = foldr (\x y -> makeGraphWithDistances graphIn y endChar x (S.insert idx alreadyVisited)) graphOut neighbors in
                         let shortestPathNeighbor = getShortestPathNeighbor neighbors updatedSubGraph in
-                            case trace ("looking at idx: " ++ show startIndex ++ "'s shortestNeighbor" ++ show shortestPathNeighbor) shortestPathNeighbor of
+                            case shortestPathNeighbor of
                                 Nothing -> V.update updatedSubGraph $ V.singleton (idx, Null)
                                 Just shortest ->
-                                    V.update updatedSubGraph $ V.singleton (idx, (PathNode thisNode ((fromJust . pathNodeLength) shortest + 1, (fromJust . pNodeIdx) shortest)))
+                                    V.update updatedSubGraph $ V.singleton (idx, PathNode thisNode ((fromJust . pathNodeLength) shortest + 1, (fromJust . pNodeIdx) shortest))
 
 getShortestPathNeighbor :: [Index] -> V.Vector PathNode -> Maybe PathNode
 getShortestPathNeighbor neighborIndices graph = let neighborNodes = map (graph V.!) neighborIndices in
-    if null $ filter (not . pNodeIsNull) neighborNodes then Nothing
+    if null $ filter (pNodeIsChecked) neighborNodes then Nothing
     else 
-        --head $ L.sortBy compareNodeLengths (filter (\case { PathNode _ _ -> True; Null -> False; }) neighborNodes)
-        Just $ head $ L.sortBy compareNodeLengths (filter (\case { PathNode _ _ -> True; Null -> False; }) neighborNodes)
-
+        let shortestPathNeighbor = Just $ head $ L.sortBy compareNodeLengths neighborNodes in
+            trace ("neighbors:" ++ show neighborNodes ++ " shortestPath neighbor:" ++ show shortestPathNeighbor) shortestPathNeighbor
 
 compareNodeLengths :: PathNode -> PathNode -> Ordering
+compareNodeLengths Unchecked _ = GT
+compareNodeLengths _ Unchecked = LT
+compareNodeLengths Null Null = GT
 compareNodeLengths Null (PathNode _ _) = GT
 compareNodeLengths (PathNode _ _) Null = LT
 compareNodeLengths (PathNode _ (pathA, _)) (PathNode _ (pathB, _)) = pathA `compare` pathB

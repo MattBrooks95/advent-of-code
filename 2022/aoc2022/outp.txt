@@ -1,0 +1,157 @@
+starting with:0
+visiting idx:0 node:Unchecked neighbors:[Unchecked,Unchecked]
+visiting idx:1 node:Unchecked neighbors:[Unchecked,Null,Unchecked]
+visiting idx:2 node:Unchecked neighbors:[Unchecked,Null]
+visiting idx:1 node:Null neighbors:[Unchecked,Null,Null]
+visiting idx:10 node:Unchecked neighbors:[Null,Unchecked,Unchecked]
+visiting idx:9 node:Unchecked neighbors:[Null,Unchecked,Unchecked,Null]
+visiting idx:10 node:Null neighbors:[Null,Unchecked,Null]
+visiting idx:8 node:Unchecked neighbors:[Null,Unchecked,Null]
+visiting idx:9 node:Null neighbors:[Null,Unchecked,Null,Null]
+visiting idx:16 node:Unchecked neighbors:[Null,Unchecked]
+visiting idx:24 node:Unchecked neighbors:[Null,Unchecked]
+visiting idx:32 node:Unchecked neighbors:[Null,Unchecked]
+visiting idx:33 node:Unchecked neighbors:[Unchecked,Null]
+visiting idx:32 node:Null neighbors:[Null,Null]
+visiting idx:25 node:Unchecked neighbors:[Unchecked,Null,Null,Unchecked]
+visiting idx:26 node:Unchecked neighbors:[Unchecked,Unchecked,Null]
+visiting idx:25 node:Null neighbors:[Unchecked,Null,Null,Null]
+visiting idx:34 node:Unchecked neighbors:[Null,Null,Unchecked]
+visiting idx:35 node:Unchecked neighbors:[Null,Unchecked]
+visiting idx:36 node:Unchecked neighbors:[Null,Unchecked]
+visiting idx:37 node:Unchecked neighbors:[Null,Unchecked]
+visiting idx:38 node:Unchecked neighbors:[Null,Unchecked]
+visiting idx:39 node:Unchecked neighbors:[Unchecked,Null]
+visiting idx:38 node:Null neighbors:[Null,Null]
+visiting idx:31 node:Unchecked neighbors:[Unchecked,Null,Null]
+visiting idx:32 node:Null neighbors:[Null,Null]
+visiting idx:39 node:Null neighbors:[Null,Null]
+visiting idx:23 node:Unchecked neighbors:[Unchecked,Null,Null]
+visiting idx:24 node:Null neighbors:[Null,Null]
+visiting idx:31 node:Null neighbors:[Null,Null,Null]
+visiting idx:15 node:Unchecked neighbors:[Unchecked,Null,Null]
+visiting idx:16 node:Null neighbors:[Null,Null]
+visiting idx:23 node:Null neighbors:[Null,Null,Null]
+visiting idx:7 node:Unchecked neighbors:[Null,Unchecked,Null]
+visiting idx:8 node:Null neighbors:[Null,Null,Null]
+visiting idx:6 node:Unchecked neighbors:[Unchecked,Null]
+visiting idx:7 node:Null neighbors:[Null,Null,Null]
+visiting idx:5 node:Unchecked neighbors:[Unchecked,Null]
+visiting idx:6 node:Null neighbors:[Null,Null]
+visiting idx:4 node:Unchecked neighbors:[Unchecked,Null]
+visiting idx:5 node:Null neighbors:[Null,Null]
+visiting idx:3 node:Unchecked neighbors:[Unchecked,Null,Null]
+visiting idx:4 node:Null neighbors:[Null,Null]
+visiting idx:2 node:Null neighbors:[Null,Null]
+visiting idx:11 node:Unchecked neighbors:[Null,Unchecked,Null]
+visiting idx:10 node:Null neighbors:[Null,Unchecked,Null]
+visiting idx:19 node:Unchecked neighbors:[Null,Unchecked,Unchecked]
+visiting idx:18 node:Unchecked neighbors:[Null,Null,Unchecked]
+visiting idx:17 node:Unchecked neighbors:[Null,Null,Null,Null]
+visiting idx:18 node:Null neighbors:[Null,Null,Null]
+visiting idx:16 node:Null neighbors:[Null,Null]
+visiting idx:25 node:Null neighbors:[Null,Null,Null,Null]
+visiting idx:9 node:Null neighbors:[Null,Null,Null,Null]
+visiting idx:26 node:Null neighbors:[Null,Null,Null]
+visiting idx:10 node:Null neighbors:[Null,Null,Null]
+visiting idx:27 node:Unchecked neighbors:[Null,Null,Null,Unchecked]
+visiting idx:28 node:Unchecked neighbors:[Null,Null,Unchecked]
+visiting idx:29 node:Unchecked neighbors:[Null,Null,Unchecked]
+visiting idx:30 node:Unchecked neighbors:[Unchecked,Null,Null,Null]
+visiting idx:31 node:Null neighbors:[Null,Null,Null]
+visiting idx:29 node:Null neighbors:[Null,Null,Null]
+visiting idx:38 node:Null neighbors:[Null,Null]
+visiting idx:22 node:Unchecked neighbors:[Unchecked,Null,Null]
+visiting idx:23 node:Null neighbors:[Null,Null,Null]
+visiting idx:30 node:Null neighbors:[Null,Null,Null,Null]
+visiting idx:14 node:Unchecked neighbors:[Null,Null,Unchecked,Null]
+visiting idx:15 node:Null neighbors:[Null,Null,Null]
+visiting idx:13 node:Unchecked neighbors:[Null,Unchecked,Null]
+visiting idx:14 node:Null neighbors:[Null,Null,Null,Null]
+visiting idx:12 node:Unchecked neighbors:[Null,Unchecked,Null,Null]
+visiting idx:13 node:Null neighbors:[Null,Null,Null]
+visiting idx:11 node:Null neighbors:[Null,Null,Null]
+visiting idx:20 node:Unchecked neighbors:[Null,Null,Null,Unchecked]
+visiting idx:21 node:Unchecked neighbors:[Null,Null,Null,Null]
+visiting idx:19 node:Null neighbors:[Null,Null,Null]
+visiting idx:28 node:Null neighbors:[Null,Null,Null]
+visiting idx:12 node:Null neighbors:[Null,Null,Null,Null]
+neighbors:[Null,Null,Null,PathNode (Node 'E' 122 21 [13,29,20,22]) (0,21)] shortestPath neighbor:Just (PathNode (Node 'E' 122 21 [13,29,20,22]) (0,21))
+visiting idx:4 node:Null neighbors:[Null,Null]
+neighbors:[Null,PathNode (Node 'z' 122 20 [12,28,19,21]) (1,21),Null,Null] shortestPath neighbor:Just (PathNode (Node 'z' 122 20 [12,28,19,21]) (1,21))
+visiting idx:5 node:Null neighbors:[Null,Null]
+neighbors:[Null,PathNode (Node 'y' 121 12 [4,20,11,13]) (2,20),Null] shortestPath neighbor:Just (PathNode (Node 'y' 121 12 [4,20,11,13]) (2,20))
+visiting idx:22 node:Null neighbors:[Null,Null,Null]
+visiting idx:6 node:Null neighbors:[Null,Null]
+neighbors:[Null,Null,PathNode (Node 'x' 120 13 [5,12,14]) (3,12),Null] shortestPath neighbor:Just (PathNode (Node 'x' 120 13 [5,12,14]) (3,12))
+neighbors:[PathNode (Node 'x' 120 14 [6,22,13,15]) (4,13),Null,Null] shortestPath neighbor:Just (PathNode (Node 'x' 120 14 [6,22,13,15]) (4,13))
+neighbors:[PathNode (Node 'x' 120 22 [14,30,23]) (5,14),Null,Null,Null] shortestPath neighbor:Just (PathNode (Node 'x' 120 22 [14,30,23]) (5,14))
+visiting idx:28 node:Null neighbors:[Null,Null,Null]
+visiting idx:37 node:Null neighbors:[Null,Null]
+neighbors:[Null,Null,PathNode (Node 'w' 119 30 [22,38,29,31]) (6,22)] shortestPath neighbor:Just (PathNode (Node 'w' 119 30 [22,38,29,31]) (6,22))
+visiting idx:27 node:Null neighbors:[Null,Null,Null,Null]
+visiting idx:36 node:Null neighbors:[Null,Null]
+neighbors:[Null,Null,PathNode (Node 'v' 118 29 [37,28,30]) (7,30)] shortestPath neighbor:Just (PathNode (Node 'v' 118 29 [37,28,30]) (7,30))
+visiting idx:26 node:Null neighbors:[Null,Null,Null]
+visiting idx:35 node:Null neighbors:[Null,Null]
+visiting idx:19 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,Null,Null,PathNode (Node 'u' 117 28 [36,27,29]) (8,29)] shortestPath neighbor:Just (PathNode (Node 'u' 117 28 [36,27,29]) (8,29))
+visiting idx:11 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,PathNode (Node 't' 116 27 [19,35,26,28]) (9,28),Null] shortestPath neighbor:Just (PathNode (Node 't' 116 27 [19,35,26,28]) (9,28))
+visiting idx:3 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,PathNode (Node 's' 115 19 [11,27,18]) (10,27),Null] shortestPath neighbor:Just (PathNode (Node 's' 115 19 [11,27,18]) (10,27))
+neighbors:[PathNode (Node 'r' 114 11 [3,19,10]) (11,19),Null,Null] shortestPath neighbor:Just (PathNode (Node 'r' 114 11 [3,19,10]) (11,19))
+neighbors:[PathNode (Node 'q' 113 3 [11,2,4]) (12,11),Null] shortestPath neighbor:Just (PathNode (Node 'q' 113 3 [11,2,4]) (12,11))
+neighbors:[PathNode (Node 'p' 112 4 [3,5]) (13,3),Null] shortestPath neighbor:Just (PathNode (Node 'p' 112 4 [3,5]) (13,3))
+neighbors:[PathNode (Node 'o' 111 5 [4,6]) (14,4),Null] shortestPath neighbor:Just (PathNode (Node 'o' 111 5 [4,6]) (14,4))
+visiting idx:15 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,PathNode (Node 'n' 110 6 [5,7]) (15,5),Null] shortestPath neighbor:Just (PathNode (Node 'n' 110 6 [5,7]) (15,5))
+neighbors:[PathNode (Node 'm' 109 7 [15,6,8]) (16,6),Null,Null] shortestPath neighbor:Just (PathNode (Node 'm' 109 7 [15,6,8]) (16,6))
+neighbors:[PathNode (Node 'l' 108 15 [7,23,16]) (17,7),Null,Null] shortestPath neighbor:Just (PathNode (Node 'l' 108 15 [7,23,16]) (17,7))
+neighbors:[PathNode (Node 'k' 107 23 [15,31,24]) (18,15),Null,Null] shortestPath neighbor:Just (PathNode (Node 'k' 107 23 [15,31,24]) (18,15))
+neighbors:[PathNode (Node 'j' 106 31 [23,39,32]) (19,23),Null] shortestPath neighbor:Just (PathNode (Node 'j' 106 31 [23,39,32]) (19,23))
+visiting idx:37 node:Null neighbors:[Null,Null]
+neighbors:[Null,PathNode (Node 'i' 105 39 [31,38]) (20,31)] shortestPath neighbor:Just (PathNode (Node 'i' 105 39 [31,38]) (20,31))
+visiting idx:36 node:Null neighbors:[Null,Null]
+neighbors:[Null,PathNode (Node 'h' 104 38 [37,39]) (21,39)] shortestPath neighbor:Just (PathNode (Node 'h' 104 38 [37,39]) (21,39))
+visiting idx:35 node:Null neighbors:[Null,Null]
+neighbors:[Null,PathNode (Node 'g' 103 37 [36,38]) (22,38)] shortestPath neighbor:Just (PathNode (Node 'g' 103 37 [36,38]) (22,38))
+visiting idx:34 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,PathNode (Node 'f' 102 36 [35,37]) (23,37)] shortestPath neighbor:Just (PathNode (Node 'f' 102 36 [35,37]) (23,37))
+visiting idx:33 node:Null neighbors:[Null,Null]
+visiting idx:26 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,Null,PathNode (Node 'e' 101 35 [34,36]) (24,36)] shortestPath neighbor:Just (PathNode (Node 'e' 101 35 [34,36]) (24,36))
+visiting idx:18 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,PathNode (Node 'd' 100 34 [26,33,35]) (25,35),Null] shortestPath neighbor:Just (PathNode (Node 'd' 100 34 [26,33,35]) (25,35))
+visiting idx:24 node:Null neighbors:[Null,Null]
+visiting idx:33 node:Null neighbors:[Null,Null]
+visiting idx:17 node:Null neighbors:[Null,Null,Null,Null]
+neighbors:[Null,Null,Null,PathNode (Node 'c' 99 26 [18,34,25]) (26,34)] shortestPath neighbor:Just (PathNode (Node 'c' 99 26 [18,34,25]) (26,34))
+neighbors:[PathNode (Node 'c' 99 25 [17,33,24,26]) (27,26),Null] shortestPath neighbor:Just (PathNode (Node 'c' 99 25 [17,33,24,26]) (27,26))
+visiting idx:24 node:Null neighbors:[Null,Null]
+neighbors:[Null,PathNode (Node 'b' 98 33 [25,32]) (28,25)] shortestPath neighbor:Just (PathNode (Node 'b' 98 33 [25,32]) (28,25))
+visiting idx:16 node:Null neighbors:[Null,Null]
+neighbors:[Null,PathNode (Node 'a' 97 32 [24,33]) (29,33)] shortestPath neighbor:Just (PathNode (Node 'a' 97 32 [24,33]) (29,33))
+visiting idx:8 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,PathNode (Node 'a' 97 24 [16,32]) (30,32)] shortestPath neighbor:Just (PathNode (Node 'a' 97 24 [16,32]) (30,32))
+visiting idx:0 node:Null neighbors:[Null,Null]
+neighbors:[Null,PathNode (Node 'a' 97 16 [8,24]) (31,24),Null] shortestPath neighbor:Just (PathNode (Node 'a' 97 16 [8,24]) (31,24))
+visiting idx:17 node:Null neighbors:[Null,PathNode (Node 'c' 99 25 [17,33,24,26]) (27,26),PathNode (Node 'a' 97 16 [8,24]) (31,24),Null]
+visiting idx:1 node:Null neighbors:[Null,Null,Null]
+neighbors:[Null,Null,PathNode (Node 'a' 97 8 [0,16,9]) (32,16),Null] shortestPath neighbor:Just (PathNode (Node 'a' 97 8 [0,16,9]) (32,16))
+visiting idx:18 node:Null neighbors:[Null,PathNode (Node 'c' 99 26 [18,34,25]) (26,34),Null]
+visiting idx:2 node:Null neighbors:[Null,Null]
+neighbors:[Null,Null,PathNode (Node 'b' 98 9 [1,17,8,10]) (33,8)] shortestPath neighbor:Just (PathNode (Node 'b' 98 9 [1,17,8,10]) (33,8))
+neighbors:[PathNode (Node 'c' 99 10 [2,18,9]) (34,9),Null] shortestPath neighbor:Just (PathNode (Node 'c' 99 10 [2,18,9]) (34,9))
+visiting idx:0 node:Null neighbors:[PathNode (Node 'a' 97 8 [0,16,9]) (32,16),Null]
+visiting idx:9 node:PathNode (Node 'b' 98 9 [1,17,8,10]) (33,8) neighbors:[Null,Null,PathNode (Node 'a' 97 8 [0,16,9]) (32,16),PathNode (Node 'c' 99 10 [2,18,9]) (34,9)]
+neighbors:[PathNode (Node 'b' 98 9 [1,17,8,10]) (33,8),Null,PathNode (Node 'b' 98 2 [10,1]) (35,10)] shortestPath neighbor:Just (PathNode (Node 'b' 98 9 [1,17,8,10]) (33,8))
+visiting idx:8 node:PathNode (Node 'a' 97 8 [0,16,9]) (32,16) neighbors:[Null,PathNode (Node 'a' 97 16 [8,24]) (31,24),PathNode (Node 'b' 98 9 [1,17,8,10]) (33,8)]
+neighbors:[PathNode (Node 'a' 97 8 [0,16,9]) (32,16),PathNode (Node 'a' 97 1 [9,0,2]) (34,9)] shortestPath neighbor:Just (PathNode (Node 'a' 97 8 [0,16,9]) (32,16))
+"using path:/home/motoko/advent-of-code/2022/2022/inputs/day12-short.txt"
+"/home/motoko/advent-of-code/2022/2022/inputs/day12-short.txt"
+[Node 'S' 97 0 [8,1],Node 'a' 97 1 [9,0,2],Node 'b' 98 2 [10,1],Node 'q' 113 3 [11,2,4],Node 'p' 112 4 [3,5],Node 'o' 111 5 [4,6],Node 'n' 110 6 [5,7],Node 'm' 109 7 [15,6,8],Node 'a' 97 8 [0,16,9],Node 'b' 98 9 [1,17,8,10],Node 'c' 99 10 [2,18,9],Node 'r' 114 11 [3,19,10],Node 'y' 121 12 [4,20,11,13],Node 'x' 120 13 [5,12,14],Node 'x' 120 14 [6,22,13,15],Node 'l' 108 15 [7,23,16],Node 'a' 97 16 [8,24],Node 'c' 99 17 [9,25,16,18],Node 'c' 99 18 [10,26,17],Node 's' 115 19 [11,27,18],Node 'z' 122 20 [12,28,19,21],Node 'E' 122 21 [13,29,20,22],Node 'x' 120 22 [14,30,23],Node 'k' 107 23 [15,31,24],Node 'a' 97 24 [16,32],Node 'c' 99 25 [17,33,24,26],Node 'c' 99 26 [18,34,25],Node 't' 116 27 [19,35,26,28],Node 'u' 117 28 [36,27,29],Node 'v' 118 29 [37,28,30],Node 'w' 119 30 [22,38,29,31],Node 'j' 106 31 [23,39,32],Node 'a' 97 32 [24,33],Node 'b' 98 33 [25,32],Node 'd' 100 34 [26,33,35],Node 'e' 101 35 [34,36],Node 'f' 102 36 [35,37],Node 'g' 103 37 [36,38],Node 'h' 104 38 [37,39],Node 'i' 105 39 [31,38]]
+[PathNode (Node 'S' 97 0 [8,1]) (33,8),PathNode (Node 'a' 97 1 [9,0,2]) (34,9),PathNode (Node 'b' 98 2 [10,1]) (35,10),PathNode (Node 'q' 113 3 [11,2,4]) (12,11),PathNode (Node 'p' 112 4 [3,5]) (13,3),PathNode (Node 'o' 111 5 [4,6]) (14,4),PathNode (Node 'n' 110 6 [5,7]) (15,5),PathNode (Node 'm' 109 7 [15,6,8]) (16,6),PathNode (Node 'a' 97 8 [0,16,9]) (32,16),PathNode (Node 'b' 98 9 [1,17,8,10]) (33,8),PathNode (Node 'c' 99 10 [2,18,9]) (34,9),PathNode (Node 'r' 114 11 [3,19,10]) (11,19),PathNode (Node 'y' 121 12 [4,20,11,13]) (2,20),PathNode (Node 'x' 120 13 [5,12,14]) (3,12),PathNode (Node 'x' 120 14 [6,22,13,15]) (4,13),PathNode (Node 'l' 108 15 [7,23,16]) (17,7),PathNode (Node 'a' 97 16 [8,24]) (31,24),Null,Null,PathNode (Node 's' 115 19 [11,27,18]) (10,27),PathNode (Node 'z' 122 20 [12,28,19,21]) (1,21),PathNode (Node 'E' 122 21 [13,29,20,22]) (0,21),PathNode (Node 'x' 120 22 [14,30,23]) (5,14),PathNode (Node 'k' 107 23 [15,31,24]) (18,15),PathNode (Node 'a' 97 24 [16,32]) (30,32),PathNode (Node 'c' 99 25 [17,33,24,26]) (27,26),PathNode (Node 'c' 99 26 [18,34,25]) (26,34),PathNode (Node 't' 116 27 [19,35,26,28]) (9,28),PathNode (Node 'u' 117 28 [36,27,29]) (8,29),PathNode (Node 'v' 118 29 [37,28,30]) (7,30),PathNode (Node 'w' 119 30 [22,38,29,31]) (6,22),PathNode (Node 'j' 106 31 [23,39,32]) (19,23),PathNode (Node 'a' 97 32 [24,33]) (29,33),PathNode (Node 'b' 98 33 [25,32]) (28,25),PathNode (Node 'd' 100 34 [26,33,35]) (25,35),PathNode (Node 'e' 101 35 [34,36]) (24,36),PathNode (Node 'f' 102 36 [35,37]) (23,37),PathNode (Node 'g' 103 37 [36,38]) (22,38),PathNode (Node 'h' 104 38 [37,39]) (21,39),PathNode (Node 'i' 105 39 [31,38]) (20,31)]
+"shortest path length:Just 33"
+[0,8,16,24,32,33,25,26,34,35,36,37,38,39,31,23,15,7,6,5,4,3,11,19,27,28,29,30,22,14,13,12,20,21]
+"shortest path length34"

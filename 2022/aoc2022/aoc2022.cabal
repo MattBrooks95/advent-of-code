@@ -46,6 +46,7 @@ library
   build-depends:
       base >=4.7 && <5
     , containers ==0.6.4.1
+    , mtl
     , regex-tdfa
     , text ==1.2.5.0
     , vector
@@ -63,6 +64,7 @@ executable aoc2022-exe
     , base >=4.7 && <5
     , containers
     , directory
+    , mtl
     , regex-tdfa
     , text ==1.2.5.0
     , vector
@@ -81,6 +83,7 @@ test-suite aoc2022-test
     , aoc2022
     , base >=4.7 && <5
     , containers ==0.6.4.1
+    , mtl
     , regex-tdfa
     , text ==1.2.5.0
     , vector

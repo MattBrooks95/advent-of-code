@@ -67,8 +67,9 @@ run inputLines = do
             print $ "starting at index:" ++ show sIdx
             let altStartIdx = Just sIdx
             let useStartIdx = case altStartIdx of { Just x -> x; Nothing -> sIdx }
-            let answer = shortestPath nodesWithNeighbors 'E' useStartIdx S.empty
+            let answer = shortestPath nodesWithNeighbors 'E' useStartIdx S.empty (V.replicate (length nodesWithNeighbors) Nothing)
             print $ show answer
+            print $ show ((length . fst) answer)
 
 --            let graphWithDistances = makeGraphWithDistances nodesWithNeighbors (V.replicate (length nodesWithNeighbors) Unchecked) 'E' useStartIdx S.empty
 --            print graphWithDistances
@@ -82,20 +83,40 @@ run inputLines = do
 --                    print $ "shortest path length" ++ show (length sPath - 1)
 
 
-shortestPath :: V.Vector Node -> Char -> Index -> S.Set Index -> Maybe [(Int, [Index])]
-shortestPath graphIn endChar thisIdx alreadyVisited =
-    if S.member thisIdx alreadyVisited then Nothing
-    else
-        let newAlreadyVisited = S.insert thisIdx alreadyVisited in
-        case graphIn V.!? thisIdx of
-            Nothing -> trace ("bad index:" ++ show thisIdx) Nothing
-            Just thisNode@(Node c _ _ neighbors) ->
-                if c == endChar then Just [(0, [thisIdx])]
-                else let (_, neighborSolutions) = foldr (\x (done, answers) -> (S.insert x done, shortestPath graphIn endChar x (S.union newAlreadyVisited done):answers)) (S.empty, []) neighbors in
-                    let justSolutions = filter (not . null) $ catMaybes neighborSolutions in
-                    if null justSolutions then Nothing
-                    else let answerNeighbor = L.minimumBy (\listA listB -> (fst . head) listA `compare` (fst . head) listB) justSolutions in
-                        Just [((fst . head) answerNeighbor + 1, thisIdx:(snd . head) answerNeighbor)]
+-- trying to memoize the results of the evaluation of the sub trees to get a runtime that
+-- will actually finish
+-- the non-memoized solution works but seemingly will not terminate on the full input
+-- because it's constantly re-evaluated sub trees
+type Memo = V.Vector (Maybe [(Int, [Index])])
+shortestPath :: V.Vector Node -> Char -> Index -> S.Set Index -> Memo -> (Memo, Maybe [(Int, [Index])])
+shortestPath graphIn endChar thisIdx alreadyVisited memo =
+    case memo V.!? thisIdx of
+        Just pathInfo -> (memo, pathInfo)
+        Nothing ->
+            if S.member thisIdx alreadyVisited then (memo, Nothing)
+            else
+                let newAlreadyVisited = S.insert thisIdx alreadyVisited in
+                case graphIn V.!? thisIdx of
+                    Nothing -> trace ("bad index:" ++ show thisIdx) (memo, Nothing)
+                    Just thisNode@(Node c _ _ neighbors) ->
+                        if c == endChar then let newPath = Just [(0, [thisIdx])] in
+                            (V.update memo (V.singleton (thisIdx, newPath)), newPath)
+                        --else let (_, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> (S.insert x done, shortestPath graphIn endChar x (S.union newAlreadyVisited done) prevMemo:answers)) (S.empty, memo, []) neighbors in
+                        else let (_, finalMemo, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> processNeighbor (shortestPath graphIn endChar) answers x prevDone prevMemo) (S.empty, memo, []) neighbors in
+                            let justSolutions = filter (not . null) $ catMaybes neighborSolutions in
+                            if null justSolutions then (V.update finalMemo (V.singleton (thisIdx, Nothing)), Nothing)
+                            else let answerNeighbor = L.minimumBy (\listA listB -> (fst . head) listA `compare` (fst . head) listB) justSolutions in
+                                let myCount = (fst . head) answerNeighbor + 1 in
+                                let myPathList = thisIdx:(snd . head) answerNeighbor in
+                                (V.update finalMemo (V.singleton (thisIdx, Just [(myCount, myPathList)])), Just [(myCount, myPathList)])
+
+processNeighbor :: (Index -> S.Set Index -> Memo -> (Memo, Maybe [(Int, [Index])])) -> [Maybe [(Int, [Index])]] -> Index -> S.Set Index -> Memo -> (S.Set Index, Memo, [Maybe [(Int, [Index])]])
+processNeighbor runNeighborFunc otherSolutions nextIdx useAlreadyVisited useMemo =
+    let (newMemo, newAnswer) = runNeighborFunc nextIdx useAlreadyVisited useMemo in
+    let newAlreadyVisited = S.insert nextIdx useAlreadyVisited in
+    --let newMemo = V.update useMemo (V.singleton (nextIdx, newAnswer)) in
+    let newAnswerList = newAnswer:otherSolutions in
+    (newAlreadyVisited, newMemo, newAnswerList)
 
 getShortestPath :: Char -> V.Vector PathNode -> Int -> Maybe [Index]
 getShortestPath endChar graph sIdx =

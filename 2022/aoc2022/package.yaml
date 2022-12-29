@@ -25,6 +25,7 @@ dependencies:
 - text == 1.2.5.0
 - regex-tdfa
 - vector
+- mtl 
 
 ghc-options:
 - -Wall

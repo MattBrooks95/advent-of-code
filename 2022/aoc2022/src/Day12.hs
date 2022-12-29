@@ -11,6 +11,8 @@ import Data.Char (
     ord
     )
 
+import Data.Foldable
+
 import Data.Maybe
 
 import Debug.Trace
@@ -67,9 +69,11 @@ run inputLines = do
             print $ "starting at index:" ++ show sIdx
             let altStartIdx = Just sIdx
             let useStartIdx = case altStartIdx of { Just x -> x; Nothing -> sIdx }
-            let answer = shortestPath nodesWithNeighbors 'E' useStartIdx S.empty (V.replicate (length nodesWithNeighbors) Nothing)
-            print $ show answer
-            print $ show ((length . fst) answer)
+            let (_, answers) = shortestPath nodesWithNeighbors 'E' useStartIdx S.empty (V.replicate (length nodesWithNeighbors) Nothing)
+            case answers of
+                Nothing -> print "no answer!!! = ("
+                Just answer -> do
+                    print $ show (head answer)
 
 --            let graphWithDistances = makeGraphWithDistances nodesWithNeighbors (V.replicate (length nodesWithNeighbors) Unchecked) 'E' useStartIdx S.empty
 --            print graphWithDistances
@@ -91,8 +95,8 @@ type Memo = V.Vector (Maybe [(Int, [Index])])
 shortestPath :: V.Vector Node -> Char -> Index -> S.Set Index -> Memo -> (Memo, Maybe [(Int, [Index])])
 shortestPath graphIn endChar thisIdx alreadyVisited memo =
     case memo V.!? thisIdx of
-        Just pathInfo -> (memo, pathInfo)
-        Nothing ->
+        Just memoAnswer@(Just _) -> (memo, memoAnswer)
+        _ ->
             if S.member thisIdx alreadyVisited then (memo, Nothing)
             else
                 let newAlreadyVisited = S.insert thisIdx alreadyVisited in
@@ -102,8 +106,10 @@ shortestPath graphIn endChar thisIdx alreadyVisited memo =
                         if c == endChar then let newPath = Just [(0, [thisIdx])] in
                             (V.update memo (V.singleton (thisIdx, newPath)), newPath)
                         --else let (_, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> (S.insert x done, shortestPath graphIn endChar x (S.union newAlreadyVisited done) prevMemo:answers)) (S.empty, memo, []) neighbors in
-                        else let (_, finalMemo, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> processNeighbor (shortestPath graphIn endChar) answers x prevDone prevMemo) (S.empty, memo, []) neighbors in
+                        else let (_, finalMemo, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> processNeighbor (shortestPath graphIn endChar) answers x prevDone prevMemo) (newAlreadyVisited, memo, []) neighbors in
+                        --else let (_, finalMemo, neighborSolutions) = foldl' (\(prevDone, prevMemo, answers) x -> processNeighbor (shortestPath graphIn endChar) answers x prevDone prevMemo) (newAlreadyVisited, memo, []) neighbors in
                             let justSolutions = filter (not . null) $ catMaybes neighborSolutions in
+                            --if null justSolutions then (V.update finalMemo (V.singleton (thisIdx, Nothing)), Nothing)
                             if null justSolutions then (V.update finalMemo (V.singleton (thisIdx, Nothing)), Nothing)
                             else let answerNeighbor = L.minimumBy (\listA listB -> (fst . head) listA `compare` (fst . head) listB) justSolutions in
                                 let myCount = (fst . head) answerNeighbor + 1 in

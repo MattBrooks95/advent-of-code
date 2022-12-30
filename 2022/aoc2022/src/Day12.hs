@@ -91,13 +91,15 @@ run inputLines = do
 -- will actually finish
 -- the non-memoized solution works but seemingly will not terminate on the full input
 -- because it's constantly re-evaluated sub trees
+-- the memoized version doesn't work either...
+-- it kind of looks like it's looping
 type Memo = V.Vector (Maybe [(Int, [Index])])
 shortestPath :: V.Vector Node -> Char -> Index -> S.Set Index -> Memo -> (Memo, Maybe [(Int, [Index])])
 shortestPath graphIn endChar thisIdx alreadyVisited memo =
-    case memo V.!? thisIdx of
-        Just memoAnswer@(Just _) -> (memo, memoAnswer)
+    case memo V.!? trace ("thisIdx:" ++ show thisIdx) thisIdx of
+        Just memoAnswer@(Just _) -> (memo, trace ("memoed answer:" ++ show memoAnswer) memoAnswer)
         _ ->
-            if S.member thisIdx alreadyVisited then (memo, Nothing)
+            if S.member thisIdx (trace (show $ "num alreadyVisited" ++ (show . length) alreadyVisited) alreadyVisited) then (memo, Nothing)
             else
                 let newAlreadyVisited = S.insert thisIdx alreadyVisited in
                 case graphIn V.!? thisIdx of

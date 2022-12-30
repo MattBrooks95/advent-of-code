@@ -67,13 +67,13 @@ run inputLines = do
             print nodesWithNeighbors
             --let graphWithDistances = makeGraphWithDistances nodesWithNeighbors (V.replicate (length nodesWithNeighbors) Unchecked) 'E' (trace ("starting with:" ++ show sIdx) sIdx) S.empty
             print $ "starting at index:" ++ show sIdx
-            let altStartIdx = Just sIdx
-            let useStartIdx = case altStartIdx of { Just x -> x; Nothing -> sIdx }
-            let (_, answers) = shortestPath nodesWithNeighbors 'E' useStartIdx S.empty (V.replicate (length nodesWithNeighbors) Nothing)
-            case answers of
-                Nothing -> print "no answer!!! = ("
-                Just answer -> do
-                    print $ show (head answer)
+            let useStartIdx = sIdx
+            print $ "starting from" ++ show useStartIdx
+            --let (_, answers) = shortestPath nodesWithNeighbors 'E' useStartIdx S.empty (V.replicate (length nodesWithNeighbors) Nothing)
+            --case answers of
+            --    Nothing -> print "no answer!!! = ("
+            --    Just answer -> do
+            --        print $ show (head answer)
 
 --            let graphWithDistances = makeGraphWithDistances nodesWithNeighbors (V.replicate (length nodesWithNeighbors) Unchecked) 'E' useStartIdx S.empty
 --            print graphWithDistances
@@ -93,53 +93,53 @@ run inputLines = do
 -- because it's constantly re-evaluated sub trees
 -- the memoized version doesn't work either...
 -- it kind of looks like it's looping
-type Memo = V.Vector (Maybe [(Int, [Index])])
-shortestPath :: V.Vector Node -> Char -> Index -> S.Set Index -> Memo -> (Memo, Maybe [(Int, [Index])])
-shortestPath graphIn endChar thisIdx alreadyVisited memo =
-    case memo V.!? trace ("thisIdx:" ++ show thisIdx) thisIdx of
-        Just memoAnswer@(Just _) -> (memo, trace ("memoed answer:" ++ show memoAnswer) memoAnswer)
-        _ ->
-            if S.member thisIdx (trace (show $ "num alreadyVisited" ++ (show . length) alreadyVisited) alreadyVisited) then (memo, Nothing)
-            else
-                let newAlreadyVisited = S.insert thisIdx alreadyVisited in
-                case graphIn V.!? thisIdx of
-                    Nothing -> trace ("bad index:" ++ show thisIdx) (memo, Nothing)
-                    Just thisNode@(Node c _ _ neighbors) ->
-                        if c == endChar then let newPath = Just [(0, [thisIdx])] in
-                            (V.update memo (V.singleton (thisIdx, newPath)), newPath)
-                        --else let (_, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> (S.insert x done, shortestPath graphIn endChar x (S.union newAlreadyVisited done) prevMemo:answers)) (S.empty, memo, []) neighbors in
-                        else let (_, finalMemo, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> processNeighbor (shortestPath graphIn endChar) answers x prevDone prevMemo) (newAlreadyVisited, memo, []) neighbors in
-                        --else let (_, finalMemo, neighborSolutions) = foldl' (\(prevDone, prevMemo, answers) x -> processNeighbor (shortestPath graphIn endChar) answers x prevDone prevMemo) (newAlreadyVisited, memo, []) neighbors in
-                            let justSolutions = filter (not . null) $ catMaybes neighborSolutions in
-                            --if null justSolutions then (V.update finalMemo (V.singleton (thisIdx, Nothing)), Nothing)
-                            if null justSolutions then (V.update finalMemo (V.singleton (thisIdx, Nothing)), Nothing)
-                            else let answerNeighbor = L.minimumBy (\listA listB -> (fst . head) listA `compare` (fst . head) listB) justSolutions in
-                                let myCount = (fst . head) answerNeighbor + 1 in
-                                let myPathList = thisIdx:(snd . head) answerNeighbor in
-                                (V.update finalMemo (V.singleton (thisIdx, Just [(myCount, myPathList)])), Just [(myCount, myPathList)])
+--type Memo = V.Vector (Maybe [(Int, [Index])])
+--shortestPath :: V.Vector Node -> Char -> Index -> S.Set Index -> Memo -> (Memo, Maybe [(Int, [Index])])
+--shortestPath graphIn endChar thisIdx alreadyVisited memo =
+--    case memo V.!? trace ("thisIdx:" ++ show thisIdx) thisIdx of
+--        Just memoAnswer@(Just _) -> (memo, trace ("memoed answer:" ++ show memoAnswer) memoAnswer)
+--        _ ->
+--            if S.member thisIdx (trace (show $ "num alreadyVisited" ++ (show . length) alreadyVisited) alreadyVisited) then (memo, Nothing)
+--            else
+--                let newAlreadyVisited = S.insert thisIdx alreadyVisited in
+--                case graphIn V.!? thisIdx of
+--                    Nothing -> trace ("bad index:" ++ show thisIdx) (memo, Nothing)
+--                    Just thisNode@(Node c _ _ neighbors) ->
+--                        if c == endChar then let newPath = Just [(0, [thisIdx])] in
+--                            (V.update memo (V.singleton (thisIdx, newPath)), newPath)
+--                        --else let (_, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> (S.insert x done, shortestPath graphIn endChar x (S.union newAlreadyVisited done) prevMemo:answers)) (S.empty, memo, []) neighbors in
+--                        else let (_, finalMemo, neighborSolutions) = foldr (\x (prevDone, prevMemo, answers) -> processNeighbor (shortestPath graphIn endChar) answers x prevDone prevMemo) (newAlreadyVisited, memo, []) neighbors in
+--                        --else let (_, finalMemo, neighborSolutions) = foldl' (\(prevDone, prevMemo, answers) x -> processNeighbor (shortestPath graphIn endChar) answers x prevDone prevMemo) (newAlreadyVisited, memo, []) neighbors in
+--                            let justSolutions = filter (not . null) $ catMaybes neighborSolutions in
+--                            --if null justSolutions then (V.update finalMemo (V.singleton (thisIdx, Nothing)), Nothing)
+--                            if null justSolutions then (V.update finalMemo (V.singleton (thisIdx, Nothing)), Nothing)
+--                            else let answerNeighbor = L.minimumBy (\listA listB -> (fst . head) listA `compare` (fst . head) listB) justSolutions in
+--                                let myCount = (fst . head) answerNeighbor + 1 in
+--                                let myPathList = thisIdx:(snd . head) answerNeighbor in
+--                                (V.update finalMemo (V.singleton (thisIdx, Just [(myCount, myPathList)])), Just [(myCount, myPathList)])
 
-processNeighbor :: (Index -> S.Set Index -> Memo -> (Memo, Maybe [(Int, [Index])])) -> [Maybe [(Int, [Index])]] -> Index -> S.Set Index -> Memo -> (S.Set Index, Memo, [Maybe [(Int, [Index])]])
-processNeighbor runNeighborFunc otherSolutions nextIdx useAlreadyVisited useMemo =
-    let (newMemo, newAnswer) = runNeighborFunc nextIdx useAlreadyVisited useMemo in
-    let newAlreadyVisited = S.insert nextIdx useAlreadyVisited in
-    --let newMemo = V.update useMemo (V.singleton (nextIdx, newAnswer)) in
-    let newAnswerList = newAnswer:otherSolutions in
-    (newAlreadyVisited, newMemo, newAnswerList)
+--processNeighbor :: (Index -> S.Set Index -> Memo -> (Memo, Maybe [(Int, [Index])])) -> [Maybe [(Int, [Index])]] -> Index -> S.Set Index -> Memo -> (S.Set Index, Memo, [Maybe [(Int, [Index])]])
+--processNeighbor runNeighborFunc otherSolutions nextIdx useAlreadyVisited useMemo =
+--    let (newMemo, newAnswer) = runNeighborFunc nextIdx useAlreadyVisited useMemo in
+--    let newAlreadyVisited = S.insert nextIdx useAlreadyVisited in
+--    --let newMemo = V.update useMemo (V.singleton (nextIdx, newAnswer)) in
+--    let newAnswerList = newAnswer:otherSolutions in
+--    (newAlreadyVisited, newMemo, newAnswerList)
 
-getShortestPath :: Char -> V.Vector PathNode -> Int -> Maybe [Index]
-getShortestPath endChar graph sIdx =
-    case graph V.! sIdx of
-        Unchecked -> Nothing
-        PathNode (Node c _ _ _) pathInfo -> 
-            case pathInfo of
-                Nothing -> Nothing
-                Just (_, nextNode) ->
-                    if endChar == c then Just [sIdx]
-                    else 
-                        let nextNodes = getShortestPath endChar graph nextNode in
-                        case nextNodes of
-                            Nothing -> Nothing
-                            Just nextIndices -> Just $ sIdx:nextIndices
+--getShortestPath :: Char -> V.Vector PathNode -> Int -> Maybe [Index]
+--getShortestPath endChar graph sIdx =
+--    case graph V.! sIdx of
+--        Unchecked -> Nothing
+--        PathNode (Node c _ _ _) pathInfo -> 
+--            case pathInfo of
+--                Nothing -> Nothing
+--                Just (_, nextNode) ->
+--                    if endChar == c then Just [sIdx]
+--                    else 
+--                        let nextNodes = getShortestPath endChar graph nextNode in
+--                        case nextNodes of
+--                            Nothing -> Nothing
+--                            Just nextIndices -> Just $ sIdx:nextIndices
 
 --makeGraphWithDistances :: V.Vector Node -> V.Vector PathNode -> Char -> Int -> S.Set Index -> V.Vector PathNode
 --makeGraphWithDistances graphIn graphOut endChar startIndex alreadyVisited =
@@ -169,30 +169,30 @@ getShortestPath endChar graph sIdx =
 easyTrace :: Show a => a -> a
 easyTrace printMe = trace (show printMe) printMe
 
-getShortestPathNeighbor :: [PathNode] -> Maybe PathNode
-getShortestPathNeighbor neighbors =
-    let checkedNeighbors = filter (\x -> pNodeIsChecked x && isJust (getPathInfo x)) neighbors in
-    if null checkedNeighbors then Nothing
-    else 
-        let sortedLengths = L.sortBy compareNodeLengths checkedNeighbors in
-        let shortestPathNeighbor = Just $ head sortedLengths in
-            shortestPathNeighbor
-        --let shortestPathNeighbor = Just $ head $ trace (" sorted lengths:" ++ show sortedLengths) sortedLengths in
-        --    trace ("neighbors:" ++ show neighborNodes ++ "lengths:" ++ show sortedLengths ++ " shortestPath neighbor:" ++ show shortestPathNeighbor) shortestPathNeighbor
-            --shortestPathNeighbor
+--getShortestPathNeighbor :: [PathNode] -> Maybe PathNode
+--getShortestPathNeighbor neighbors =
+--    let checkedNeighbors = filter (\x -> pNodeIsChecked x && isJust (getPathInfo x)) neighbors in
+--    if null checkedNeighbors then Nothing
+--    else 
+--        let sortedLengths = L.sortBy compareNodeLengths checkedNeighbors in
+--        let shortestPathNeighbor = Just $ head sortedLengths in
+--            shortestPathNeighbor
+--        --let shortestPathNeighbor = Just $ head $ trace (" sorted lengths:" ++ show sortedLengths) sortedLengths in
+--        --    trace ("neighbors:" ++ show neighborNodes ++ "lengths:" ++ show sortedLengths ++ " shortestPath neighbor:" ++ show shortestPathNeighbor) shortestPathNeighbor
+--            --shortestPathNeighbor
 
-compareNodeLengths :: PathNode -> PathNode -> Ordering
-compareNodeLengths Unchecked _ = GT
-compareNodeLengths _ Unchecked = LT
-compareNodeLengths pNodeA pNodeB = 
-    case pNodeALength of
-        Just (aLen, _) -> case pNodeBLength of
-            Nothing -> LT
-            Just (bLen, _) -> aLen `compare` bLen
-        Nothing -> GT
-    where
-        pNodeALength = getPathInfo pNodeA
-        pNodeBLength = getPathInfo pNodeB
+--compareNodeLengths :: PathNode -> PathNode -> Ordering
+--compareNodeLengths Unchecked _ = GT
+--compareNodeLengths _ Unchecked = LT
+--compareNodeLengths pNodeA pNodeB = 
+--    case pNodeALength of
+--        Just (aLen, _) -> case pNodeBLength of
+--            Nothing -> LT
+--            Just (bLen, _) -> aLen `compare` bLen
+--        Nothing -> GT
+--    where
+--        pNodeALength = getPathInfo pNodeA
+--        pNodeBLength = getPathInfo pNodeB
 
 
 -- I had to re-read the problem:
@@ -229,17 +229,17 @@ evaluateCharacter c = case c of
 --        thisNode = getNodeFromGraph graph startIdx
 --        numVisitedNodes = show $ length visitedList
 
-didSolutionExist :: (S.Set Index, [[Index]]) -> Bool
---didSolutionExist possibleSolutions = trace traceMsg (numPossibleSolutions /= 0)
-didSolutionExist possibleSolutions = numPossibleSolutions /= 0
-    where
-        traceMsg = show $ "num possible solutions:" ++ show numPossibleSolutions
-        numPossibleSolutions = (sum . map length . snd) possibleSolutions
+--didSolutionExist :: (S.Set Index, [[Index]]) -> Bool
+----didSolutionExist possibleSolutions = trace traceMsg (numPossibleSolutions /= 0)
+--didSolutionExist possibleSolutions = numPossibleSolutions /= 0
+--    where
+--        traceMsg = show $ "num possible solutions:" ++ show numPossibleSolutions
+--        numPossibleSolutions = (sum . map length . snd) possibleSolutions
 
-getShortestList :: Show a => [[a]] -> [a]
-getShortestList lists = trace ("sol length" ++ show (length (head lists)) ++ " solution lists:"++show sortedLists ++ "num lists" ++ show (length sortedLists)) (head sortedLists)
-    where
-        sortedLists = L.sortOn length lists
+--getShortestList :: Show a => [[a]] -> [a]
+--getShortestList lists = trace ("sol length" ++ show (length (head lists)) ++ " solution lists:"++show sortedLists ++ "num lists" ++ show (length sortedLists)) (head sortedLists)
+--    where
+--        sortedLists = L.sortOn length lists
 
 makeGraph :: Int -> V.Vector LabeledChar -> V.Vector Node
 makeGraph numItemsPerRow labeledNodes = findNeighbors numItemsPerRow 0 labeledNodes V.empty

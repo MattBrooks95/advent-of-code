@@ -87,7 +87,7 @@ run inputLines = do
             --print charsWithIndicesAndValues
             let asVector = V.fromList charsWithIndicesAndValues
             --print asVector
-            let nodesWithNeighbors = makeGraph lengthOfRow asVector
+            let nodesWithNeighbors = makeGraph canClimbTo lengthOfRow asVector
             -- TODO some nodes are having their height values swapped with
             -- the index somewhere...
             --print nodesWithNeighbors
@@ -111,6 +111,30 @@ run inputLines = do
             --    Nothing -> print "no answer!!! = ("
             --    Just answer -> do
             --        print $ show (head answer)
+            --part 2
+            print "=================== part 2 ===================="
+            let endIndex = L.elemIndex 'E' asOneInput
+            case endIndex of
+                Nothing -> print "part two, couldn't find the index for node E"
+                Just eIdx -> do
+                    print $ "starting from index:" ++ show eIdx
+                    -- For part two, I am just going to do a search from the End
+                    -- to the first A that I find, BUT you have to be able to climb from that A to the end
+                    -- so I re-made the nodesWithNeighbors graph, but instead of only being able to climb up at most one step
+                    -- you can only climb down at most one step
+                    let part2NodesWithNeighbors = makeGraph canClimbToPart2 lengthOfRow asVector
+                    mapM_ print part2NodesWithNeighbors
+                    let part2StartingGraph = V.map (\x -> PaintedNode x White (-1) Null) part2NodesWithNeighbors
+                    let part2StartNode = part2StartingGraph V.!? eIdx
+                    when (isNothing part2StartNode) $ do
+                        print ("couldn't find elem at index" ++ show eIdx ++ "to start processing part 2")
+                        exitFailure
+                    let part2Graph = shortestPath (V.update part2StartingGraph (V.singleton (eIdx, whiteNodeToGray (fromJust part2StartNode) 0 Null))) [eIdx]
+                    mapM_ print part2Graph
+                    let aNodes = V.filter (\(PaintedNode (Node c _ _ _) _ dist _) -> dist /= (-1) && c == 'a') part2Graph
+                    let sortedAs = L.sortOn snd (V.toList $ V.map (\(PaintedNode (Node _ _ idx _) _ dist _) -> (idx, dist)) aNodes)
+                    print $ show sortedAs
+
 
 shortestPath :: V.Vector PaintedNode -> [Index] -> V.Vector PaintedNode
 shortestPath graph [] = graph
@@ -127,8 +151,10 @@ shortestPath graph (currIdx:remainingQ) = case graph V.!? currIdx of
         -- all other nodes will have their parent set when we change their color from white to gray
         let nodeParent = if dist == 0 then Null else thisParent in
         let enqueueIndices = map (pNodeIndex . snd) updatedNodes in
-        let nextQueue = remainingQ++easyTrace enqueueIndices in
-        shortestPath (graph V.// ((currIdx, PaintedNode thisNode Black dist nodeParent):updatedNodes)) (easyTrace nextQueue)
+        --let nextQueue = remainingQ++easyTrace enqueueIndices in
+        let nextQueue = remainingQ++enqueueIndices in
+        --shortestPath (graph V.// ((currIdx, PaintedNode thisNode Black dist nodeParent):updatedNodes)) (easyTrace nextQueue)
+        shortestPath (graph V.// ((currIdx, PaintedNode thisNode Black dist nodeParent):updatedNodes)) nextQueue
 
 whiteNodeToGray :: PaintedNode -> Int -> Parent -> PaintedNode
 whiteNodeToGray (PaintedNode node _ _ _) dist newParent = PaintedNode node Gray dist newParent
@@ -299,19 +325,19 @@ evaluateCharacter c = case c of
 --    where
 --        sortedLists = L.sortOn length lists
 
-makeGraph :: Int -> V.Vector LabeledChar -> V.Vector Node
-makeGraph numItemsPerRow labeledNodes = findNeighbors numItemsPerRow 0 labeledNodes V.empty
+makeGraph :: ((Char, Int) -> (Char, Int) -> Bool) -> Int -> V.Vector LabeledChar -> V.Vector Node
+makeGraph canClimbF numItemsPerRow labeledNodes = findNeighbors canClimbF numItemsPerRow 0 labeledNodes V.empty
 
-findNeighbors :: Int -> Int -> V.Vector LabeledChar -> V.Vector Node -> V.Vector Node
-findNeighbors itemsPerRow currIdx graphIn graphOut =
+findNeighbors :: ((Char, Int) -> (Char, Int) -> Bool) -> Int -> Int -> V.Vector LabeledChar -> V.Vector Node -> V.Vector Node
+findNeighbors canClimbF itemsPerRow currIdx graphIn graphOut =
     if currIdx >= V.length graphIn || currIdx < 0
     then graphOut
     else let newItem = Node currItemChar currItemVal currItemIdx canClimbToIndices in
-        findNeighbors itemsPerRow (currIdx + 1) graphIn (V.snoc graphOut newItem)
+        findNeighbors canClimbF itemsPerRow (currIdx + 1) graphIn (V.snoc graphOut newItem)
         where
             (currItemChar, currItemVal, currItemIdx) = graphIn V.! currIdx
             canClimbToIndices = map (\(_, _, idx) -> idx) canClimbToItems
-            canClimbToItems = filter (\(toChar, toVal, _) -> canClimbTo (currItemChar, currItemVal) (toChar, toVal)) justDirections
+            canClimbToItems = filter (\(toChar, toVal, _) -> canClimbF (currItemChar, currItemVal) (toChar, toVal)) justDirections
             justDirections = catMaybes [up, down, left, right]
             up = getNodeFromGraphIn (currIdx - itemsPerRow)
             down = getNodeFromGraphIn (currIdx + itemsPerRow)
@@ -338,6 +364,9 @@ canClimbTo :: (Char, Int) -> (Char, Int) -> Bool
 --canClimbTo _ ('S', _) = False
 --canClimbTo (_, fVal) (_, tVal) = trace ("climb from height:" ++ show fVal ++ " to height:" ++ show tVal) (tVal <= (fVal + 1))
 canClimbTo (_, fVal) (_, tVal) = tVal <= fVal + 1
+
+canClimbToPart2 :: (Char, Int) -> (Char, Int) -> Bool
+canClimbToPart2 (_, fVal) (_, tVal) = fVal - tVal <= 1
 
 checkIndex :: Int -> Int -> Bool
 checkIndex numItems targetIndex = targetIndex >= 0 && targetIndex < numItems

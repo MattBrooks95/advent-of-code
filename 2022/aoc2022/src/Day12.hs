@@ -7,9 +7,17 @@ import Prelude hiding (
     getChar
     )
 
+import Control.Monad (
+    when
+    )
+
+import System.Exit
+
 import Data.Char (
     ord
     )
+
+import GHC.Real
 
 import Data.Foldable
 
@@ -34,17 +42,35 @@ instance Show Node where
 nIndex (Node _ _ idx _) = idx
 
 -- a node with it's distance to the endpoint and which path to take
-data PathNode = PathNode Node (Maybe (Int, Index)) | Unchecked deriving (Show)
+--data PathNode = PathNode Node (Maybe (Int, Index)) deriving (Show)
 
-pNodeIsChecked (PathNode _ _) = True
-pNodeIsChecked _ = False
+data Color = White | Gray | Black deriving (Show)
+data Parent = Parent Index | Null deriving (Show)
+data PaintedNode = PaintedNode Node Color Int Parent
+instance Show PaintedNode where
+    show (PaintedNode node color dist parent) = "[" ++ show node ++ " " ++ show color ++ " dist:" ++ show dist ++ " parent:" ++ (\case { Parent x -> show x; Null -> show Null;}) parent ++ "]"
 
-pNodeIdx (PathNode (Node _ _ idx _) _) = Just idx
-pNodeIdx Unchecked = Nothing
+pNodeIndex :: PaintedNode -> Index
+pNodeIndex (PaintedNode node _ _ _) = nIndex node
 
-getPathInfo :: PathNode -> Maybe (Int, Index)
-getPathInfo Unchecked = Nothing
-getPathInfo (PathNode _ pathInfo) = pathInfo
+pNodeDist :: PaintedNode -> Int
+pNodeDist (PaintedNode _ _ dist _) = dist
+
+pUpdateDist :: PaintedNode -> Int -> PaintedNode
+pUpdateDist (PaintedNode node color _ parent) newDist = PaintedNode node color newDist parent
+
+--pNodeIsChecked (PathNode _ _) = True
+--pNodeIsChecked _ = False
+
+--pNodeIdx (PathNode (Node _ _ idx _) _) = Just idx
+--pNodeIdx Unchecked = Nothing
+
+--getPathInfo :: PathNode -> Maybe (Int, Index)
+--getPathInfo Unchecked = Nothing
+--getPathInfo (PathNode _ pathInfo) = pathInfo
+
+-- after struggling for hours to do this recursively, I consulted chapter 20.2 in Introduction to Algorithms Fourth Edition
+-- Cormen, Leiserson, Rivest and Stein
 
 run :: [String] -> IO ()
 run inputLines = do
@@ -64,16 +90,48 @@ run inputLines = do
             let nodesWithNeighbors = makeGraph lengthOfRow asVector
             -- TODO some nodes are having their height values swapped with
             -- the index somewhere...
-            print nodesWithNeighbors
+            --print nodesWithNeighbors
             --let graphWithDistances = makeGraphWithDistances nodesWithNeighbors (V.replicate (length nodesWithNeighbors) Unchecked) 'E' (trace ("starting with:" ++ show sIdx) sIdx) S.empty
             print $ "starting at index:" ++ show sIdx
             let useStartIdx = sIdx
+            -- initialize the graph
+            let startingGraph = V.map (\x -> PaintedNode x White (-1) Null) nodesWithNeighbors
+            let startingNode = startingGraph V.!? sIdx
+            when (isNothing startingNode) $ do
+                print ("couldn't find node at index" ++ show sIdx ++ " to start processing from!")
+                exitFailure
             print $ "starting from" ++ show useStartIdx
+            let answer = shortestPath (V.update startingGraph (V.singleton (sIdx, whiteNodeToGray (fromJust startingNode) 0 Null))) [sIdx]
+            mapM_ print answer
+            let endItem = V.find (\(PaintedNode (Node c _ _ _) _ _ _) -> c == 'E') answer
+            print endItem
+            --mapM_ print (V.map (\x -> (pNodeIndex x, pNodeDist x)) answer)
             --let (_, answers) = shortestPath nodesWithNeighbors 'E' useStartIdx S.empty (V.replicate (length nodesWithNeighbors) Nothing)
             --case answers of
             --    Nothing -> print "no answer!!! = ("
             --    Just answer -> do
             --        print $ show (head answer)
+
+shortestPath :: V.Vector PaintedNode -> [Index] -> V.Vector PaintedNode
+shortestPath graph [] = graph
+--shortestPath graph (currIdx:remainingQ) = case graph V.!? (trace ("=================" ++ show currIdx) currIdx) of
+shortestPath graph (currIdx:remainingQ) = case graph V.!? currIdx of
+    Nothing -> trace ("bad index, elem does not exist:" ++ show currIdx) graph
+    Just (PaintedNode thisNode@(Node _ _ _ neighbors) _ dist thisParent) -> let neighborNodes = mapMaybe (graph V.!?) neighbors in
+        let whiteNodes = filter (\case { (PaintedNode _ White _ _) -> True; _ -> False; }) neighborNodes in
+        --let updatedNodes = map (\(PaintedNode node@(Node _ _ nIdx _) _ _ _) -> (nIdx, PaintedNode node Gray (dist + 1) (Parent currIdx))) whiteNodes in
+        let distOfNeighbors = dist + 1 in
+        --let updatedNodes = map (\whiteNode -> (pNodeIndex whiteNode, whiteNodeToGray whiteNode distOfNeighbors currIdx)) (trace ("dist:" ++ show dist ++ " neigh:" ++ show whiteNodes) whiteNodes) in
+        let updatedNodes = map (\whiteNode -> (pNodeIndex whiteNode, whiteNodeToGray whiteNode distOfNeighbors (Parent currIdx))) whiteNodes in
+        -- the initial element will need to have it's parent set to 0
+        -- all other nodes will have their parent set when we change their color from white to gray
+        let nodeParent = if dist == 0 then Null else thisParent in
+        let enqueueIndices = map (pNodeIndex . snd) updatedNodes in
+        let nextQueue = remainingQ++easyTrace enqueueIndices in
+        shortestPath (graph V.// ((currIdx, PaintedNode thisNode Black dist nodeParent):updatedNodes)) (easyTrace nextQueue)
+
+whiteNodeToGray :: PaintedNode -> Int -> Parent -> PaintedNode
+whiteNodeToGray (PaintedNode node _ _ _) dist newParent = PaintedNode node Gray dist newParent
 
 --            let graphWithDistances = makeGraphWithDistances nodesWithNeighbors (V.replicate (length nodesWithNeighbors) Unchecked) 'E' useStartIdx S.empty
 --            print graphWithDistances

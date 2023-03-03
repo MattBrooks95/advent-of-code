@@ -63,8 +63,12 @@ directionFromChar c = case c of
 numTailPositions :: [Position] -> Int
 numTailPositions = length
 
+-- create a set of the tail positions, then turn it back into a list and take
+-- the length
 numUniqueTailPositions :: [Position] -> Int
-numUniqueTailPositions tpos = numTailPositions $ toList $ fromList tpos
+-- length should work for a set, so I didn't need to do this...
+--numUniqueTailPositions tpos = numTailPositions $ toList $ fromList tpos
+numUniqueTailPositions = length . fromList
 
 lineToMotion :: String -> Maybe (Direction, Int)
 lineToMotion [] = Nothing
@@ -91,8 +95,8 @@ runMotion :: Head -> Tail -> [Position] -> (Direction, Int) -> (Rope, [Position]
 runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (_, 0) = (Rope (Head (hx, hy)) (Tail (tx, ty)), positionAcc)
 --runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (direction, magnitude) = (Rope (Head (hx, hy)) (Tail (tx, ty)), positionAcc)
 runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (direction, magnitude) =
-    let newHeadPos = updatePos (hx, hy) (direction, 1) in
-    let distance = getDirectDistance newHeadPos (tx, ty) in
+    let newHeadPos = updatePos (hx, hy) (direction, 1)
+        distance = getDirectDistance newHeadPos (tx, ty) in
     if trace (show distance) distance == 1
     then runMotion (Head newHeadPos) (Tail (tx, ty)) ((tx, ty):positionAcc) (direction, magnitude - 1)
     else

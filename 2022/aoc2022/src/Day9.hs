@@ -1,8 +1,16 @@
-module Day9 where
+module Day9 (
+    run 
+    ) where 
 
 import Prelude hiding (
     Left
     , Right
+    , head
+    , tail
+    )
+
+import qualified Prelude as P (
+    head
     )
 
 import Debug.Trace
@@ -69,13 +77,13 @@ lineToMotion [] = Nothing
 lineToMotion line =
     if length line < 3
     then Nothing
-    else case directionFromChar $ head line of 
+    else case directionFromChar $ P.head line of 
         Just d -> Just (d, read (drop 2 line) :: Int)
         Nothing -> Nothing
 
 runSimulation :: Rope -> [Position] -> [(Direction, Int)] -> (Rope, [Position])
 runSimulation rope positions [] = (rope, positions)
-runSimulation rope@(Rope head@(Head (hx, hy)) tail@(Tail (tx, ty))) positions (mt:mts) =
+runSimulation (Rope head@(Head _) tail@(Tail _)) positions (mt:mts) =
     let (newRope, tailPositions) = runMotion head tail positions mt in
     runSimulation newRope tailPositions mts
 

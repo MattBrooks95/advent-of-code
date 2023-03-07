@@ -1,6 +1,8 @@
-module Day9 (
-    run 
-    ) where 
+module Day9
+    --(
+    --run 
+    --)
+    where 
 
 import Prelude hiding (
     Left
@@ -30,19 +32,49 @@ import Data.Char (
 
 run :: [String] -> IO ()
 run inputLines = do
-    print inputLines
+    --print inputLines
     let motions = mapMaybe lineToMotion inputLines
-    print motions
-    let simResult@(rope, tailPositions) = runSimulation (Rope (Head (0, 0)) (Tail (0, 0))) [] motions
-    putStrLn $ "simResult:" ++ show simResult
-    putStrLn $ "final rope position:" ++ show rope
-    putStrLn $ "tail positions: " ++ show (reverse tailPositions)
-    putStrLn $ "num tail positions: " ++ show (numTailPositions tailPositions)
-    putStrLn $ "num unique tail positions: " ++ show (numUniqueTailPositions tailPositions)
+    --print motions
+    --let simResult@(rope, tailPositions) = runSimulation (Rope (Head (0, 0)) (Tail (0, 0))) [] motions
+    --putStrLn $ "simResult:" ++ show simResult
+    --putStrLn $ "final rope position:" ++ show rope
+    --putStrLn $ "tail positions: " ++ show (reverse tailPositions)
+    --putStrLn $ "num tail positions: " ++ show (numTailPositions tailPositions)
+    --putStrLn $ "num unique tail positions: " ++ show (numUniqueTailPositions tailPositions)
+    putStrLn "part2=============================="
+    let partTwoRope = Part2Rope $ replicate 10 (0, 0)
+    --print partTwoRope
+    let (finalRope, prevRopes) = runSimulationPart2 partTwoRope [] motions
+    print $ "final rope:" ++ show finalRope
+    print $ "final rope length:" ++ (show . getLength) finalRope
+    print $ "previous ropes" ++ concat (replicate 20 "#")
+    mapM_ print prevRopes
+    let allRopeTailPositions = map (last . getPositions) prevRopes
+    print $ "num unique tail positions:" ++ show (length (fromList allRopeTailPositions))
+    --let prevRopes = snd partTwoRopeSimResult
+    --mapM_ print (reverse prevRopes)
+    --let tailPositions = map (last . getPositions) prevRopes
+    --print tailPositions
+    --let uniqueTailPositions = fromList tailPositions
+    --print uniqueTailPositions
+    --print $ length uniqueTailPositions
+
 
 newtype Head = Head Position deriving (Show)
 newtype Tail = Tail Position deriving (Show)
 data Rope = Rope Head Tail deriving (Show)
+
+-- the part two rope is Head - segments 1 - 9
+-- 9 is the tail
+newtype Part2Rope = Part2Rope [Position]
+    deriving (Show)
+
+getPositions :: Part2Rope -> [Position]
+getPositions (Part2Rope positions) = positions
+
+getLength :: Part2Rope -> Int
+getLength (Part2Rope list) = length list
+
 
 type Position = (Int, Int)
 
@@ -91,6 +123,12 @@ runSimulation (Rope head@(Head _) tail@(Tail _)) positions (mt:mts) =
     let (newRope, tailPositions) = runMotion head tail positions mt in
     runSimulation newRope tailPositions mts
 
+runSimulationPart2 :: Part2Rope -> [Part2Rope] -> [(Direction, Int)] -> (Part2Rope, [Part2Rope])
+runSimulationPart2 rope prevRopes [] = (rope, prevRopes)
+runSimulationPart2 (Part2Rope rope) prevRopes (movement:movements) =
+    let (newRope, intermediateRopeStates) = runMotionPart2 (rope, []) movement in
+    runSimulationPart2 (Part2Rope newRope) (concat [prevRopes, [Part2Rope newRope], map Part2Rope intermediateRopeStates]) movements
+
 runMotion :: Head -> Tail -> [Position] -> (Direction, Int) -> (Rope, [Position])
 runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (_, 0) = (Rope (Head (hx, hy)) (Tail (tx, ty)), positionAcc)
 --runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (direction, magnitude) = (Rope (Head (hx, hy)) (Tail (tx, ty)), positionAcc)
@@ -103,6 +141,24 @@ runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (direction, magnitude) =
         if distance >= 2
         then runMotion (Head newHeadPos) (Tail (hx, hy)) ((hx, hy):positionAcc) (direction, magnitude - 1)
         else runMotion (Head newHeadPos) (Tail (tx, ty)) ((tx, ty):positionAcc) (direction, magnitude - 1)
+
+runMotionPart2 :: ([Position], [[Position]]) -> (Direction, Int) -> ([Position], [[Position]])
+runMotionPart2 ([], _) _ = ([], [])
+runMotionPart2 pos (_, 0) = pos
+runMotionPart2 (head:remaining, prevStates) (direc, mag) =
+    let newHead = updatePos head (direc, 1)
+        newTails = foldl (\predecessors y -> predecessors++[tailFollowsHead (oldHeadPred predecessors) (newHeadPred predecessors) y] ) [(head, newHead)] remaining in
+        let newRope = map snd newTails in
+            runMotionPart2 (newRope, newRope:prevStates) (direc, mag - 1)
+    where
+        newHeadPred = snd . last
+        oldHeadPred = fst . last
+
+-- |returns (oldTail, newTail)
+tailFollowsHead :: Position -> Position -> Position -> (Position, Position)
+tailFollowsHead oldHead head tail =
+    let distance = getDirectDistance head tail in
+    if distance >= 2 then (tail, oldHead) else (tail, tail)
 
 updatePos :: Position -> (Direction, Int) -> Position
 updatePos (x, y) motion = case motion of

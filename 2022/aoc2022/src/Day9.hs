@@ -35,20 +35,20 @@ run inputLines = do
     --print inputLines
     let motions = mapMaybe lineToMotion inputLines
     --print motions
-    --let simResult@(rope, tailPositions) = runSimulation (Rope (Head (0, 0)) (Tail (0, 0))) [] motions
+    let simResult@(rope, tailPositions) = runSimulation (Rope (Head (0, 0)) (Tail (0, 0))) [] motions
     --putStrLn $ "simResult:" ++ show simResult
     --putStrLn $ "final rope position:" ++ show rope
     --putStrLn $ "tail positions: " ++ show (reverse tailPositions)
     --putStrLn $ "num tail positions: " ++ show (numTailPositions tailPositions)
-    --putStrLn $ "num unique tail positions: " ++ show (numUniqueTailPositions tailPositions)
+    putStrLn $ "num unique tail positions: " ++ show (numUniqueTailPositions tailPositions)
     putStrLn "part2=============================="
     let partTwoRope = Part2Rope $ replicate 10 (0, 0)
     --print partTwoRope
     let (finalRope, prevRopes) = runSimulationPart2 partTwoRope [] motions
-    print $ "final rope:" ++ show finalRope
-    print $ "final rope length:" ++ (show . getLength) finalRope
-    print $ "previous ropes" ++ concat (replicate 20 "#")
-    mapM_ print prevRopes
+    --print $ "final rope:" ++ show finalRope
+    --print $ "final rope length:" ++ (show . getLength) finalRope
+    --print $ "previous ropes" ++ concat (replicate 20 "#")
+    --mapM_ print prevRopes
     let allRopeTailPositions = map (last . getPositions) prevRopes
     print $ "num unique tail positions:" ++ show (length (fromList allRopeTailPositions))
     --let prevRopes = snd partTwoRopeSimResult
@@ -135,7 +135,8 @@ runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (_, 0) = (Rope (Head (hx, 
 runMotion (Head (hx, hy)) (Tail (tx, ty)) positionAcc (direction, magnitude) =
     let newHeadPos = updatePos (hx, hy) (direction, 1)
         distance = getDirectDistance newHeadPos (tx, ty) in
-    if trace (show distance) distance == 1
+    --if trace (show distance) distance == 1
+    if distance == 1
     then runMotion (Head newHeadPos) (Tail (tx, ty)) ((tx, ty):positionAcc) (direction, magnitude - 1)
     else
         if distance >= 2
@@ -147,18 +148,44 @@ runMotionPart2 ([], _) _ = ([], [])
 runMotionPart2 pos (_, 0) = pos
 runMotionPart2 (head:remaining, prevStates) (direc, mag) =
     let newHead = updatePos head (direc, 1)
-        newTails = foldl (\predecessors y -> predecessors++[tailFollowsHead (oldHeadPred predecessors) (newHeadPred predecessors) y] ) [(head, newHead)] remaining in
-        let newRope = map snd newTails in
+        newTails = foldl (\predecessors y -> predecessors++[tailFollowsHead (last predecessors) y] ) [newHead] remaining in
+        let newRope = newTails in
             runMotionPart2 (newRope, newRope:prevStates) (direc, mag - 1)
-    where
-        newHeadPred = snd . last
-        oldHeadPred = fst . last
 
--- |returns (oldTail, newTail)
-tailFollowsHead :: Position -> Position -> Position -> (Position, Position)
-tailFollowsHead oldHead head tail =
+tailFollowsHead :: Position -> Position -> Position
+tailFollowsHead head tail =
     let distance = getDirectDistance head tail in
-    if distance >= 2 then (tail, oldHead) else (tail, tail)
+    if distance >= 2 then
+        let xDistance = fst head - fst tail
+            yDistance = snd head - snd tail
+            applyDelta = getMovementToFollow xDistance yDistance
+        in
+            applyDelta tail
+    else tail
+
+getMovementToFollow :: Int -> Int -> (Position -> Position)
+getMovementToFollow xDiff yDiff =
+    if isDiagonalMovement xDiff yDiff then
+        let xDelta = getDelta xDiff
+            yDelta = getDelta yDiff
+        in
+            \(px, py) -> (px + xDelta, py + yDelta)
+    else
+        case xDiff of
+            2 -> (\(px, py) -> (px + 1, py))
+            -2 -> (\(px, py) -> (px - 1, py))
+            _ -> case yDiff of
+                2 -> \(px, py) -> (px, py + 1)
+                -2 -> \(px, py) -> (px, py - 1)
+                _ -> id -- this should never happen, if it's not a diagonal movement then the x or y diff will be 2
+
+getDelta :: Int -> Int
+getDelta diff = if abs diff == 2
+    then (if diff > 0 then 1 else -1)
+    else diff
+
+isDiagonalMovement :: Int -> Int -> Bool
+isDiagonalMovement xDiff yDiff = abs xDiff > 0 && abs yDiff > 0
 
 updatePos :: Position -> (Direction, Int) -> Position
 updatePos (x, y) motion = case motion of

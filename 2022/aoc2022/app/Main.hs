@@ -99,9 +99,9 @@ main = do
     --Day6.run fileLines
     --Day7.run fileLines
     --Day8.run fileLines
-    Day9.run fileLines
+    --Day9.run fileLines
     --Day10.run fileLines
     --Day11.run fileLines
     --Day12.run fileLines
-    --Day13.run fileLines
+    Day13.run filePath
 

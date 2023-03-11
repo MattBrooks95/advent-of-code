@@ -68,7 +68,7 @@ nestedList = NestedList <$> between openB closeB (choice [nestedList, emptyList,
 
 parseSignal :: Parsec String ParserState Signal
 parseSignal = do
-    parseResults <- (nestedList <|> emptyList) <* endOfLine
+    parseResults <- nestedList <* endOfLine
     return Signal { contents=parseResults }
 
 
@@ -79,7 +79,7 @@ parseSignalPair = do
     signalTwo <- parseSignal
     ParserState currIndex <- getState
     modifyState (\(ParserState prevIndex) -> ParserState (prevIndex + 1))
-    
+
     return $ SignalPair currIndex (signalOne, signalTwo)
 
 --parseSignalPair = do
@@ -101,21 +101,27 @@ run filePath = do
     input <- readFile filePath
     print input
     case runParser parseProblem (ParserState { pairIndex=1 }) filePath input of
-        Right problem -> print problem
+        Right (Decoder problem) -> do
+            print problem
+            let results = map (\(SignalPair idx (sig1, sig2)) -> (idx, compareList (contents sig1) (contents sig2))) problem
+            print results
+            let correctPairSum = sum $ map fst (filter snd results)
+            print correctPairSum
         Left e -> print e
    --print inputLines
     --let linesGrouped = groupLines inputLines
     --mapM_ print linesGrouped
 
 compareList :: List -> List -> Bool
-compareList (NestedList (x:xs)) (NestedList (y:ys)) = True --TODO map compare list over the item pairs of the two lists and do an and?
+--TODO map compare list over the item pairs of the two lists and do an and?
+compareList (NestedList (x:xs)) (NestedList (y:ys)) = compareList x y && and (map (\(l1, l2) -> compareList l1 l2) (zip xs ys))
 compareList (NestedList (_:_)) (NestedList []) = False
 compareList (NestedList []) (NestedList (_:_)) = True
 compareList (NestedList []) (NestedList []) = True
 compareList EmptyList EmptyList = True
-compareList EmptyList (NumericVal _) = False --can this case happen?
+compareList EmptyList (NumericVal _) = True --can this case happen?
 compareList (NumericVal _) EmptyList = False --can this case happen?
-compareList l1@(NumericVal _) l2@(NestedList _) = compareList (NestedList [l1]) (NestedList [l2])
+compareList l1@(NumericVal _) l2@(NestedList _) = compareList (NestedList [l1]) l2
 compareList l1@(NestedList _) l2@(NumericVal _) = compareList l1 (NestedList [l2])
 compareList (NestedList _) EmptyList = False
 compareList EmptyList (NestedList _) = True

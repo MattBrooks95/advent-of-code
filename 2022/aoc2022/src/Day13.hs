@@ -13,14 +13,19 @@ import Text.Parsec (
     , Parsec
     , eof
     , many
+    , many1
     , endOfLine
     , try
     , string
     , choice
     , sepBy
+    , sepBy1
     , many
     , digit
-    , (<|>), runParser
+    , (<|>)
+    , runParser
+    , optional
+    , between
     )
 
 data ParserState = ParserState {
@@ -28,7 +33,7 @@ data ParserState = ParserState {
 
 -- I want this to be generic but I'm not sure how to do that
 -- when I'm using digits to parse numbers
-data List = NestedList [List] | AtomList [Int] | EmptyList
+data List = NestedList [List] | NumericVal Int | EmptyList
     deriving (Show)
 
 data Signal = Signal { index::Int, contents::List }
@@ -47,18 +52,20 @@ closeB = char ']'
 emptyList :: Parsec String ParserState List
 emptyList = EmptyList <$ string "[]"
 
-listOfDigits :: Parsec String ParserState [Int]
-listOfDigits = fmap Prelude.read <$> many digit `sepBy` char ','
+numericVal :: Parsec String ParserState List
+numericVal = NumericVal <$> (Prelude.read <$> many1 digit)
+--listOfDigits :: Parsec String ParserState [Int]
+--listOfDigits = fmap Prelude.read <$> many1 digit `sepBy` char ','
 
-atomList :: Parsec String ParserState List
-atomList = AtomList <$> listOfDigits
+--atomList :: Parsec String ParserState List
+--atomList = AtomList <$> (openB *> listOfDigits <* closeB)
 
 nestedList :: Parsec String ParserState List
-nestedList = openB *> (emptyList <|> NestedList <$> many nestedList) <* closeB
+nestedList = NestedList <$> between openB closeB (choice [nestedList, emptyList, numericVal] `sepBy` char ',')
 
 parseSignal :: Parsec String ParserState Signal
 parseSignal = do
-    parseResults <- openB *> choice [emptyList, atomList] <* closeB
+    parseResults <- (emptyList <|> nestedList) <* endOfLine
     return Signal { index=0, contents=parseResults }
 
 
@@ -80,7 +87,8 @@ parseSignalPair = SignalPair <$> do
     --    _ -> Parse
 
 parseProblem :: Parsec String ParserState Decoder
-parseProblem = Decoder <$> many parseSignalPair <* eof
+parseProblem = Decoder <$> parseSignalPair `sepBy` endOfLine <* eof
+--parseProblem = Decoder <$> many parseSignalPair <* eof
 
 run :: FilePath -> IO ()
 run filePath = do
@@ -89,7 +97,7 @@ run filePath = do
     case runParser parseProblem (ParserState {}) filePath input of
         Right problem -> print problem
         Left e -> print e
-    --print inputLines
+   --print inputLines
     --let linesGrouped = groupLines inputLines
     --mapM_ print linesGrouped
 

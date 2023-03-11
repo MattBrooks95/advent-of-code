@@ -20,7 +20,7 @@ import Text.Parsec (
     , sepBy
     , many
     , digit
-    , (<|>)
+    , (<|>), runParser
     )
 
 data ParserState = ParserState {
@@ -32,9 +32,12 @@ data List = NestedList [List] | AtomList [Int] | EmptyList
     deriving (Show)
 
 data Signal = Signal { index::Int, contents::List }
+    deriving (Show)
 newtype SignalPair = SignalPair (Signal, Signal)
+    deriving (Show)
 
-newtype Decoder a = Decoder [SignalPair]
+newtype Decoder = Decoder [SignalPair]
+    deriving (Show)
 
 openB :: Parsec String ParserState Char
 openB = char '['
@@ -61,7 +64,12 @@ parseSignal = do
 
 parseSignalPair :: Parsec String ParserState SignalPair
 --parseSignalPair = SignalPair <$> parseSignal `sepBy` endOfLine
-parseSignalPair = --do
+parseSignalPair = SignalPair <$> do
+    signalOne <- parseSignal
+    signalTwo <- parseSignal
+    return (signalOne, signalTwo)
+
+--parseSignalPair = do
     --instead of matching a list and then trying to assert that there are
     --only two, write the parser such that it only succeeds on reading 2 signals
     --separated by a newline
@@ -71,13 +79,16 @@ parseSignalPair = --do
     --    [sig1, sig2] -> return $ SignalPair (sig1, sig2)
     --    _ -> Parse
 
---parseProblem :: Parsec String ParserState (Decoder a)
---parseProblem = many parseSignalPair <* eof
+parseProblem :: Parsec String ParserState Decoder
+parseProblem = Decoder <$> many parseSignalPair <* eof
 
 run :: FilePath -> IO ()
 run filePath = do
     input <- readFile filePath
     print input
+    case runParser parseProblem (ParserState {}) filePath input of
+        Right problem -> print problem
+        Left e -> print e
     --print inputLines
     --let linesGrouped = groupLines inputLines
     --mapM_ print linesGrouped

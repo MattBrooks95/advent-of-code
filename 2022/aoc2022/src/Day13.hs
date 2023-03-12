@@ -187,25 +187,28 @@ compareList lList@(NestedList _) rVal@(NumericVal _) = compareList lList (Nested
 compareList (NestedList (x:xs)) (NestedList (y:ys)) = case itemCompareResult  of
     Correct -> Correct
     Incorrect -> Incorrect
+    -- it was necessary to just re-wrap what was left after the head comparison and continue
+    -- to recurse, instead of using the compareListLengths helper
     Continue -> compareList (NestedList xs) (NestedList ys)
+    --Continue -> compareListLengths xs ys
     where
         itemCompareResult = compareList x y
 
-compareListLengths :: [List] -> [List] -> Result
-compareListLengths [] [] = Continue
-compareListLengths l1 l2
-    | Correct `elem` loggedResult = Correct
-    | all (==Continue) loggedResult && length1 < length2 = Correct
-    | all (==Continue) loggedResult && length1 == length2 = Continue
-    -- this case was necessary for it to 'short-circuit' by stopping processing
-    -- the moment an incorrect result was found
-    | Incorrect `elem` loggedResult = Incorrect
-    | otherwise = Incorrect
-    --else Continue
-    --trace (show (l1, l2, answer)) answer
-    where
-        --answer = (Correct `elem` listCheckResult) && length1 <= length2
-        length1 = length l1
-        length2 = length l2
-        loggedResult = trace ("compareListLengths:" ++ show listCheckResult) listCheckResult
-        listCheckResult = map (\(li1, li2) -> compareList li1 li2) (zip l1 l2)
+--compareListLengths :: [List] -> [List] -> Result
+--compareListLengths [] [] = Continue
+--compareListLengths l1 l2
+--    | Correct `elem` loggedResult = Correct
+--    | all (==Continue) loggedResult && length1 < length2 = Correct
+--    | all (==Continue) loggedResult && length1 == length2 = Continue
+--    -- this case was necessary for it to 'short-circuit' by stopping processing
+--    -- the moment an incorrect result was found
+--    | Incorrect `elem` loggedResult = Incorrect
+--    | otherwise = Incorrect
+--    --else Continue
+--    --trace (show (l1, l2, answer)) answer
+--    where
+--        --answer = (Correct `elem` listCheckResult) && length1 <= length2
+--        length1 = length l1
+--        length2 = length l2
+--        loggedResult = trace ("compareListLengths:" ++ show listCheckResult) listCheckResult
+--        listCheckResult = map (\(li1, li2) -> compareList li1 li2) (zip l1 l2)

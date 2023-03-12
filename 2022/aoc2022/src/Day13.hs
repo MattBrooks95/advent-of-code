@@ -4,6 +4,11 @@ module Day13
     --)
     where
 
+import Debug.Trace
+    (
+    trace
+    )
+
 import Lib (
     groupLines
     )
@@ -112,9 +117,14 @@ run filePath = do
     --let linesGrouped = groupLines inputLines
     --mapM_ print linesGrouped
 
+--I think it isn't working because of the parse result
+--sometimes the answer is wrapped in a NestedList one more time than it should be
 compareList :: List -> List -> Bool
 --TODO map compare list over the item pairs of the two lists and do an and?
-compareList (NestedList (x:xs)) (NestedList (y:ys)) = compareList x y && and (map (\(l1, l2) -> compareList l1 l2) (zip xs ys))
+--gives 11 because pair2 becomes false when it shouldn't be
+--compareList (NestedList (x:xs)) (NestedList (y:ys)) = compareList x y && compareListLengths xs ys
+-- gives 18 because the 7s case becomes true...
+--compareList (NestedList (x:xs)) (NestedList (y:ys)) = compareList x y && and (map (\(l1, l2) -> compareList l1 l2) (zip xs ys))
 compareList (NestedList (_:_)) (NestedList []) = False
 compareList (NestedList []) (NestedList (_:_)) = True
 compareList (NestedList []) (NestedList []) = True
@@ -127,3 +137,14 @@ compareList (NestedList _) EmptyList = False
 compareList EmptyList (NestedList _) = True
 compareList (NumericVal leftNum) (NumericVal rightNum) =
     leftNum <= rightNum
+
+
+compareListLengths :: [List] -> [List] -> Bool
+compareListLengths l1 l2 =
+    trace (show (l1, l2, answer)) answer
+    where
+        answer = listsEqual && length1 <= length2
+        length1 = length l1
+        length2 = length l2
+        listsEqual = and $ map (\(li1, li2) -> compareList li1 li2) (zip l1 l2)
+--map (\(l1, l2) -> compareList l1 l2

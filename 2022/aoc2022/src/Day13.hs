@@ -156,11 +156,11 @@ compareList (NestedList (x:xs)) (NestedList (y:ys)) = case compareList x y  of
 
 
 compareListLengths :: [List] -> [List] -> Result
-compareListLengths l1 l2 =
-    if Correct `elem` listCheckResult then Correct
-    else
-        if all (==Continue) listCheckResult && length1 < length2 then Correct
-        else if length1 == length2 then Continue else Incorrect
+compareListLengths l1 l2
+    | Correct `elem` listCheckResult = Correct
+    | all (==Continue) listCheckResult && length1 < length2 = Correct
+    | length1 == length2 = Continue
+    | otherwise = Incorrect
     --else Continue
     --trace (show (l1, l2, answer)) answer
     where

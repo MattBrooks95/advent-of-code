@@ -42,12 +42,17 @@ data ParserState = ParserState {
 -- I want this to be generic but I'm not sure how to do that
 -- when I'm using digits to parse numbers
 data List = NestedList [List] | NumericVal Int
-    deriving (Show)
+instance Show List where
+    show (NestedList []) = "[]"
+    show (NestedList list) = show list
+    show (NumericVal num) = show num
 
 data Signal = Signal { contents::List }
-    deriving (Show)
+instance Show Signal where
+    show (Signal {contents=sig}) = show sig
 data SignalPair = SignalPair Int (Signal, Signal)
-    deriving (Show)
+instance Show SignalPair where
+    show (SignalPair idx (s1, s2)) = "\n(Pair idx:"++show idx++"\n"++show s1++"\n"++show s2++")\n"
 
 newtype Decoder = Decoder [SignalPair]
     deriving (Show)
@@ -103,7 +108,8 @@ parseProblem = Decoder <$> parseSignalPair `sepBy1` endOfLine <* eof
 
 --5832 too high
 --5649 too high
---5520
+--5520 wrong
+--5544 wrong
 
 run :: FilePath -> IO ()
 run filePath = do
@@ -173,14 +179,16 @@ compareList :: List -> List -> Result
 --compareList (NestedList (x:xs)) (NestedList (y:ys)) = compareList x y && compareListLengths xs ys
 -- gives 18 because the 7s case becomes true...
 --compareList (NestedList (x:xs)) (NestedList (y:ys)) = compareList x y && and (map (\(l1, l2) -> compareList l1 l2) (zip xs ys))
-compareList (NestedList []) (NestedList []) = trace "both empty" Continue
-compareList (NestedList []) (NestedList (_:_)) = trace "left empty" Correct
-compareList (NestedList (_:_)) (NestedList []) = trace "right empty" Incorrect
-compareList (NumericVal lVal) (NumericVal rVal) = let res = numCompare lVal rVal in trace (show lVal ++ " vs " ++ show rVal ++ " " ++ show res) res
+compareList (NestedList []) (NestedList []) = Continue
+compareList (NestedList []) (NestedList (_:_)) = Correct
+compareList (NestedList (_:_)) (NestedList []) = Incorrect
+--compareList (NumericVal lVal) (NumericVal rVal) = let res = numCompare lVal rVal in trace (show lVal ++ " vs " ++ show rVal ++ " " ++ show res) res
+compareList (NumericVal lVal) (NumericVal rVal) = let res = numCompare lVal rVal in res
 --compareList (NumericVal lVal) (NumericVal rVal) = let res = numCompare lVal rVal in res
 compareList lVal@(NumericVal _) rList@(NestedList _) = compareList (NestedList [lVal]) rList
 compareList lList@(NestedList _) rVal@(NumericVal _) = compareList lList (NestedList [rVal])
-compareList (NestedList (x:xs)) (NestedList (y:ys)) = case trace (show $ "compare head l:" ++ show x ++ " r:" ++ show y ++ " " ++ show itemCompareResult) itemCompareResult  of
+--compareList (NestedList (x:xs)) (NestedList (y:ys)) = case trace (show $ "compare head l:" ++ show x ++ " r:" ++ show y ++ " " ++ show itemCompareResult) itemCompareResult  of
+compareList (NestedList (x:xs)) (NestedList (y:ys)) = case itemCompareResult  of
     Correct -> Correct
     Incorrect -> Incorrect
     Continue -> compareListLengths xs ys

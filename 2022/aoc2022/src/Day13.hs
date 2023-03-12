@@ -101,6 +101,10 @@ parseProblem :: Parsec String ParserState Decoder
 parseProblem = Decoder <$> parseSignalPair `sepBy1` endOfLine <* eof
 --parseProblem = Decoder <$> many parseSignalPair <* eof
 
+--5832 too high
+--5649 too high
+--5520
+
 run :: FilePath -> IO ()
 run filePath = do
     input <- readFile filePath
@@ -117,7 +121,42 @@ run filePath = do
     --let linesGrouped = groupLines inputLines
     --mapM_ print linesGrouped
 
+test :: IO ()
+test = do
+    --let tests = []
+    --I guess the lists being totally equal is impossible
+    let tests = [
+            (NestedList [], NestedList [], Continue)
+            , (NestedList [NumericVal 1], NestedList [NumericVal 1], Continue)
+            , (NestedList [NumericVal 2], NumericVal 2, Continue)
+            , (NestedList [NumericVal 1], NestedList [NestedList []], Incorrect)
+            , (NestedList [NestedList []], NestedList [NumericVal 1], Correct)
+            , (NumericVal 1, NumericVal 2, Correct)
+            , (NumericVal 2, NumericVal 1, Incorrect)
+            , (NestedList [NestedList[], NestedList[]], NestedList[NestedList []], Incorrect)
+            , (NestedList [NumericVal 1, NumericVal 2], NestedList [NumericVal 1, NumericVal 2], Continue)
+            , (NestedList [NestedList []], NestedList [NestedList []], Continue)
+            , (NestedList [NumericVal 1], NestedList [NestedList [NumericVal 1]], Continue)
+            , (NestedList [NumericVal 2], NestedList [NestedList [NumericVal 2], NumericVal 3], Correct)
+            , (NestedList [NestedList [NumericVal 2]], NestedList [NestedList [NumericVal 2]], Continue)
+            , (NestedList [NestedList [NumericVal 2]], NestedList [NumericVal 2], Continue)
+            , (NestedList [NestedList [NumericVal 2], NumericVal 3], NestedList [NumericVal 2], Incorrect)
+            , (NestedList [NestedList [NumericVal 2], NumericVal 3], NestedList [NestedList [NumericVal 2]], Incorrect)
+            ]
+    let testResults = zip ([1..] :: [Int]) (map runTest tests)
+    mapM_ print testResults
+    print ("num failures:" ++ show (length $ filter (\(_, TestResult (_, _, passed)) -> not passed) testResults))
+
+newtype TestResult = TestResult (Result, Result, Bool)
+instance Show TestResult where
+    show (TestResult (expected, actual, testPassed)) = "Actual:"++show expected++" Expected:"++show actual++" succeded?:"++show testPassed
+
+runTest :: (List, List, Result) -> TestResult
+runTest (l1, l2, answer) = TestResult (result, answer, answer == result)
+    where result = compareList l1 l2
+
 data Result = Incorrect | Continue | Correct deriving (Show, Eq)
+isCorrect :: Result -> Bool
 isCorrect = (== Correct)
 
 numCompare :: Int -> Int -> Result
@@ -134,16 +173,19 @@ compareList :: List -> List -> Result
 --compareList (NestedList (x:xs)) (NestedList (y:ys)) = compareList x y && compareListLengths xs ys
 -- gives 18 because the 7s case becomes true...
 --compareList (NestedList (x:xs)) (NestedList (y:ys)) = compareList x y && and (map (\(l1, l2) -> compareList l1 l2) (zip xs ys))
-compareList (NestedList []) (NestedList []) = Correct
-compareList (NestedList []) (NestedList (_:_)) = Correct
-compareList (NestedList (_:_)) (NestedList []) = Incorrect
+compareList (NestedList []) (NestedList []) = trace "both empty" Continue
+compareList (NestedList []) (NestedList (_:_)) = trace "left empty" Correct
+compareList (NestedList (_:_)) (NestedList []) = trace "right empty" Incorrect
 compareList (NumericVal lVal) (NumericVal rVal) = let res = numCompare lVal rVal in trace (show lVal ++ " vs " ++ show rVal ++ " " ++ show res) res
+--compareList (NumericVal lVal) (NumericVal rVal) = let res = numCompare lVal rVal in res
 compareList lVal@(NumericVal _) rList@(NestedList _) = compareList (NestedList [lVal]) rList
 compareList lList@(NestedList _) rVal@(NumericVal _) = compareList lList (NestedList [rVal])
-compareList (NestedList (x:xs)) (NestedList (y:ys)) = case compareList x y  of
+compareList (NestedList (x:xs)) (NestedList (y:ys)) = case trace (show $ "compare head l:" ++ show x ++ " r:" ++ show y ++ " " ++ show itemCompareResult) itemCompareResult  of
     Correct -> Correct
     Incorrect -> Incorrect
     Continue -> compareListLengths xs ys
+    where
+        itemCompareResult = compareList x y
 
 --
 --compareList (NestedList (_:_)) (NestedList []) = False
@@ -156,10 +198,14 @@ compareList (NestedList (x:xs)) (NestedList (y:ys)) = case compareList x y  of
 
 
 compareListLengths :: [List] -> [List] -> Result
+compareListLengths [] [] = Continue
 compareListLengths l1 l2
-    | Correct `elem` listCheckResult = Correct
-    | all (==Continue) listCheckResult && length1 < length2 = Correct
-    | length1 == length2 = Continue
+    | Correct `elem` loggedResult = Correct
+    | all (==Continue) loggedResult && length1 < length2 = Correct
+    | all (==Continue) loggedResult && length1 == length2 = Continue
+    -- this case was necessary for it to 'short-circuit' by stopping processing
+    -- the moment an incorrect result was found
+    | Incorrect `elem` loggedResult = Incorrect
     | otherwise = Incorrect
     --else Continue
     --trace (show (l1, l2, answer)) answer
@@ -167,6 +213,7 @@ compareListLengths l1 l2
         --answer = (Correct `elem` listCheckResult) && length1 <= length2
         length1 = length l1
         length2 = length l2
+        loggedResult = trace ("compareListLengths:" ++ show listCheckResult) listCheckResult
         listCheckResult = map (\(li1, li2) -> compareList li1 li2) (zip l1 l2)
 
 --map (\(l1, l2) -> compareList l1 l2

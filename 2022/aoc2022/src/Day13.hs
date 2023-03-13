@@ -9,6 +9,16 @@ import Debug.Trace
     trace
     )
 
+import Data.Maybe (
+    fromJust
+    )
+
+import Data.List (
+    sortBy
+    , elemIndex
+    , findIndex
+    )
+
 import Lib (
     groupLines
     )
@@ -42,6 +52,7 @@ data ParserState = ParserState {
 -- I want this to be generic but I'm not sure how to do that
 -- when I'm using digits to parse numbers
 data List = NestedList [List] | NumericVal Int
+
 instance Show List where
     show (NestedList []) = "[]"
     show (NestedList list) = show list
@@ -67,11 +78,6 @@ emptyList = NestedList[] <$ string "[]"
 
 numericVal :: Parsec String ParserState List
 numericVal = NumericVal <$> (Prelude.read <$> many1 digit)
---listOfDigits :: Parsec String ParserState [Int]
---listOfDigits = fmap Prelude.read <$> many1 digit `sepBy` char ','
-
---atomList :: Parsec String ParserState List
---atomList = AtomList <$> (openB *> listOfDigits <* closeB)
 
 nestedList :: Parsec String ParserState List
 nestedList = NestedList <$> between openB closeB (choice [nestedList, emptyList, numericVal] `sepBy` char ',')
@@ -83,7 +89,6 @@ parseSignal = do
 
 
 parseSignalPair :: Parsec String ParserState SignalPair
---parseSignalPair = SignalPair <$> parseSignal `sepBy` endOfLine
 parseSignalPair = do
     signalOne <- parseSignal
     signalTwo <- parseSignal
@@ -92,20 +97,11 @@ parseSignalPair = do
 
     return $ SignalPair currIndex (signalOne, signalTwo)
 
---parseSignalPair = do
-    --instead of matching a list and then trying to assert that there are
-    --only two, write the parser such that it only succeeds on reading 2 signals
-    --separated by a newline
-    --but the hard part is putting the result into a tuple, like I want to
-    --signals <- parseSignal `sepBy` endOfLine
-    --case signals of
-    --    [sig1, sig2] -> return $ SignalPair (sig1, sig2)
-    --    _ -> Parse
-
 parseProblem :: Parsec String ParserState Decoder
 parseProblem = Decoder <$> parseSignalPair `sepBy1` endOfLine <* eof
 --parseProblem = Decoder <$> many parseSignalPair <* eof
 
+--part one guesses:
 --5832 too high
 --5649 too high
 --5520 wrong
@@ -115,7 +111,8 @@ run :: FilePath -> IO ()
 run filePath = do
     input <- readFile filePath
     print input
-    case runParser parseProblem (ParserState { pairIndex=1 }) filePath input of
+    let parseResult = runParser parseProblem (ParserState { pairIndex=1 }) filePath input
+    case parseResult of
         Right (Decoder problem) -> do
             print problem
             let results = map (\(SignalPair idx (sig1, sig2)) -> (idx, compareList (contents sig1) (contents sig2))) problem
@@ -123,6 +120,29 @@ run filePath = do
             let correctPairSum = sum $ map fst (filter (isCorrect . snd) results)
             print correctPairSum
         Left e -> print e
+    -- [[2]] (127) * [[6]] (215) = 27305 too low
+    -- I forgot that the indices are 1-based, let's try
+    -- [[2]] (128) * [[6]] (216) = 27648
+    print "part2############"
+    case parseResult of
+        Right (Decoder problem) -> do
+            -- split out the signal pairs into a single big list of signals
+            let signalsInOneList = foldl (\acc (SignalPair _ (sig1, sig2)) -> sig1:sig2:acc) [] problem
+            let dividerPackets@[divider1, divider2] = [NestedList [NestedList [NumericVal 2]], NestedList [NestedList [NumericVal 6]]]
+            let finalList = zip (dividerPackets ++ map contents signalsInOneList) ([1..] :: [Int])
+            mapM_ print (take 10 finalList)
+            print $ "length of signals list:" ++ (show . length) finalList
+            let sorted = sortBy (\(lst1, _) (lst2, _) -> compareListOrdering lst1 lst2) finalList
+            print "sorted list:"
+            mapM_ print sorted
+            -- I wanted to use `elemIndex`, but I couldn't figure out how to derive Eq for the recursive List
+            -- data structure, so I had to staple an index to them and look for that instead
+            let packet1Index = 1 + fromJust (findIndex (\(_, signalId) -> signalId == 1) sorted)
+            let packet2Index = 1 + fromJust (findIndex (\(_, signalId) -> signalId == 2) sorted)
+            print $ "packet [[2]] index (1 based!!!):" ++ show packet1Index ++ " packet [[6]] index " ++ show packet2Index
+            print $ "signal strength = " ++ show (packet1Index * packet2Index)
+        Left e -> print e
+
    --print inputLines
     --let linesGrouped = groupLines inputLines
     --mapM_ print linesGrouped
@@ -173,6 +193,12 @@ numCompare l r
 
 --compareLists :: [List] -> [List] -> Result
 --compareLists 
+
+compareListOrdering :: List -> List -> Ordering
+compareListOrdering l1 l2 = case compareList l1 l2 of
+    Continue -> LT
+    Correct -> LT
+    Incorrect -> GT
 
 compareList :: List -> List -> Result
 compareList (NestedList []) (NestedList []) = Continue

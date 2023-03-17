@@ -26,11 +26,16 @@ import Text.Parsec (
     , try
     )
 
-data Location = Location Int Int
+import qualified Data.Set as S
+
+data Location = Location Int Int deriving (Show)
 
 --data Sand = Sand { settled::Bool, location::Location }
 
-data Space = Empty | Rock { location::Location } | Sand { settled::Bool, location::Location }
+newtype RockPath = RockPath [Location] deriving Show
+data Sand = Sand { settled::Bool, location::Location } deriving (
+    Show
+    )
 
 run :: FilePath -> IO()
 run fp = do
@@ -38,9 +43,34 @@ run fp = do
     print fileContents
     print "day 14"
     case runParser parse () fp fileContents of
-        Right rockPaths -> do
-            mapM_ print rockPaths
+        Right parsedRps -> do
+            mapM_ print parsedRps
+            let rockpaths = map generateRockPath parsedRps
+            print rockpaths
         Left parseError -> print parseError
+
+generateRockPath :: [(Int, Int)] -> RockPath
+generateRockPath [] = RockPath []
+generateRockPath pathPoints =
+    RockPath $ foldl generateIntermediatePoints [] pathPoints
+
+generateIntermediatePoints :: [Location] -> (Int, Int) -> [Location]
+generateIntermediatePoints [] (ex, ey) = [Location ex ey]
+generateIntermediatePoints prevPoints@(_:_) (ex, ey) = let Location sx sy = last prevPoints in
+    if sx /= ex then prevPoints ++ [ Location x sy | x <- generatePointsBetween sx ex ]
+    --if sx /= ex then prevPoints ++ drop 1 [ Location x sy | x <- [sx..ex] ]
+    else if sy /= ey then prevPoints ++ [ Location sx y | y <- generatePointsBetween sy ey ]
+    else []
+
+
+generatePointsBetween :: Int -> Int -> [Int]
+generatePointsBetween num1 num2
+    -- | abs (num2 - num1) == 1 = []
+    | num1 < num2 = reverse $ (num1 + 1):generatePointsBetween (num1 + 1) num2
+    | num2 < num1 = reverse $ (num2 + 1):generatePointsBetween num1 (num2+1)
+    | otherwise = []
+
+
 
 comma :: Parsec String () Char
 comma = char ','

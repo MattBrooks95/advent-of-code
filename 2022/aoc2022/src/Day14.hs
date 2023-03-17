@@ -64,11 +64,12 @@ generateIntermediatePoints prevPoints@(_:_) (ex, ey) = let Location sx sy = last
 
 
 generatePointsBetween :: Int -> Int -> [Int]
-generatePointsBetween num1 num2
-    -- | abs (num2 - num1) == 1 = []
-    | num1 < num2 = reverse $ (num1 + 1):generatePointsBetween (num1 + 1) num2
-    | num2 < num1 = reverse $ (num2 + 1):generatePointsBetween num1 (num2+1)
-    | otherwise = []
+generatePointsBetween n1 n2 = reverse $ go [] n1 n2
+    where
+        go nums num1 num2
+            | num1 < num2 = go ((num1 + 1):nums) (num1 + 1) num2
+            | num1 > num2 = go ((num1 -1):nums) (num1 - 1) num2
+            | otherwise = nums
 
 
 

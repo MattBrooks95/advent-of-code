@@ -26,14 +26,12 @@ import Text.Parsec (
     , try
     )
 
-import qualified Data.Set as S
-
 data Location = Location Int Int deriving (Show)
 
 --data Sand = Sand { settled::Bool, location::Location }
 
 newtype RockPath = RockPath [Location] deriving Show
-data Sand = Sand { settled::Bool, location::Location } deriving (
+newtype Sand = Sand { location::Location } deriving (
     Show
     )
 
@@ -47,7 +45,54 @@ run fp = do
             mapM_ print parsedRps
             let rockpaths = map generateRockPath parsedRps
             print rockpaths
+            let simResult = runSimulation $ Simulation rockpaths [] (Location 500 0)
+            print "part1 result:"
+            print simResult
         Left parseError -> print parseError
+
+data Simulation = Simulation { rPaths::[RockPath], sand::[Sand], flowPoint::Location }
+    deriving (Show)
+
+runSimulation :: Simulation -> Simulation
+-- generate first unit of sand
+runSimulation s@(Simulation _ [] fp) = s { sand=[Sand fp] }
+runSimulation (Simulation rp sandList@(_:sands) fp) =
+    case gravity sandList rp of
+        Settled _ -> runSimulation $ Simulation rp (Sand fp:sandList) fp
+        NewLocation newSand -> runSimulation $ Simulation rp (newSand:sands) fp
+        Abyss -> Simulation rp sands fp
+
+data FallResult = NewLocation Sand | Settled Sand | Abyss
+
+gravity :: [Sand] -> [RockPath] -> FallResult
+gravity [] _ = Abyss
+gravity (s@(Sand (Location x y)):sands) rp
+    | checkOccupied down = NewLocation $ Sand down
+    | checkOccupied downL = NewLocation $ Sand downL
+    | checkOccupied downR = NewLocation $ Sand downR
+    | maximum (y:map (\(Location _ rpy) -> rpy) (rockPathsToLocations rp)) == y = Abyss
+    | otherwise = Settled s
+    where
+        checkOccupied = isOccupied usedLocs
+        down = Location x (y + 1)
+        downL = Location (x - 1) (y + 1)
+        downR = Location (x + 1) (y + 1)
+        usedLocs = getUsedLocations sands rp
+
+getUsedLocations :: [Sand] -> [RockPath] -> [Location]
+getUsedLocations s rp = sandLocs++rockLocs
+    where
+        sandLocs = map (\(Sand l) -> l) s
+        rockLocs = rockPathsToLocations rp
+
+rockPathsToLocations :: [RockPath] -> [Location]
+rockPathsToLocations = concatMap (\(RockPath l) -> l)
+
+isOccupied :: [Location] -> Location -> Bool
+isOccupied usedLocs (Location x y) =
+    let sameX = filter (\(Location ox _) -> x == ox) usedLocs
+        otherYs = map (\(Location _ oy) -> oy) sameX
+        in y `elem` otherYs
 
 generateRockPath :: [(Int, Int)] -> RockPath
 generateRockPath [] = RockPath []

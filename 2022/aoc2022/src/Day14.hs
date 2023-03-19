@@ -50,7 +50,7 @@ newtype Sand = Sand { location::Location } deriving (
 run :: FilePath -> IO()
 run fp = do
     fileContents <- ST.readFile fp
-    print fileContents
+    --print fileContents
     print "day 14"
     case runParser parse () fp fileContents of
         Left parseError -> print parseError
@@ -101,8 +101,8 @@ runSimulation sim@(Simulation rockpaths _ _) =
     go :: Int -> Simulation -> Simulation
     go lrp s@(Simulation _ [] fp) = go lrp $ s { sand=[Sand fp] }
     go lrp (Simulation rp sandList@(_:sands) fp) =
-        case trace (show gravityResult) gravityResult of
-        --case gravityResult of
+        --case trace (show gravityResult) gravityResult of
+        case gravityResult of
             Settled _ -> go lrp (Simulation rp (Sand fp:sandList) fp)
             NewLocation newSand -> go lrp (Simulation rp (newSand:sands) fp)
             Abyss -> Simulation rp sands fp

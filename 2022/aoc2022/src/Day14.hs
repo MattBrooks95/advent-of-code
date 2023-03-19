@@ -54,9 +54,9 @@ run fp = do
     print "day 14"
     case runParser parse () fp fileContents of
         Right parsedRps -> do
-            mapM_ print parsedRps
+            --mapM_ print parsedRps
             let rockpaths = map generateRockPath parsedRps
-            print rockpaths
+            --print rockpaths
             let simResult = runSimulation $ Simulation rockpaths [] (Location 500 0)
             print "part1 result:"
             print simResult
@@ -70,7 +70,8 @@ runSimulation :: Simulation -> Simulation
 -- generate first unit of sand
 runSimulation s@(Simulation _ [] fp) = runSimulation $ s { sand=[Sand fp] }
 runSimulation (Simulation rp sandList@(_:sands) fp) =
-    case trace (show gravityResult) gravityResult of
+    --case trace (show gravityResult) gravityResult of
+    case gravityResult of
         Settled _ -> runSimulation $ Simulation rp (Sand fp:sandList) fp
         NewLocation newSand -> runSimulation $ Simulation rp (newSand:sands) fp
         Abyss -> Simulation rp sands fp

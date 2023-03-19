@@ -58,33 +58,58 @@ run fp = do
             --mapM_ print parsedRps
             let rockpaths = map generateRockPath parsedRps
             --print rockpaths
-            let simResult = runSimulation $ Simulation rockpaths [] (Location 500 0)
-            print "part1 result:"
+            --let simResult = runSimulation $ Simulation rockpaths [] (Location 500 0)
+            --print "part1 result:"
             --print simResult
             --answer 618
-            print $ "num of sand:" ++ show (length (sand simResult))
-            print "part 2"
-            let floorY = 2 + maximum (map (\(Location _ y) -> y) (rockPathsToLocations rockpaths))
-            print $ "part2 floorY:" ++ show floorY
-            let part2Result = runSimulationPart2 floorY (Simulation rockpaths [] (Location 500 0))
-            print $ "num of sand:" ++ show (length (sand part2Result))
+            --print $ "num of sand:" ++ show (length (sand simResult))
+            part1 rockpaths
+            --part2 rockpaths
+            --print "part 2"
+            --let floorY = 2 + maximum (map (\(Location _ y) -> y) (rockPathsToLocations rockpaths))
+            --print $ "part2 floorY:" ++ show floorY
+            --let part2Result = runSimulationPart2 floorY (Simulation (rockPathsToLocations rockpaths) [] (Location 500 0))
+            --print $ "num of sand:" ++ show (length (sand part2Result))
+part1 :: [RockPath] -> IO()
+part1 rockpaths = do
+    let rockpathLocations = rockPathsToLocations rockpaths
+    let simResult = runSimulation $ Simulation rockpathLocations [] (Location 500 0)
+    print "part1 result:"
+    --print simResult
+    --answer 618
+    print $ "num of sand:" ++ show (length (sand simResult))
 
-data Simulation = Simulation { rPaths::[RockPath], sand::[Sand], flowPoint::Location }
+part2 :: [RockPath] -> IO()
+part2 rockpaths = do
+    print "part 2"
+    let rockPathLocations = rockPathsToLocations rockpaths
+    let floorY = 2 + maximum (map (\(Location _ y) -> y) rockPathLocations)
+    print $ "part2 floorY:" ++ show floorY
+    let part2Result = runSimulationPart2 floorY (Simulation rockPathLocations [] (Location 500 0))
+    print $ "num of sand:" ++ show (length (sand part2Result))
+
+data Simulation = Simulation { rPaths::[Location], sand::[Sand], flowPoint::Location }
     deriving (Show)
 
 runSimulation :: Simulation -> Simulation
 -- generate first unit of sand
-runSimulation s@(Simulation _ [] fp) = runSimulation $ s { sand=[Sand fp] }
-runSimulation (Simulation rp sandList@(_:sands) fp) =
-    --case trace (show gravityResult) gravityResult of
-    case gravityResult of
-        Settled _ -> runSimulation $ Simulation rp (Sand fp:sandList) fp
-        NewLocation newSand -> runSimulation $ Simulation rp (newSand:sands) fp
-        Abyss -> Simulation rp sands fp
+--runSimulation s@(Simulation _ [] fp) = runSimulation $ s { sand=[Sand fp] }
+runSimulation sim@(Simulation rockpaths _ _) =
+    let lowestRockPath = maximum (map (\(Location _ rpy) -> rpy) rockpaths) in
+        go lowestRockPath sim
     where
-        gravityResult = gravity isAbyss isSettled sandList rp
-        isAbyss (Location _ y) = maximum (y:map (\(Location _ rpy) -> rpy) (rockPathsToLocations rp)) == y
-        isSettled _ = False
+    go :: Int -> Simulation -> Simulation
+    go lrp s@(Simulation _ [] fp) = go lrp $ s { sand=[Sand fp] }
+    go lrp (Simulation rp sandList@(_:sands) fp) =
+        case trace (show gravityResult) gravityResult of
+        --case gravityResult of
+            Settled _ -> go lrp (Simulation rp (Sand fp:sandList) fp)
+            NewLocation newSand -> go lrp (Simulation rp (newSand:sands) fp)
+            Abyss -> Simulation rp sands fp
+        where
+            gravityResult = gravity isAbyss isSettled sandList rp
+            isAbyss (Location _ y) = y >= lrp -- maximum (y:map (\(Location _ rpy) -> rpy) rp) == y
+            isSettled _ = False
 
 -- now takes an integer that represents the y coordinate of the bottom
 -- of the cave
@@ -111,7 +136,7 @@ runSimulationPart2 floorY s@(Simulation rp sandList@(_:sands) fp@(Location fpX f
 
 data FallResult = NewLocation Sand | Settled Sand | Abyss deriving (Show)
 
-gravity :: (Location -> Bool) -> (Location -> Bool) -> [Sand] -> [RockPath] -> FallResult
+gravity :: (Location -> Bool) -> (Location -> Bool) -> [Sand] -> [Location] -> FallResult
 gravity _ _ [] _ = Abyss
 gravity isAbyss isSettled (s@(Sand sl@(Location x y)):sands) rp
     | isSettled sl = Settled s
@@ -127,11 +152,10 @@ gravity isAbyss isSettled (s@(Sand sl@(Location x y)):sands) rp
         downR = Location (x + 1) (y + 1)
         usedLocs = getUsedLocations sands rp
 
-getUsedLocations :: [Sand] -> [RockPath] -> [Location]
-getUsedLocations s rp = sandLocs++rockLocs
+getUsedLocations :: [Sand] -> [Location] -> [Location]
+getUsedLocations s rp = sandLocs++rp
     where
         sandLocs = map (\(Sand l) -> l) s
-        rockLocs = rockPathsToLocations rp
 
 rockPathsToLocations :: [RockPath] -> [Location]
 rockPathsToLocations = concatMap (\(RockPath l) -> l)

@@ -8,6 +8,18 @@ import System.IO.Strict as ST (
     readFile
     )
 
+import Data.List (
+    find
+    )
+
+import Data.Maybe (
+    isJust
+    )
+
+import Debug.Trace (
+    trace
+    )
+
 import Text.Parsec (
     sepBy
     , sepBy1
@@ -48,6 +60,7 @@ run fp = do
             let simResult = runSimulation $ Simulation rockpaths [] (Location 500 0)
             print "part1 result:"
             print simResult
+            print $ "num of sand:" ++ show (length (sand simResult))
         Left parseError -> print parseError
 
 data Simulation = Simulation { rPaths::[RockPath], sand::[Sand], flowPoint::Location }
@@ -55,22 +68,24 @@ data Simulation = Simulation { rPaths::[RockPath], sand::[Sand], flowPoint::Loca
 
 runSimulation :: Simulation -> Simulation
 -- generate first unit of sand
-runSimulation s@(Simulation _ [] fp) = s { sand=[Sand fp] }
+runSimulation s@(Simulation _ [] fp) = runSimulation $ s { sand=[Sand fp] }
 runSimulation (Simulation rp sandList@(_:sands) fp) =
-    case gravity sandList rp of
+    case trace (show gravityResult) gravityResult of
         Settled _ -> runSimulation $ Simulation rp (Sand fp:sandList) fp
         NewLocation newSand -> runSimulation $ Simulation rp (newSand:sands) fp
         Abyss -> Simulation rp sands fp
+    where
+        gravityResult = gravity sandList rp
 
-data FallResult = NewLocation Sand | Settled Sand | Abyss
+data FallResult = NewLocation Sand | Settled Sand | Abyss deriving (Show)
 
 gravity :: [Sand] -> [RockPath] -> FallResult
 gravity [] _ = Abyss
 gravity (s@(Sand (Location x y)):sands) rp
-    | checkOccupied down = NewLocation $ Sand down
-    | checkOccupied downL = NewLocation $ Sand downL
-    | checkOccupied downR = NewLocation $ Sand downR
     | maximum (y:map (\(Location _ rpy) -> rpy) (rockPathsToLocations rp)) == y = Abyss
+    | not (checkOccupied down) = NewLocation $ Sand down
+    | not (checkOccupied downL) = NewLocation $ Sand downL
+    | not (checkOccupied downR) = NewLocation $ Sand downR
     | otherwise = Settled s
     where
         checkOccupied = isOccupied usedLocs
@@ -89,10 +104,12 @@ rockPathsToLocations :: [RockPath] -> [Location]
 rockPathsToLocations = concatMap (\(RockPath l) -> l)
 
 isOccupied :: [Location] -> Location -> Bool
+isOccupied [] _ = False
 isOccupied usedLocs (Location x y) =
-    let sameX = filter (\(Location ox _) -> x == ox) usedLocs
-        otherYs = map (\(Location _ oy) -> oy) sameX
-        in y `elem` otherYs
+    isJust $ find (\(Location ox oy) -> x == ox && y == oy) usedLocs
+    --let sameX = filter (\(Location ox _) -> x == ox) usedLocs
+    --    otherYs = map (\(Location _ oy) -> oy) sameX
+    --    in y `elem` otherYs
 
 generateRockPath :: [(Int, Int)] -> RockPath
 generateRockPath [] = RockPath []

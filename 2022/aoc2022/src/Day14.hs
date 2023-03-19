@@ -53,15 +53,21 @@ run fp = do
     print fileContents
     print "day 14"
     case runParser parse () fp fileContents of
+        Left parseError -> print parseError
         Right parsedRps -> do
             --mapM_ print parsedRps
             let rockpaths = map generateRockPath parsedRps
             --print rockpaths
             let simResult = runSimulation $ Simulation rockpaths [] (Location 500 0)
             print "part1 result:"
-            print simResult
+            --print simResult
+            --answer 618
             print $ "num of sand:" ++ show (length (sand simResult))
-        Left parseError -> print parseError
+            print "part 2"
+            let floorY = 2 + maximum (map (\(Location _ y) -> y) (rockPathsToLocations rockpaths))
+            print $ "part2 floorY:" ++ show floorY
+            --let part2Result = runSimulationPart2 floorY (Simulation rockpaths [] (Location 500 0))
+            --print $ "num of sand:" ++ show (length (sand part2Result))
 
 data Simulation = Simulation { rPaths::[RockPath], sand::[Sand], flowPoint::Location }
     deriving (Show)
@@ -76,14 +82,36 @@ runSimulation (Simulation rp sandList@(_:sands) fp) =
         NewLocation newSand -> runSimulation $ Simulation rp (newSand:sands) fp
         Abyss -> Simulation rp sands fp
     where
-        gravityResult = gravity sandList rp
+        gravityResult = gravity isAbyss sandList rp
+        isAbyss (Location _ y) = maximum (y:map (\(Location _ rpy) -> rpy) (rockPathsToLocations rp)) == y
+
+-- now takes an integer that represents the y coordinate of the bottom
+-- of the cave
+runSimulationPart2 :: Int -> Simulation -> Simulation
+runSimulationPart2 _ s@(Simulation _ [] fp) = runSimulation $ s { sand=[Sand fp] }
+runSimulationPart2 floorY s@(Simulation rp sandList@(_:sands) fp@(Location fpX fpY)) =
+    case gravityResult of
+        NewLocation newSand -> runSimulationPart2 floorY (s { sand=newSand:sands })
+        Settled newSand@(Sand (Location x y)) ->
+            if x == fpX && y == fpY
+            -- the sand blocked the input source, so the simulation is over
+            then newSimulation
+            else runSimulationPart2 floorY newSimulation
+                where
+                    newSimulation = s { rPaths=rp, sand=newSand:sandList, flowPoint=fp }
+        Abyss -> trace "sand fell into the abyss in part2, when it should be impossible" s
+
+
+    where
+        gravityResult = gravity isAbyss sandList rp
+        isAbyss _ = False
 
 data FallResult = NewLocation Sand | Settled Sand | Abyss deriving (Show)
 
-gravity :: [Sand] -> [RockPath] -> FallResult
-gravity [] _ = Abyss
-gravity (s@(Sand (Location x y)):sands) rp
-    | maximum (y:map (\(Location _ rpy) -> rpy) (rockPathsToLocations rp)) == y = Abyss
+gravity :: (Location -> Bool) -> [Sand] -> [RockPath] -> FallResult
+gravity _ [] _ = Abyss
+gravity isAbyss (s@(Sand sl@(Location x y)):sands) rp
+    | isAbyss sl = Abyss
     | not (checkOccupied down) = NewLocation $ Sand down
     | not (checkOccupied downL) = NewLocation $ Sand downL
     | not (checkOccupied downR) = NewLocation $ Sand downR
@@ -103,6 +131,12 @@ getUsedLocations s rp = sandLocs++rockLocs
 
 rockPathsToLocations :: [RockPath] -> [Location]
 rockPathsToLocations = concatMap (\(RockPath l) -> l)
+
+-- now accepts the y coordinate for the floor of the cavern
+-- if sand y does not equal floor y, calls isOccupied as it was from part 1
+--isOccupiedWithFloor :: Int -> [Location] -> Location -> Bool
+--isOccupiedWithFloor floorY usedLocs (Location x y) =
+--    y >= floorY - 1 || isOccupied usedLocs (Location x y)
 
 isOccupied :: [Location] -> Location -> Bool
 isOccupied [] _ = False

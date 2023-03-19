@@ -66,8 +66,8 @@ run fp = do
             print "part 2"
             let floorY = 2 + maximum (map (\(Location _ y) -> y) (rockPathsToLocations rockpaths))
             print $ "part2 floorY:" ++ show floorY
-            --let part2Result = runSimulationPart2 floorY (Simulation rockpaths [] (Location 500 0))
-            --print $ "num of sand:" ++ show (length (sand part2Result))
+            let part2Result = runSimulationPart2 floorY (Simulation rockpaths [] (Location 500 0))
+            print $ "num of sand:" ++ show (length (sand part2Result))
 
 data Simulation = Simulation { rPaths::[RockPath], sand::[Sand], flowPoint::Location }
     deriving (Show)
@@ -82,35 +82,39 @@ runSimulation (Simulation rp sandList@(_:sands) fp) =
         NewLocation newSand -> runSimulation $ Simulation rp (newSand:sands) fp
         Abyss -> Simulation rp sands fp
     where
-        gravityResult = gravity isAbyss sandList rp
+        gravityResult = gravity isAbyss isSettled sandList rp
         isAbyss (Location _ y) = maximum (y:map (\(Location _ rpy) -> rpy) (rockPathsToLocations rp)) == y
+        isSettled _ = False
 
 -- now takes an integer that represents the y coordinate of the bottom
 -- of the cave
 runSimulationPart2 :: Int -> Simulation -> Simulation
-runSimulationPart2 _ s@(Simulation _ [] fp) = runSimulation $ s { sand=[Sand fp] }
+runSimulationPart2 floorY s@(Simulation _ [] fp) = runSimulationPart2 floorY (s { sand=[Sand fp] })
 runSimulationPart2 floorY s@(Simulation rp sandList@(_:sands) fp@(Location fpX fpY)) =
+    --case trace (show gravityResult) gravityResult of
     case gravityResult of
         NewLocation newSand -> runSimulationPart2 floorY (s { sand=newSand:sands })
-        Settled newSand@(Sand (Location x y)) ->
+        Settled (Sand (Location x y)) ->
             if x == fpX && y == fpY
             -- the sand blocked the input source, so the simulation is over
-            then newSimulation
+            then s { sand=sandList }
             else runSimulationPart2 floorY newSimulation
                 where
-                    newSimulation = s { rPaths=rp, sand=newSand:sandList, flowPoint=fp }
+                    newSimulation = s { rPaths=rp, sand=Sand fp:sandList, flowPoint=fp }
         Abyss -> trace "sand fell into the abyss in part2, when it should be impossible" s
 
 
     where
-        gravityResult = gravity isAbyss sandList rp
+        gravityResult = gravity isAbyss isSettled sandList rp
         isAbyss _ = False
+        isSettled (Location _ ly) = ly == floorY - 1
 
 data FallResult = NewLocation Sand | Settled Sand | Abyss deriving (Show)
 
-gravity :: (Location -> Bool) -> [Sand] -> [RockPath] -> FallResult
-gravity _ [] _ = Abyss
-gravity isAbyss (s@(Sand sl@(Location x y)):sands) rp
+gravity :: (Location -> Bool) -> (Location -> Bool) -> [Sand] -> [RockPath] -> FallResult
+gravity _ _ [] _ = Abyss
+gravity isAbyss isSettled (s@(Sand sl@(Location x y)):sands) rp
+    | isSettled sl = Settled s
     | isAbyss sl = Abyss
     | not (checkOccupied down) = NewLocation $ Sand down
     | not (checkOccupied downL) = NewLocation $ Sand downL

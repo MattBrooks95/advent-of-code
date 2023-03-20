@@ -18,6 +18,7 @@ import Data.List (
     find
     , groupBy
     , maximumBy
+    , sortBy
     )
 
 import Data.Maybe (
@@ -53,7 +54,7 @@ data Matter = Rock | Sand deriving Show
 data Location = Location (Int, Int) Matter deriving Show
 
 isSand :: Location -> Bool
-isSand (Location (x, y) mType) = case mType of
+isSand (Location _ mType) = case mType of
     Sand -> True
     _ -> False
 
@@ -81,17 +82,20 @@ run fp = do
             --answer 618
             --print $ "num of sand:" ++ show (length (sand simResult))
             part1 rockpaths
-            --part2 rockpaths
-            --print "part 2"
+            print "part 2"
+            part2 rockpaths
             --let floorY = 2 + maximum (map (\(Location _ y) -> y) (rockPathsToLocations rockpaths))
             --print $ "part2 floorY:" ++ show floorY
             --let part2Result = runSimulationPart2 floorY (Simulation (rockPathsToLocations rockpaths) [] (Location 500 0))
             --print $ "num of sand:" ++ show (length (sand part2Result))
+
 part1 :: [RockPath] -> IO()
 part1 rockpaths = do
     let rockpathLocations = rockPathsToLocations rockpaths
+    let sortedByMaxIndex = sortBy (compare `on` hashLoc) rockpathLocations
+    print $ "lowest 10:" ++ concatMap show (take 10 sortedByMaxIndex) ++ " highest 10:" ++ concatMap show (drop (length sortedByMaxIndex - 10) sortedByMaxIndex)
     let locsVec = initVec rockpathLocations
-    print locsVec
+    --print locsVec
     let simResult = runSimulation $ Simulation locsVec (500, 0) (500, 0)
     print "part1 result:"
     --print simResult
@@ -122,17 +126,19 @@ hashLoc (Location (x, y) _) = x * y
 getMinMaxIndex :: [Location] -> Int
 getMinMaxIndex locs = let (mX, mY) = go (0, 0) locs in (mX + 1) * (mY + 1)
     where
-        go acc [] = acc
+        go acc [] = trace ("minMax:" ++ show acc) acc
         go (maxX, maxY) (Location (x, y) _:ls) = go (max maxX x, max maxY y) ls
 
---part2 :: [RockPath] -> IO()
---part2 rockpaths = do
---    print "part 2"
---    let rockPathLocations = rockPathsToLocations rockpaths
---    let floorY = 2 + maximum (map (\(Location _ y) -> y) rockPathLocations)
---    print $ "part2 floorY:" ++ show floorY
---    let part2Result = runSimulationPart2 floorY (Simulation rockPathLocations [] (Location 500 0))
---    print $ "num of sand:" ++ show (length (sand part2Result))
+part2 :: [RockPath] -> IO()
+part2 rockpaths = do
+    print "part 2"
+    let rockpathLocations = rockPathsToLocations rockpaths
+    let locsVec = initVec rockpathLocations
+    let floorY = 1 + maximum (map (\(Location (_, y) _) -> y) rockpathLocations)
+    print $ "part2 floorY:" ++ show floorY
+    let part2Result = runSimulationPart2 floorY (Simulation locsVec (500, 0) (500, 0))
+    print $ "num of sand:" ++ show (length (getSand (locations part2Result)))
+    --print $ "num of sand:" ++ show (length (sand part2Result))
 
 data Simulation = Simulation { locations::Locations, currentSand::(Int, Int), flowPoint::(Int, Int) }
     deriving (Show)
@@ -174,26 +180,27 @@ maxYLocation locs =
 
 -- now takes an integer that represents the y coordinate of the bottom
 -- of the cave
---runSimulationPart2 :: Int -> Simulation -> Simulation
---runSimulationPart2 floorY s@(Simulation _ [] fp) = runSimulationPart2 floorY (s { sand=[Sand fp] })
---runSimulationPart2 floorY s@(Simulation rp sandList@(_:sands) fp@(Location fpX fpY)) =
---    --case trace (show gravityResult) gravityResult of
---    case gravityResult of
---        NewLocation newSand -> runSimulationPart2 floorY (s { sand=newSand:sands })
---        Settled (Sand (Location x y)) ->
---            if x == fpX && y == fpY
---            -- the sand blocked the input source, so the simulation is over
---            then s { sand=sandList }
---            else runSimulationPart2 floorY newSimulation
---                where
---                    newSimulation = s { rPaths=rp, sand=Sand fp:sandList, flowPoint=fp }
---        Abyss -> trace "sand fell into the abyss in part2, when it should be impossible" s
---
---
---    where
---        gravityResult = gravity isAbyss isSettled sandList rp
---        isAbyss _ = False
---        isSettled (Location _ ly) = ly == floorY - 1
+runSimulationPart2 :: Int -> Simulation -> Simulation
+--runSimulationPart2 floorY s@(Simulation _  fp) = runSimulationPart2 floorY (s { currentSand=fp })
+runSimulationPart2 floorY s@(Simulation locs sand fp@(fpX, fpY)) =
+    --case trace (show gravityResult) gravityResult of
+    case gravityResult of
+        --NewLocation newSand -> runSimulationPart2 floorY (s { currentSand= trace("new sand:" ++ show newSand) newSand })
+        NewLocation newSand -> runSimulationPart2 floorY (s { currentSand= newSand })
+        Settled settledSand@(x, y) ->
+            if x == fpX && y == fpY
+            -- the sand blocked the input source, so the simulation is over
+            then newSimulation
+            else runSimulationPart2 floorY newSimulation
+                where
+                    newSimulation = s { locations=insert locs (Location settledSand Sand), currentSand=fp }
+        Abyss -> trace "sand fell into the abyss in part2, when it should be impossible" s
+
+
+    where
+        gravityResult = gravity isAbyss isSettled locs sand
+        isAbyss _ = False
+        isSettled (_, ly) = ly == floorY - 1
 
 data FallResult = NewLocation (Int, Int) | Settled (Int, Int) | Abyss deriving (Show)
 
@@ -231,8 +238,8 @@ type Locations = V.Vector [Location]
 insert :: Locations -> Location -> Locations
 insert locs newLoc = let hashKey = hashLoc newLoc in
     case locs V.!? hashKey of
-        Nothing -> error $ "couldn't find a bucket for hash" ++ show hashKey
-        Just bucket -> (V.//) locs [(hashKey, newLoc:bucket)]
+        Nothing -> error $ "couldn't find a bucket for hash" ++ show hashKey ++ " loc:" ++ show newLoc
+        Just bucket -> locs V.// [(hashKey, newLoc:bucket)]
 
 isOccupied :: Locations -> (Int, Int) -> Bool
 isOccupied usedLocs (x, y) =

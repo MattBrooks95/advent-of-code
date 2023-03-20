@@ -8,7 +8,7 @@ import System.IO.Strict as ST (
     readFile
     )
 
-import qualified Data.Vector as V
+--import qualified Data.Vector as V
 
 import Data.Function (
     on
@@ -20,6 +20,8 @@ import Data.List (
     , maximumBy
     , sortBy
     )
+
+import qualified Data.Map as M
 
 import Data.Maybe (
     isJust
@@ -94,27 +96,31 @@ part1 rockpaths = do
     let rockpathLocations = rockPathsToLocations rockpaths
     let sortedByMaxIndex = sortBy (compare `on` hashLoc) rockpathLocations
     print $ "lowest 10:" ++ concatMap show (take 10 sortedByMaxIndex) ++ " highest 10:" ++ concatMap show (drop (length sortedByMaxIndex - 10) sortedByMaxIndex)
-    let locsVec = initVec rockpathLocations
+    let locMap = initMap rockpathLocations
     --print locsVec
-    let simResult = runSimulation $ Simulation locsVec (500, 0) (500, 0)
+    let simResult = runSimulation $ Simulation locMap (500, 0) (500, 0)
     print "part1 result:"
     --print simResult
     --answer 618
     --print $ "num of sand:" ++ show (length (currentSand simResult))
     print $ "num of sand:" ++ show (length (getSand (locations simResult)))
 
-getSand :: Locations -> [Location]
-getSand = concatMap getSandFromBucket
+--getSand :: Locations -> Location
+--getSand = concatMap getSandFromBucket
+
+getSand :: M.Map (Int, Int) Location -> M.Map (Int, Int) Location
+getSand = M.filter (\(Location _ mType) -> case mType of { Sand -> True; _ -> False; })
 
 getSandFromBucket :: [Location] -> [Location]
 getSandFromBucket = filter isSand
 
-initVec :: [Location] -> V.Vector [Location]
-initVec locs = let
-        maxIndex = getMinMaxIndex locs
-        groupedRocks = groupBy (\loc1 loc2 -> hashLoc loc1 == hashLoc loc2) locs
-    in
-        V.replicate maxIndex [] V.// map bucketWithHash groupedRocks
+initMap :: [Location] -> M.Map (Int, Int) Location
+initMap locs = M.fromList (map (\loc@(Location coords _) -> (coords, loc)) locs)
+    --let
+    --    maxIndex = getMinMaxIndex locs
+    --    groupedRocks = groupBy (\loc1 loc2 -> hashLoc loc1 == hashLoc loc2) locs
+    --in
+    --    V.replicate maxIndex [] V.// map bucketWithHash groupedRocks
 
 bucketWithHash :: [Location] -> (Int, [Location])
 bucketWithHash [] = (-1, [])
@@ -123,21 +129,26 @@ bucketWithHash bucket@(x:_) = (hashLoc x, bucket)
 hashLoc :: Location -> Int
 hashLoc (Location (x, y) _) = x * y
 
-getMinMaxIndex :: [Location] -> Int
-getMinMaxIndex locs = let (mX, mY) = go (0, 0) locs in (mX + 1) * (mY + 1)
-    where
-        go acc [] = trace ("minMax:" ++ show acc) acc
-        go (maxX, maxY) (Location (x, y) _:ls) = go (max maxX x, max maxY y) ls
+--getMinMaxIndex :: [Location] -> Int
+--getMinMaxIndex locs = let (mX, mY) = go (0, 0) locs in (mX + 1) * (mY + 1)
+--    where
+--        go acc [] = trace ("minMax:" ++ show acc) acc
+--        go (maxX, maxY) (Location (x, y) _:ls) = go (max maxX x, max maxY y) ls
 
+--26032 too low
+--26358, I was checking against the floor Y value minus 1, instead of the floor Y value...
 part2 :: [RockPath] -> IO()
 part2 rockpaths = do
     print "part 2"
     let rockpathLocations = rockPathsToLocations rockpaths
-    let locsVec = initVec rockpathLocations
+    let locsVec = initMap rockpathLocations
     let floorY = 1 + maximum (map (\(Location (_, y) _) -> y) rockpathLocations)
     print $ "part2 floorY:" ++ show floorY
     let part2Result = runSimulationPart2 floorY (Simulation locsVec (500, 0) (500, 0))
     print $ "num of sand:" ++ show (length (getSand (locations part2Result)))
+    case M.lookup (500, 0) (locations part2Result) of
+        Nothing -> print "the sand that is supposed to be blocking the input isn't in the list"
+        Just stopped -> print $ "sand that filled the hole:" ++ show stopped
     --print $ "num of sand:" ++ show (length (sand part2Result))
 
 data Simulation = Simulation { locations::Locations, currentSand::(Int, Int), flowPoint::(Int, Int) }
@@ -165,9 +176,13 @@ runSimulation sim@(Simulation startLocs _ fp) =
 
 maxYOfLocs :: Locations -> Int
 maxYOfLocs locs =
-    if null locs then -1
-    else let maxYBucket = V.maximumBy (compare `on` maxYLocation) locs in
-        maxYLocation maxYBucket
+    let (Location (_, y) _)  = maximumBy (compare `on` getY) asList in y
+    where
+        asList = map (\((_, _), loc) -> loc) mapAsList
+        mapAsList = M.toList locs
+    --if null locs then -1
+    --else let maxYBucket = M.maximumBy (compare `on` maxYLocation) locs in
+    --    maxYLocation maxYBucket
 
 getY :: Location -> Int
 getY (Location (_, y) _) = y
@@ -186,7 +201,7 @@ runSimulationPart2 floorY s@(Simulation locs sand fp@(fpX, fpY)) =
     --case trace (show gravityResult) gravityResult of
     case gravityResult of
         --NewLocation newSand -> runSimulationPart2 floorY (s { currentSand= trace("new sand:" ++ show newSand) newSand })
-        NewLocation newSand -> runSimulationPart2 floorY (s { currentSand= newSand })
+        NewLocation newSand -> runSimulationPart2 floorY (s { currentSand=newSand })
         Settled settledSand@(x, y) ->
             if x == fpX && y == fpY
             -- the sand blocked the input source, so the simulation is over
@@ -200,7 +215,7 @@ runSimulationPart2 floorY s@(Simulation locs sand fp@(fpX, fpY)) =
     where
         gravityResult = gravity isAbyss isSettled locs sand
         isAbyss _ = False
-        isSettled (_, ly) = ly == floorY - 1
+        isSettled (_, ly) = ly == floorY
 
 data FallResult = NewLocation (Int, Int) | Settled (Int, Int) | Abyss deriving (Show)
 
@@ -233,23 +248,17 @@ rockPathsToLocations = concatMap (\(RockPath l) -> l)
 --isOccupiedWithFloor floorY usedLocs (Location x y) =
 --    y >= floorY - 1 || isOccupied usedLocs (Location x y)
 
-type Locations = V.Vector [Location]
+type Locations = M.Map (Int, Int) Location
 
 insert :: Locations -> Location -> Locations
-insert locs newLoc = let hashKey = hashLoc newLoc in
-    case locs V.!? hashKey of
-        Nothing -> error $ "couldn't find a bucket for hash" ++ show hashKey ++ " loc:" ++ show newLoc
-        Just bucket -> locs V.// [(hashKey, newLoc:bucket)]
+insert locs newLoc@(Location (x, y) _) = M.insert (x, y) newLoc locs
 
 isOccupied :: Locations -> (Int, Int) -> Bool
 isOccupied usedLocs (x, y) =
     isJust $ getLoc usedLocs (x, y)
 
 getLoc :: Locations -> (Int, Int) -> Maybe Location
-getLoc locs (x, y) = let key = x * y in
-    case locs V.!? key of
-        Just bucket -> find (\(Location (ox, oy) _) -> ox == x && oy == y) bucket
-        Nothing -> Nothing
+getLoc locs (x, y) = M.lookup (x, y) locs
 
     --isJust $ find (\(Location ox oy) -> x == ox && y == oy) usedLocs
     --let sameX = filter (\(Location ox _) -> x == ox) usedLocs

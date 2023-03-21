@@ -32,22 +32,17 @@ import Debug.Trace (
     )
 
 import Text.Parsec (
-    sepBy
-    , sepBy1
+    sepBy1
     , Parsec
-    , digit
-    , char
-    , many1
-    , spaces
     , endOfLine
     , many
     , string
     , runParser
     , eof
-    , skipMany
     , between
-    , try
     )
+
+import Parsing
 
 --data Location = Location Int Int deriving (Show)
 
@@ -288,15 +283,6 @@ generatePointsBetween n1 n2 = reverse $ go [] n1 n2
             | otherwise = nums
 
 
-
-comma :: Parsec String () Char
-comma = char ','
-
-digits :: Parsec String () Int
-digits = read <$> many1 digit
-
-plainWhitespace :: Parsec String () Char
-plainWhitespace = char ' '
 
 numberPair :: Parsec String () (Int, Int)
 numberPair = do

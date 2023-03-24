@@ -66,19 +66,18 @@ test = do
     let tests = [
             Test "Sensor at x=14, y=3: closest beacon is at x=15, y=3"
                 [
-                    (14, 3), (14, 2), (14, 4)
-                    , (13, 3), (13, 4), (13, 2)
-                    , (15, 3), (15, 2), (15, 4)
+                    (14, 3), (13, 3), (15, 3)
+                    , (14, 2), (14, 4)
                     ]
             ]
     testResults <- mapM runTest tests
     mapM_ print testResults
 
-runTest :: Test -> IO (String, Bool, S.Set Coord)
+runTest :: Test -> IO (String, Bool, S.Set Coord, S.Set Coord)
 runTest (Test input answers) = do
     case P.runParser parseLine () "" input of
-        Left e -> print ("couldn't run test:" ++ input ++ " " ++ show e) >> return (input, False, S.empty)
-        Right sensor -> return (input, null diff, diff)
+        Left e -> print ("couldn't run test:" ++ input ++ " " ++ show e) >> return (input, False, S.empty, S.empty)
+        Right sensor -> return (input, null diff, diff, results)
             where
                 diff = S.difference (S.fromList answers) results
                 results = getProhibitedSpacesAroundSensor sensor
@@ -146,7 +145,7 @@ walkItBack start update stop  = go [start] 1 start
             else go (acc ++ newProhibited) (iter + 2) (update currCoord)
             where
                 --newProhibited = [ (x, cy) | x <- [1..iter] ]
-                newProhibited = foldl (\newPAcc newX -> (cx - newX, cy):newPAcc) [] [1..iter] -- [ (x, cy) | x <- [1..iter] ]
+                newProhibited = foldl (\newPAcc newX -> (cx - newX, cy):newPAcc) [] [0..iter] -- [ (x, cy) | x <- [1..iter] ]
 
 -- this assumes that the Y coordinate is in range of the sensor
 getProhibitedSpacesAtY :: Int -> Sensor -> [Coord]

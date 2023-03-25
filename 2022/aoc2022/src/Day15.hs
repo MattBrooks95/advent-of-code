@@ -51,16 +51,13 @@ run inputFilePath = do
     case P.runParser parse () inputFilePath fileContents of
         Left parseError -> print parseError
         Right parseResults -> do
-            --let inRangeOfSensor = calculateImpossiblePlacesForY checkYCoord parseResults
-            --let cannotBeBeacon = postProcessImpossiblePlaces inRangeOfSensor parseResults
-            --print $ "checking y coord:" ++ show checkYCoord
-            ----print $ sort cannotBeBeacon
-            --print $ "num impossible places:" ++ show (length cannotBeBeacon)
+            part1 parseResults checkYCoord
             print "part2"
-            let gridDim = targetBeaconMaxCoord
+            --let gridDim = targetBeaconMaxCoord
             --let gridDim = 20
-            print $ "maxCoord:" ++ show gridDim
-            let prohibitedSpaces = S.unions $ map getProhibitedSpacesAroundSensor parseResults
+            --print $ "maxCoord:" ++ show gridDim
+            --let prohibitedSpaces = S.unions $ map getProhibitedSpacesAroundSensor parseResults
+            --print $ length prohibitedSpaces
             --let badSensor = findSensorForSpace parseResults (14, 11)
             --case badSensor of
             --    Nothing -> print "no bad sensor was found"
@@ -69,11 +66,21 @@ run inputFilePath = do
             --        let prohib = getProhibitedSpacesAroundSensor s
             --        --print prohib
             --        print $ S.filter (\(_, y) -> y == 11) prohib
-            let grid = getGrid gridDim gridDim
-            print $ "grid length:" ++ show (length grid) ++ " prohibited length:" ++ show (length prohibitedSpaces)
+            --let grid = getGrid gridDim gridDim
+            --print $ "grid length:" ++ show (length grid) ++ " prohibited length:" ++ show (length prohibitedSpaces)
             --print $ "grid:" ++ show grid
             --print $ "prohibitedSpaces:" ++ show prohibitedSpaces
-            print $ "difference:" ++ show (S.difference grid prohibitedSpaces)
+            --print $ "difference:" ++ show (S.difference grid prohibitedSpaces)
+            --let sensorsWithGaps = getIntraSensorDistances parseResults
+
+part1 :: [Sensor] -> Int -> IO ()
+part1 sensors targetY = do
+    print "part1"
+    let inRangeOfSensor = calculateImpossiblePlacesForY targetY sensors
+    let cannotBeBeacon = postProcessImpossiblePlaces inRangeOfSensor sensors
+    --print $ "checking y coord:" ++ show checkYCoord
+    ----print $ sort cannotBeBeacon
+    print $ "num impossible places:" ++ show (length cannotBeBeacon)
 
 data Test = Test String [Coord]
 
@@ -113,12 +120,7 @@ findSensorForSpace sensors target = find (hasSpace target) sensors
         hasSpace (cx, cy) s = isJust $ find (\(x, y) -> x == cx && y == cy) (getProhibitedSpacesAroundSensor s)
 
 getGrid :: Int -> Int -> S.Set Coord
---getGrid x y = S.fromList (concat [ ([(cx, cy) | cx <- [0..x]]) | cy <- [0..y] ])
---getGrid x y = S.fromList (concat [ ([(cx, cy) | cx <- [0..x]]) | cy <- [0..y] ])
-getGrid x y = S.fromList (zip xs ys)
-    where
-        ys = [0..y]
-        xs = [0..x]
+getGrid x y = S.fromList (concat [ ([(cx, cy) | cx <- [0..x]]) | cy <- [0..y] ])
 
 targetBeaconMaxCoord :: Int
 targetBeaconMaxCoord = 4 * ((10 :: Int) ^ (6 :: Int))

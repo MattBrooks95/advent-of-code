@@ -6,6 +6,8 @@ import Data.Functor
 
 import Debug.Trace
 
+import qualified Data.Map as M
+
 import Data.List (
     unfoldr
     , sort
@@ -51,27 +53,8 @@ run inputFilePath = do
     case P.runParser parse () inputFilePath fileContents of
         Left parseError -> print parseError
         Right parseResults -> do
-            part1 parseResults checkYCoord
-            print "part2"
-            --let gridDim = targetBeaconMaxCoord
-            --let gridDim = 20
-            --print $ "maxCoord:" ++ show gridDim
-            --let prohibitedSpaces = S.unions $ map getProhibitedSpacesAroundSensor parseResults
-            --print $ length prohibitedSpaces
-            --let badSensor = findSensorForSpace parseResults (14, 11)
-            --case badSensor of
-            --    Nothing -> print "no bad sensor was found"
-            --    Just s -> do
-            --        print $ "bad sensor:" ++ show s
-            --        let prohib = getProhibitedSpacesAroundSensor s
-            --        --print prohib
-            --        print $ S.filter (\(_, y) -> y == 11) prohib
-            --let grid = getGrid gridDim gridDim
-            --print $ "grid length:" ++ show (length grid) ++ " prohibited length:" ++ show (length prohibitedSpaces)
-            --print $ "grid:" ++ show grid
-            --print $ "prohibitedSpaces:" ++ show prohibitedSpaces
-            --print $ "difference:" ++ show (S.difference grid prohibitedSpaces)
-            --let sensorsWithGaps = getIntraSensorDistances parseResults
+            --part1 parseResults checkYCoord
+            part2 parseResults
 
 part1 :: [Sensor] -> Int -> IO ()
 part1 sensors targetY = do
@@ -82,7 +65,33 @@ part1 sensors targetY = do
     ----print $ sort cannotBeBeacon
     print $ "num impossible places:" ++ show (length cannotBeBeacon)
 
+part2 :: [Sensor] -> IO ()
+part2 sensors = do
+    print "part2"
+    print $ "num sensors:" ++ show (length sensors)
+    let sensorsWithDistances = getDistancesBetweenSensors sensors
+    let sensorsNotTouching = getSensorsNotTouching sensorsWithDistances
+    print $ "not touching:" ++ show sensorsNotTouching
+
+type SensorsDist = [(Sensor, [(Int, Sensor)])]
+
+getSensorsNotTouching :: SensorsDist -> SensorsDist
+getSensorsNotTouching sensors = map notTouching sensors
+
+notTouching :: (Sensor, [(Int, Sensor)]) -> (Sensor, [(Int, Sensor)])
+notTouching (sensor@(Sensor _ _ distToBeacon), neighbors) = (sensor, tooFarNeighbors)
+    where
+        tooFarNeighbors =
+            filter (\(distTo, otherSensor) -> distTo > max distToBeacon (bDist otherSensor)) neighbors
+
+getDistancesBetweenSensors :: [Sensor] -> SensorsDist
+getDistancesBetweenSensors sensors =
+    [ (s1, [(sensorDist s1 s2, s2) | s2 <- sensors, s2 /= s1]) | s1 <- sensors]
+
 data Test = Test String [Coord]
+
+sensorDist :: Sensor -> Sensor -> Int
+sensorDist s1 s2 = getDist (loc s1) (loc s2)
 
 test :: IO ()
 test = do
@@ -139,13 +148,16 @@ postProcessImpossiblePlaces iL ss =
 
 type SensorLocation = Coord
 type BeaconLocation = Coord
-data Sensor = Sensor SensorLocation BeaconLocation Int deriving Show
+data Sensor = Sensor SensorLocation BeaconLocation Int deriving (Show, Ord, Eq)
 
 loc :: Sensor -> SensorLocation
 loc (Sensor sens _ _) = sens
 
 beaconLoc :: Sensor -> BeaconLocation
 beaconLoc (Sensor _ beac _) = beac
+
+bDist :: Sensor -> Int
+bDist (Sensor _ _ distToBeacon) = distToBeacon
 
 type Coord = (Int, Int)
 

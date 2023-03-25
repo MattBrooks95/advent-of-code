@@ -9,6 +9,12 @@ import Debug.Trace
 import Data.List (
     unfoldr
     , sort
+    , find
+    , groupBy
+    )
+
+import Data.Maybe (
+    isJust
     )
 
 import qualified Data.Set as S (
@@ -21,6 +27,7 @@ import qualified Data.Set as S (
     , fromList
     , intersection
     , empty
+    , filter
     )
 
 import System.IO.Strict as ST (
@@ -50,14 +57,23 @@ run inputFilePath = do
             ----print $ sort cannotBeBeacon
             --print $ "num impossible places:" ++ show (length cannotBeBeacon)
             print "part2"
-            --let gridDim = targetBeaconMaxCoord
-            let gridDim = 20
+            let gridDim = targetBeaconMaxCoord
+            --let gridDim = 20
             print $ "maxCoord:" ++ show gridDim
             let prohibitedSpaces = S.unions $ map getProhibitedSpacesAroundSensor parseResults
+            --let badSensor = findSensorForSpace parseResults (14, 11)
+            --case badSensor of
+            --    Nothing -> print "no bad sensor was found"
+            --    Just s -> do
+            --        print $ "bad sensor:" ++ show s
+            --        let prohib = getProhibitedSpacesAroundSensor s
+            --        --print prohib
+            --        print $ S.filter (\(_, y) -> y == 11) prohib
             let grid = getGrid gridDim gridDim
+            print $ "grid length:" ++ show (length grid) ++ " prohibited length:" ++ show (length prohibitedSpaces)
             --print $ "grid:" ++ show grid
-            print $ "prohibitedSpaces:" ++ show prohibitedSpaces
-            --print $ "difference:" ++ show (S.difference grid prohibitedSpaces)
+            --print $ "prohibitedSpaces:" ++ show prohibitedSpaces
+            print $ "difference:" ++ show (S.difference grid prohibitedSpaces)
 
 data Test = Test String [Coord]
 
@@ -66,9 +82,17 @@ test = do
     let tests = [
             Test "Sensor at x=14, y=3: closest beacon is at x=15, y=3"
                 [
-                    (14, 3), (13, 3), (15, 3)
-                    , (14, 2), (14, 4)
-                    ]
+                (14, 3), (13, 3), (15, 3)
+                , (14, 2), (14, 4)
+                ]
+            , Test "Sensor at x=14, y=3: closest beacon is at x=16, y=3"
+                [
+                (14, 1), (14, 2), (14, 3), (14, 4), (14, 5)
+                , (13, 2), (13, 3), (13, 4)
+                , (12, 3)
+                , (15, 2), (15, 3), (15, 4)
+                , (16, 3)
+                ]
             ]
     testResults <- mapM runTest tests
     mapM_ print testResults
@@ -82,9 +106,19 @@ runTest (Test input answers) = do
                 diff = S.difference (S.fromList answers) results
                 results = getProhibitedSpacesAroundSensor sensor
 
+findSensorForSpace :: [Sensor] -> Coord -> Maybe Sensor
+findSensorForSpace sensors target = find (hasSpace target) sensors
+    where
+        hasSpace :: Coord -> Sensor -> Bool
+        hasSpace (cx, cy) s = isJust $ find (\(x, y) -> x == cx && y == cy) (getProhibitedSpacesAroundSensor s)
 
 getGrid :: Int -> Int -> S.Set Coord
-getGrid x y = S.fromList (concat [ ([(cx, cy) | cx <- [0..x]]) | cy <- [0..y] ])
+--getGrid x y = S.fromList (concat [ ([(cx, cy) | cx <- [0..x]]) | cy <- [0..y] ])
+--getGrid x y = S.fromList (concat [ ([(cx, cy) | cx <- [0..x]]) | cy <- [0..y] ])
+getGrid x y = S.fromList (zip xs ys)
+    where
+        ys = [0..y]
+        xs = [0..x]
 
 targetBeaconMaxCoord :: Int
 targetBeaconMaxCoord = 4 * ((10 :: Int) ^ (6 :: Int))
@@ -122,21 +156,25 @@ calculateImpossiblePlacesForY y sensors = go [] (filter (isCloseTo y) sensors)
     go prohibited (s:ss) = go (prohibited++getProhibitedSpacesAtY y s) ss
 
 getProhibitedSpacesAroundSensor :: Sensor -> S.Set Coord
-getProhibitedSpacesAroundSensor (Sensor (sx, sy) _ dist) =
-    let upProhibited = walkItBack (trace (show furthestUp) furthestUp) countDown stopUp
-        downProhibited = walkItBack (trace (show furthestDown) furthestDown) countUp stopDown
+getProhibitedSpacesAroundSensor sens@(Sensor (sx, sy) _ dist) =
+    --let upProhibited = walkItBack (trace (show furthestUp) furthestUp) countDown stopUp
+    --    downProhibited = walkItBack (trace (show furthestDown) furthestDown) countUp stopDown
+    let upProhibited = walkItBack furthestUp countDown stopUp
+        downProhibited = walkItBack furthestDown countUp stopDown
     in
-        S.union (S.fromList upProhibited) (S.fromList downProhibited)
+        let total = S.union (S.fromList upProhibited) (S.fromList downProhibited) in
+        trace ("finished sensor " ++ show sens) total
+
     where
         furthestUp = (sx, sy - dist)
         furthestDown = (sx, sy + dist)
-        stopDown (_, y) = y == sy - 1
+        stopDown (_, y) = y == sy
         countDown (x, y) = (x + 1, y + 1)
-        stopUp (_, y) = y == sy
+        stopUp (_, y) = y == sy + 1
         countUp (x, y) = (x + 1, y - 1)
 
 walkItBack :: Coord -> (Coord -> Coord) -> (Coord -> Bool) -> [Coord]
-walkItBack start update stop  = go [start] 1 start
+walkItBack start update stop  = go [] 0 start
     where
         go :: [Coord] -> Int -> Coord -> [Coord]
         go acc iter currCoord@(cx, cy) =

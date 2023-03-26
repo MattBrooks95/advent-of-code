@@ -79,6 +79,7 @@ part2 sensors = do
     print $ "num sensors:" ++ show (length sensors)
     let gridDim = targetBeaconMaxCoord
     --let gridDim = 20
+    print $ "grid dim:" ++ show gridDim
     let freeSpaces = findFreeSpaces gridDim gridDim sensors
     print $ "free spaces:" ++ show freeSpaces
 
@@ -95,20 +96,44 @@ findFreeSpaces gridX gridY sensors = go [] 0
             | currIdx > maxIteration = acc
             | otherwise = let currCoord = getIter currIdx in
                 --if or (map (inAreaOfSensor currCoord) sensors)
-                if any (inAreaOfSensor currCoord) sensors || isJust (M.lookup currCoord beacons)
+                if isJust (M.lookup currCoord beacons)
                 then go acc (currIdx + 1)
-                else go (currCoord:acc) (currIdx + 1)
+                else case getFirstProhibitSensor currCoord sensors of
+                    Nothing -> go (currCoord:acc) (currIdx + 1)
+                    Just (xDiff, _) ->
+                        if xDiff > 0
+                        then go acc (currIdx + (trace ("able to skip" ++ show (xDiff * 2)) (xDiff * 2)))
+                        else go acc (currIdx + 1)
+
+                    --case find (inAreaOfSensor currCoord) sensors of
+                    --    Nothing -> go (currCoord:acc) (currIdx + 1)
+                    --    Just prohibitSensor -> []
+                    --if any (inAreaOfSensor currCoord) sensors || 
+                    --then go acc (currIdx + 1)
+                    --else go (currCoord:acc) (currIdx + 1)
+
+getFirstProhibitSensor :: Coord -> [Sensor] -> Maybe (Int, Sensor)
+getFirstProhibitSensor c [] = Nothing
+getFirstProhibitSensor c (s:ss) =
+    let (isInArea, xDiff) = inAreaOfSensor c s in
+        if isInArea then Just (xDiff, s)
+        else getFirstProhibitSensor c ss
+
 
 -- Manhatten Distance is the sum of the absolute difference between the
 -- measures in all dimensions of two points
 -- only doing 2D: x and y
-getDist :: Coord -> Coord -> Int
+-- returns (difference x (pos or neg), difference y (same), manhatten distance)
+getDist :: Coord -> Coord -> (Int, Int, Int)
 getDist (x1, y1) (x2, y2) =
     let
-        xDiff = abs (x2 - x1)
-        yDiff = abs (y2 - y1)
+        xDiff = x2 - x1
+        xDiffAbs = abs (x2 - x1)
+        yDiff = y2 - y1
+        yDiffAbs = abs yDiff
     in
-        xDiff `seq` yDiff `seq` (xDiff + yDiff)
+        --xDiff `seq` yDiff `seq` (xDiff + yDiff)
+        (xDiff, yDiff, xDiffAbs + yDiffAbs)
 
 iterationToCoord :: Int -> Int -> Int -> Coord
 iterationToCoord limitX limitY curr = (curr `mod` limitX,  curr `divRoundDown` limitY)
@@ -119,16 +144,16 @@ n1 `divRoundDown` n2 = floor ((asNum1 / asNum2) :: Double)
         asNum1 = fromIntegral n1
         asNum2 = fromIntegral n2
 
-inAreaOfSensor :: Coord -> Sensor -> Bool
+inAreaOfSensor :: Coord -> Sensor -> (Bool, Int)
 inAreaOfSensor coord (Sensor sensCoord _ dist) =
-    let distTo = getDist coord sensCoord in
-        distTo <= (distTo `seq` dist)
+    let (xDiff, _, distTo) = getDist coord sensCoord in
+        (distTo <= dist, xDiff)
 
 
 type SensorsDist = [(Sensor, [(Int, Sensor)])]
 
 getSensorsNotTouching :: SensorsDist -> SensorsDist
-getSensorsNotTouching sensors = map notTouching sensors
+getSensorsNotTouching = map notTouching
 
 notTouching :: (Sensor, [(Int, Sensor)]) -> (Sensor, [(Int, Sensor)])
 notTouching (sensor@(Sensor _ _ distToBeacon), neighbors) = (sensor, tooFarNeighbors)
@@ -143,7 +168,7 @@ getDistancesBetweenSensors sensors =
 data Test = Test String [Coord]
 
 sensorDist :: Sensor -> Sensor -> Int
-sensorDist s1 s2 = getDist (loc s1) (loc s2)
+sensorDist s1 s2 = let (_, _, dist) = getDist (loc s1) (loc s2) in dist
 
 --test :: IO ()
 --test = do
@@ -267,7 +292,7 @@ testOutFrom update currX loc1@(x1, y1) loc2 distToBeacon
     | distToSensor <= distToBeacon = Just ((x1, y1), update currX)
     | otherwise = Nothing
         where
-            distToSensor = getDist loc1 loc2
+            (_, _, distToSensor) = getDist loc1 loc2
 
 isCloseTo :: Int -> Sensor -> Bool
 isCloseTo checkY (Sensor (_, sy) _ dist) =
@@ -299,7 +324,8 @@ parseLine = do
     sensorCoords <- parseCoords
     _ <- parseBeacon
     beaconCoords <- parseCoords
-    return $ Sensor sensorCoords beaconCoords (getDist sensorCoords beaconCoords)
+    let (_, _, dist) = getDist sensorCoords beaconCoords
+    return $ Sensor sensorCoords beaconCoords dist
     --return $ Sensor sensorCoords beaconCoords
 
 parse :: P.Parsec String () [Sensor]

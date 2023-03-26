@@ -89,13 +89,26 @@ findFreeSpaces gridX gridY sensors = go [] 0
         beacons :: M.Map Coord ()
         beacons = M.fromList (map (\sens -> (beaconLoc sens, ())) sensors)
         getIter = iterationToCoord gridX gridY
+        maxIteration = gridY * gridX
         go :: [Coord] -> Int -> [Coord]
-        go acc currIdx | currIdx > gridY * gridX = acc
+        go acc currIdx
+            | currIdx > maxIteration = acc
             | otherwise = let currCoord = getIter currIdx in
-            --if or (map (inAreaOfSensor currCoord) sensors)
-            if any (inAreaOfSensor currCoord) sensors || isJust (M.lookup currCoord beacons)
-            then go acc (currIdx + 1)
-            else go (currCoord:acc) (currIdx + 1)
+                --if or (map (inAreaOfSensor currCoord) sensors)
+                if any (inAreaOfSensor currCoord) sensors || isJust (M.lookup currCoord beacons)
+                then go acc (currIdx + 1)
+                else go (currCoord:acc) (currIdx + 1)
+
+-- Manhatten Distance is the sum of the absolute difference between the
+-- measures in all dimensions of two points
+-- only doing 2D: x and y
+getDist :: Coord -> Coord -> Int
+getDist (x1, y1) (x2, y2) =
+    let
+        xDiff = abs (x2 - x1)
+        yDiff = abs (y2 - y1)
+    in
+        xDiff `seq` yDiff `seq` (xDiff + yDiff)
 
 iterationToCoord :: Int -> Int -> Int -> Coord
 iterationToCoord limitX limitY curr = (curr `mod` limitX,  curr `divRoundDown` limitY)
@@ -109,7 +122,7 @@ n1 `divRoundDown` n2 = floor ((asNum1 / asNum2) :: Double)
 inAreaOfSensor :: Coord -> Sensor -> Bool
 inAreaOfSensor coord (Sensor sensCoord _ dist) =
     let distTo = getDist coord sensCoord in
-        distTo <= dist
+        distTo <= (distTo `seq` dist)
 
 
 type SensorsDist = [(Sensor, [(Int, Sensor)])]
@@ -259,15 +272,6 @@ testOutFrom update currX loc1@(x1, y1) loc2 distToBeacon
 isCloseTo :: Int -> Sensor -> Bool
 isCloseTo checkY (Sensor (_, sy) _ dist) =
         abs (checkY - sy) <= dist
-
--- Manhatten Distance is the sum of the absolute difference between the
--- measures in all dimensions of two points
--- only doing 2D: x and y
-getDist :: Coord -> Coord -> Int
-getDist (x1, y1) (x2, y2) =
-    let xDiff = abs (x2 - x1)
-        yDiff = abs (y2 - y1) in
-            xDiff + yDiff
 
 parseAssignment :: P.Parsec String () Int
 --parseAssignment = (P.char 'x' P.<|> P.char 'y') *> equals *>

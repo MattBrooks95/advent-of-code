@@ -65,13 +65,52 @@ part1 sensors targetY = do
     ----print $ sort cannotBeBeacon
     print $ "num impossible places:" ++ show (length cannotBeBeacon)
 
+--part2 :: [Sensor] -> IO ()
+--part2 sensors = do
+--    print "part2"
+--    print $ "num sensors:" ++ show (length sensors)
+--    let sensorsWithDistances = getDistancesBetweenSensors sensors
+--    let sensorsNotTouching = getSensorsNotTouching sensorsWithDistances
+--    print $ "not touching:" ++ show sensorsNotTouching
+
 part2 :: [Sensor] -> IO ()
 part2 sensors = do
     print "part2"
     print $ "num sensors:" ++ show (length sensors)
-    let sensorsWithDistances = getDistancesBetweenSensors sensors
-    let sensorsNotTouching = getSensorsNotTouching sensorsWithDistances
-    print $ "not touching:" ++ show sensorsNotTouching
+    let gridDim = targetBeaconMaxCoord
+    --let gridDim = 20
+    let freeSpaces = findFreeSpaces gridDim gridDim sensors
+    print $ "free spaces:" ++ show freeSpaces
+
+
+findFreeSpaces :: Int -> Int -> [Sensor] -> [Coord]
+findFreeSpaces gridX gridY sensors = go [] 0
+    where
+        beacons :: M.Map Coord ()
+        beacons = M.fromList (map (\sens -> (beaconLoc sens, ())) sensors)
+        getIter = iterationToCoord gridX gridY
+        go :: [Coord] -> Int -> [Coord]
+        go acc currIdx | currIdx > gridY * gridX = acc
+            | otherwise = let currCoord = getIter currIdx in
+            --if or (map (inAreaOfSensor currCoord) sensors)
+            if any (inAreaOfSensor currCoord) sensors || isJust (M.lookup currCoord beacons)
+            then go acc (currIdx + 1)
+            else go (currCoord:acc) (currIdx + 1)
+
+iterationToCoord :: Int -> Int -> Int -> Coord
+iterationToCoord limitX limitY curr = (curr `mod` limitX,  curr `divRoundDown` limitY)
+
+divRoundDown :: Int -> Int -> Int
+n1 `divRoundDown` n2 = floor ((asNum1 / asNum2) :: Double)
+    where
+        asNum1 = fromIntegral n1
+        asNum2 = fromIntegral n2
+
+inAreaOfSensor :: Coord -> Sensor -> Bool
+inAreaOfSensor coord (Sensor sensCoord _ dist) =
+    let distTo = getDist coord sensCoord in
+        distTo <= dist
+
 
 type SensorsDist = [(Sensor, [(Int, Sensor)])]
 
@@ -93,27 +132,27 @@ data Test = Test String [Coord]
 sensorDist :: Sensor -> Sensor -> Int
 sensorDist s1 s2 = getDist (loc s1) (loc s2)
 
-test :: IO ()
-test = do
-    let tests = [
-            Test "Sensor at x=14, y=3: closest beacon is at x=15, y=3"
-                [
-                (14, 3), (13, 3), (15, 3)
-                , (14, 2), (14, 4)
-                ]
-            , Test "Sensor at x=14, y=3: closest beacon is at x=16, y=3"
-                [
-                (14, 1), (14, 2), (14, 3), (14, 4), (14, 5)
-                , (13, 2), (13, 3), (13, 4)
-                , (12, 3)
-                , (15, 2), (15, 3), (15, 4)
-                , (16, 3)
-                ]
-            ]
-    testResults <- mapM runTest tests
-    mapM_ print testResults
+--test :: IO ()
+--test = do
+--    let tests = [
+--            Test "Sensor at x=14, y=3: closest beacon is at x=15, y=3"
+--                [
+--                (14, 3), (13, 3), (15, 3)
+--                , (14, 2), (14, 4)
+--                ]
+--            , Test "Sensor at x=14, y=3: closest beacon is at x=16, y=3"
+--                [
+--                (14, 1), (14, 2), (14, 3), (14, 4), (14, 5)
+--                , (13, 2), (13, 3), (13, 4)
+--                , (12, 3)
+--                , (15, 2), (15, 3), (15, 4)
+--                , (16, 3)
+--                ]
+--            ]
+--    testResults <- mapM runTest tests
+--    mapM_ print testResults
 
-runTest :: Test -> IO (String, Bool, S.Set Coord, S.Set Coord)
+--runTest :: Test -> IO (String, Bool, S.Set Coord, S.Set Coord)
 runTest (Test input answers) = do
     case P.runParser parseLine () "" input of
         Left e -> print ("couldn't run test:" ++ input ++ " " ++ show e) >> return (input, False, S.empty, S.empty)
@@ -128,8 +167,8 @@ findSensorForSpace sensors target = find (hasSpace target) sensors
         hasSpace :: Coord -> Sensor -> Bool
         hasSpace (cx, cy) s = isJust $ find (\(x, y) -> x == cx && y == cy) (getProhibitedSpacesAroundSensor s)
 
-getGrid :: Int -> Int -> S.Set Coord
-getGrid x y = S.fromList (concat [ ([(cx, cy) | cx <- [0..x]]) | cy <- [0..y] ])
+--getGrid :: Int -> Int -> S.Set Coord
+--getGrid x y = S.fromList (concat [ ([(cx, cy) | cx <- [0..x]]) | cy <- [0..y] ])
 
 targetBeaconMaxCoord :: Int
 targetBeaconMaxCoord = 4 * ((10 :: Int) ^ (6 :: Int))
@@ -225,7 +264,10 @@ isCloseTo checkY (Sensor (_, sy) _ dist) =
 -- measures in all dimensions of two points
 -- only doing 2D: x and y
 getDist :: Coord -> Coord -> Int
-getDist (x1, y1) (x2, y2) = abs (x2 - x1) + abs (y2 - y1)
+getDist (x1, y1) (x2, y2) =
+    let xDiff = abs (x2 - x1)
+        yDiff = abs (y2 - y1) in
+            xDiff + yDiff
 
 parseAssignment :: P.Parsec String () Int
 --parseAssignment = (P.char 'x' P.<|> P.char 'y') *> equals *>

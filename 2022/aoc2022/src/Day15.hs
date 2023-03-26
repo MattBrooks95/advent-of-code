@@ -53,7 +53,7 @@ run inputFilePath = do
     case P.runParser parse () inputFilePath fileContents of
         Left parseError -> print parseError
         Right parseResults -> do
-            --part1 parseResults checkYCoord
+            part1 parseResults checkYCoord
             part2 parseResults
 
 part1 :: [Sensor] -> Int -> IO ()
@@ -73,6 +73,7 @@ part1 sensors targetY = do
 --    let sensorsNotTouching = getSensorsNotTouching sensorsWithDistances
 --    print $ "not touching:" ++ show sensorsNotTouching
 
+-- 11756174628223 first guess, every time
 part2 :: [Sensor] -> IO ()
 part2 sensors = do
     print "part2"
@@ -81,8 +82,16 @@ part2 sensors = do
     --let gridDim = 20
     print $ "grid dim:" ++ show gridDim
     let freeSpaces = findFreeSpaces gridDim gridDim sensors
-    print $ "free spaces:" ++ show freeSpaces
+    if null freeSpaces
+    then print "didn't find any hidden beacons"
+    else
+        let freeSpace@(x, y) = head freeSpaces in
+            do
+                print $ "free spaces: " ++ show freeSpace
+                print $ "tuning frequency: " ++ show (getTuning x y)
 
+getTuning :: Int -> Int -> Int
+getTuning x y = (x * targetBeaconMaxCoord) + y
 
 findFreeSpaces :: Int -> Int -> [Sensor] -> [Coord]
 findFreeSpaces gridX gridY sensors = go [] 0
@@ -90,33 +99,42 @@ findFreeSpaces gridX gridY sensors = go [] 0
         beacons :: M.Map Coord ()
         beacons = M.fromList (map (\sens -> (beaconLoc sens, ())) sensors)
         getIter = iterationToCoord gridX gridY
+        getCoord = coordToIteration gridX gridY
         maxIteration = gridY * gridX
         go :: [Coord] -> Int -> [Coord]
         go acc currIdx
             | currIdx > maxIteration = acc
+            -- | otherwise = let currCoord = getIter (trace ("currIdx:" ++ show currIdx) currIdx) in
             | otherwise = let currCoord = getIter currIdx in
                 --if or (map (inAreaOfSensor currCoord) sensors)
                 if isJust (M.lookup currCoord beacons)
                 then go acc (currIdx + 1)
                 else case getFirstProhibitSensor currCoord sensors of
-                    Nothing -> go (currCoord:acc) (currIdx + 1)
-                    Just (xDiff, _) ->
-                        if xDiff > 0
-                        then go acc (currIdx + (trace ("able to skip" ++ show (xDiff * 2)) (xDiff * 2)))
-                        else go acc (currIdx + 1)
+                        --Nothing -> [currCoord] -- go (currCoord:acc) (currIdx + 1)
+                        Nothing -> go (currCoord:acc) (currIdx + 1)
+                        Just found@(xDiff, yDiff, dist, sensor) ->
+                            let jumpX = getJumpX found currCoord
+                                nextX = fst currCoord + jumpX
+                            in
+                                if nextX > gridX
+                                then go acc (getCoord (0, snd currCoord + 1))
+                                else go acc (getCoord (nextX, snd currCoord))
 
-                    --case find (inAreaOfSensor currCoord) sensors of
-                    --    Nothing -> go (currCoord:acc) (currIdx + 1)
-                    --    Just prohibitSensor -> []
-                    --if any (inAreaOfSensor currCoord) sensors || 
-                    --then go acc (currIdx + 1)
-                    --else go (currCoord:acc) (currIdx + 1)
+getJumpX :: (Int, Int, Int, Sensor) -> Coord -> Int
+getJumpX (xDiff, yDiff, _, sensor@(Sensor (sensX, sensY) _ _)) currCoord =
+    let jumpX = jumpDestinationX  - fst currCoord in
+        if jumpX == 0 then 1
+        else jumpX
+    where
+        jumpDestinationX = sensX + (ceiling (fromIntegral widthOfRow / 2))
+        sensorDistToBeacon = bDist sensor
+        widthOfRow = (sensorDistToBeacon * 2 + 1) - (abs yDiff * 2)
 
-getFirstProhibitSensor :: Coord -> [Sensor] -> Maybe (Int, Sensor)
-getFirstProhibitSensor c [] = Nothing
+getFirstProhibitSensor :: Coord -> [Sensor] -> Maybe (Int, Int, Int, Sensor)
+getFirstProhibitSensor _ [] = Nothing
 getFirstProhibitSensor c (s:ss) =
-    let (isInArea, xDiff) = inAreaOfSensor c s in
-        if isInArea then Just (xDiff, s)
+    let (isInArea, xDiff, yDiff, dist) = inAreaOfSensor c s in
+        if isInArea then Just (xDiff, yDiff, dist, s)
         else getFirstProhibitSensor c ss
 
 
@@ -138,16 +156,19 @@ getDist (x1, y1) (x2, y2) =
 iterationToCoord :: Int -> Int -> Int -> Coord
 iterationToCoord limitX limitY curr = (curr `mod` limitX,  curr `divRoundDown` limitY)
 
+coordToIteration :: Int -> Int -> Coord -> Int
+coordToIteration _ maxY (cx, cy) = cx + maxY * cy
+
 divRoundDown :: Int -> Int -> Int
 n1 `divRoundDown` n2 = floor ((asNum1 / asNum2) :: Double)
     where
         asNum1 = fromIntegral n1
         asNum2 = fromIntegral n2
 
-inAreaOfSensor :: Coord -> Sensor -> (Bool, Int)
+inAreaOfSensor :: Coord -> Sensor -> (Bool, Int, Int, Int)
 inAreaOfSensor coord (Sensor sensCoord _ dist) =
-    let (xDiff, _, distTo) = getDist coord sensCoord in
-        (distTo <= dist, xDiff)
+    let (xDiff, yDiff, distTo) = getDist coord sensCoord in
+        (distTo <= dist, xDiff, yDiff, dist)
 
 
 type SensorsDist = [(Sensor, [(Int, Sensor)])]

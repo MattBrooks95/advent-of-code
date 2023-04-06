@@ -5,6 +5,8 @@ import Text.Parsec
 
 import Parsing (
     digits
+    , plainWhitespace
+    , plural
     )
 
 data Valve = Valve String Int [String]
@@ -15,7 +17,9 @@ run filepath = do
     print $ "day16, file path:" ++ filepath
     filecontent <- readFile filepath
     case runParser Day16.parse () filepath filecontent of
-        Left e -> print $ "parsing error:" ++ show e
+        Left e -> do
+            print "parsing error"
+            print e
         Right parseResult -> do
             print $ "parse result:" ++ show parseResult
 
@@ -25,9 +29,15 @@ valveStatement = do
     valveName <- many letter <* space
     _ <- string "has flow rate="
     flowrate <- digits
-    _ <- char ';' <* space
-    _ <- string "tunnels lead to valve"
-    _ <- optional (char 's') <* space
+    _ <- char ';' 
+    _ <- plainWhitespace
+    _ <- string "tunnel" <* plural
+    _ <- plainWhitespace
+    _ <- string "lead" <* plural
+    _ <- plainWhitespace
+    _ <- string "to "
+    _ <- string "valve" <* plural
+    _ <- plainWhitespace
     tunnels <- many letter `sepBy1` string ", "
     return $ Valve valveName flowrate tunnels
 

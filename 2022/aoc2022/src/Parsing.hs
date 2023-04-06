@@ -4,6 +4,7 @@ module Parsing (
     , plainWhitespace
     , equals
     , integer
+    , plural
     ) where
 
 import Text.Parsec
@@ -27,3 +28,6 @@ digits = read <$> many1 digit
 
 plainWhitespace :: Parsec String () Char
 plainWhitespace = char ' '
+
+plural :: Parsec String () ()
+plural = optional $ char 's'

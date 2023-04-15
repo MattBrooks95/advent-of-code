@@ -21,6 +21,9 @@ import Data.Function (on)
 data Valve = Valve String Int [String] Bool
     deriving (Show)
 
+valveIsOn :: Valve -> Bool
+valveIsOn (Valve _ _ _ isOn) = isOn
+
 valveName :: Valve -> String
 valveName (Valve nm _ _ _) = nm
 
@@ -35,19 +38,20 @@ run filepath = do
         Right parseResult -> do
             print $ "parse result:" ++ show parseResult
             let valvesAsMap = M.fromList (map (\v -> (valveName v, v)) parseResult)
-            let (_, answer) = runState (solve valvesAsMap ((valveName . head) parseResult) 30) M.empty
-            print $ "# moves made:" ++ show (length answer)
+            let ((answerPressure, answerValves, answerActions), answerFinalState) = runState (solve valvesAsMap ((valveName . head) parseResult) 3) M.empty
+            print $ "# moves made:" ++ show (length answerActions)
+            mapM_ print answerActions
 
 data Action = Move String String | Activate String deriving (Show)
 
 type Valves = M.Map String Valve
 
-type Solutions = M.Map (String, Int, Bool) (Int, [Action])
+type Solutions = M.Map (String, Int, Bool) (Int, Valves, [Action])
 
-solve :: Valves -> String -> Int -> State Solutions (Int, [Action])
+solve :: Valves -> String -> Int -> State Solutions (Int, Valves, [Action])
 solve valves currValve time
-    | null valves = pure (0, [])
-    | time == 0 = pure (0, [])
+    | null valves = pure (0, valves, [])
+    | time == 0 = pure (0, valves, [])
     | otherwise = do
         let (Valve vName _ _ isOn) = fromJust (M.lookup currValve valves)
         cachedSolutions <- get
@@ -57,15 +61,22 @@ solve valves currValve time
                 let actions = generateActions valves currValve
                     subTrees = map (applyAction valves time) actions
                 subSolutions <- mapM (\(newTime, newValves, newCurrValve) -> solve newValves newCurrValve newTime) subTrees
-                let bestSolution = F.maximumBy (compare `on` fst) subSolutions
+                let bestSubSolution@(_, newValves, actionsTaken) = F.maximumBy (compare `on` (\(p, _, _) -> p)) subSolutions
+                    thisSolution = (evaluateValves newValves, newValves, actionsTaken)
                 -- a lambda was more easy for me to understand but the compiler complained that I needed to 'avoid lambda' (\oldState -> M.insert ... newState)
-                modify $ M.insert (vName, time, isOn) bestSolution
-                return bestSolution
+                modify $ M.insert (vName, time, isOn) thisSolution
+                return thisSolution
 
                 --    subSolutions = mapM (\(newTime, newValves, newLoc) -> solve newValves newLoc newTime) subTrees
                 --    bestSolution = F.maximumBy (compare `on` fmap  fst) subSolutions
                 --put (M.insert (vName, time, isOn) bestSolution cachedSolutions)
                 --return bestSolution
+
+-- calculate the pressure released by the list of valves per minute
+evaluateValves :: Valves ->  Int
+evaluateValves valves = sum (M.map (\(Valve _ pressure _ _) -> pressure) onValves)
+    where
+        onValves = M.filter valveIsOn valves
 
 -- returns (time after action, valve list after action, current valve after action)
 applyAction :: Valves -> Int -> Action -> (Int, Valves, String)

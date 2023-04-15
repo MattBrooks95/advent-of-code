@@ -89,7 +89,8 @@ solve vs
     | otherwise = do
         memoedSolutions <- get
         case M.lookup vs memoedSolutions of
-            Just (totalPressureReleased, actions) -> trace "cache hit!" (return (totalPressureReleased, actions))
+            --Just (totalPressureReleased, actions) -> trace "cache hit!" (return (totalPressureReleased, actions))
+            Just (totalPressureReleased, actions) -> return (totalPressureReleased, actions)
             Nothing -> do
                 let possibleActions = generateActions vs
                 subSolutions <- mapM (solve . applyAction vs) possibleActions

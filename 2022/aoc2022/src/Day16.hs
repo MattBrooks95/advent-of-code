@@ -49,6 +49,7 @@ type Valves = M.Map String Valve
 
 type MemoSolutions = M.Map ValveState (Int, [Action])
 
+--part 1 answer 2119
 run :: FilePath -> IO ()
 run filepath = do
     print $ "day16, file path:" ++ filepath

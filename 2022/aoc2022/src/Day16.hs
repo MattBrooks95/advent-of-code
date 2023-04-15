@@ -100,17 +100,17 @@ solve vs
                     pressureReleased = subPressureReleased + evaluateValves vs
                 --this makes easier to see what is happening
                 --modify (\stateWithUpdatedMemos -> M.insert answerState allActions stateWithUpdatedMemos)
-                modify $ M.insert vs (subPressureReleased, allActions)
+                modify $ M.insert vs (pressureReleased, allActions)
                 return (pressureReleased, allActions)
 
-calcReleasedPressure :: ValveState -> [Action] -> Int
-calcReleasedPressure vs actions
-    | rTime vs == 0 = evaluateValves vs
-    | otherwise =
-        let pressureReleasedThisMinute = evaluateValves vs
-            nextValveState = if null actions then vs { rTime=rTime vs - 1 } else applyAction vs (head actions)
-        in
-            pressureReleasedThisMinute + calcReleasedPressure nextValveState (tail actions)
+--calcReleasedPressure :: ValveState -> [Action] -> Int
+--calcReleasedPressure vs actions
+--    | rTime vs == 0 = evaluateValves vs
+--    | otherwise =
+--        let pressureReleasedThisMinute = evaluateValves vs
+--            nextValveState = if null actions then vs { rTime=rTime vs - 1 } else applyAction vs (head actions)
+--        in
+--            pressureReleasedThisMinute + calcReleasedPressure nextValveState (tail actions)
 
 --solve :: Valves -> String -> Int -> State Solutions (Int, Valves, [Action])
 --solve valves currValve time

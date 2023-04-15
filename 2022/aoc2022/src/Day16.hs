@@ -73,7 +73,7 @@ run filepath = do
             mapM_ print bestActions
             print $ "final valve state:" ++ show (vState finalValveState)
             print $ "final valve state pressure per minute:" ++ show (evaluateValves finalValveState)
-            let pressureReleased = calcReleasedPressure startState bestActions simDuration
+            let pressureReleased = calcReleasedPressure startState bestActions
             print $ "total pressure released:" ++ show pressureReleased
             --let solutionPressurePerMinute = evaluateValves (foldl applyAction bestActions)
             --print $ "pressure per minute of final solution:" ++ show (evaluateValves
@@ -103,13 +103,14 @@ solve vs
                 modify $ M.insert vs allActions
                 return (answerState, allActions)
 
-calcReleasedPressure :: ValveState -> [Action] -> Int -> Int
-calcReleasedPressure _ _ 0 = 0
-calcReleasedPressure vs actions remainingTime =
-    let pressureReleasedThisMinute = evaluateValves vs
-        nextValveState = if null actions then vs else applyAction vs (head actions)
-    in
-        pressureReleasedThisMinute + calcReleasedPressure nextValveState (tail actions) (remainingTime - 1)
+calcReleasedPressure :: ValveState -> [Action] -> Int
+calcReleasedPressure vs actions
+    | rTime vs == 0 = evaluateValves vs
+    | otherwise =
+        let pressureReleasedThisMinute = evaluateValves vs
+            nextValveState = if null actions then vs { rTime=rTime vs - 1 } else applyAction vs (head actions)
+        in
+            pressureReleasedThisMinute + calcReleasedPressure nextValveState (tail actions)
 
 --solve :: Valves -> String -> Int -> State Solutions (Int, Valves, [Action])
 --solve valves currValve time
@@ -150,7 +151,8 @@ applyAction valves act =
         Activate targetValveName -> let targetValve = fromJust (M.lookup targetValveName (vState valves)) in
             valves { rTime=newTime, vState=M.insert targetValveName (turnOn targetValve) (vState valves) }
         where
-            newTime = trace (show $ rTime valves - 1) (rTime valves - 1)
+            --newTime = trace (show $ rTime valves - 1) (rTime valves - 1)
+            newTime = rTime valves - 1
 
 activateValve :: Valve -> Valve
 activateValve (Valve nm pressure nhbrs _) = Valve nm pressure nhbrs True
@@ -160,7 +162,7 @@ generateActions vs
     | null (vState vs) = []
     | otherwise = case M.lookup (currVName vs) (vState vs) of
         Nothing -> []
-        Just (Valve name _ neighbors isOn) -> movements ++ (if isOn then [] else [Activate name])
+        Just (Valve name pressure neighbors isOn) -> movements ++ (if isOn || pressure == 0 then [] else [Activate name])
             where
                 movements = makeMovements name neighbors
 

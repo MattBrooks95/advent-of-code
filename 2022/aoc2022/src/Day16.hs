@@ -4,6 +4,8 @@ import qualified Data.Map as M
 
 import Control.Monad.State
 
+import Data.Maybe
+
 import Text.Parsec as P hiding (State)
 import qualified Text.Parsec as P (State)
 
@@ -32,31 +34,40 @@ run filepath = do
             print e
         Right parseResult -> do
             print $ "parse result:" ++ show parseResult
+            let valvesAsMap = M.fromList (map (\v -> (valveName v, v)) parseResult)
+            let (_, answer) = runState (solve valvesAsMap ((valveName . head) parseResult) 30) M.empty
+            print $ "# moves made:" ++ show (length answer)
 
-data Action = Move String String | Activate String
+data Action = Move String String | Activate String deriving (Show)
 
 type Valves = M.Map String Valve
 
-type Solutions = M.Map (String, Int, Bool) (Int, Action)
+type Solutions = M.Map (String, Int, Bool) (Int, [Action])
 
 solve :: Valves -> String -> Int -> State Solutions (Int, [Action])
 solve valves currValve time
     | null valves = pure (0, [])
     | time == 0 = pure (0, [])
-    | otherwise = case M.lookup currValve valves of
-            Nothing -> error $ "valve id doesn't exist:" ++ currValve
-            Just (Valve vName _ _ isOn) -> do
-                cachedSolutions <- get
-                case M.lookup (vName, time, isOn) cachedSolutions of
-                    Just cachedAnswer -> cachedAnswer
-                    Nothing -> do
-                        let actions = generateActions valves currValve
-                            subTrees = map (applyAction valves time) actions
-                            subSolutions = map (\(newTime, newValves, newLoc) -> solve newValves newLoc newTime) subTrees
-                            bestSolution = F.maximumBy (compare `on` fmap  fst) subSolutions
-                        put (M.insert (vName, time, isOn) bestSolution cachedSolutions)
-                        bestSolution
+    | otherwise = do
+        let (Valve vName _ _ isOn) = fromJust (M.lookup currValve valves)
+        cachedSolutions <- get
+        case M.lookup (vName, time, isOn) cachedSolutions of
+            Just cachedAnswer -> return cachedAnswer
+            Nothing -> do
+                let actions = generateActions valves currValve
+                    subTrees = map (applyAction valves time) actions
+                subSolutions <- mapM (\(newTime, newValves, newCurrValve) -> solve newValves newCurrValve newTime) subTrees
+                let bestSolution = F.maximumBy (compare `on` fst) subSolutions
+                -- a lambda was more easy for me to understand but the compiler complained that I needed to 'avoid lambda' (\oldState -> M.insert ... newState)
+                modify $ M.insert (vName, time, isOn) bestSolution
+                return bestSolution
 
+                --    subSolutions = mapM (\(newTime, newValves, newLoc) -> solve newValves newLoc newTime) subTrees
+                --    bestSolution = F.maximumBy (compare `on` fmap  fst) subSolutions
+                --put (M.insert (vName, time, isOn) bestSolution cachedSolutions)
+                --return bestSolution
+
+-- returns (time after action, valve list after action, current valve after action)
 applyAction :: Valves -> Int -> Action -> (Int, Valves, String)
 applyAction valves time act = case act of
     Move _ to -> (time - 1, valves, to)

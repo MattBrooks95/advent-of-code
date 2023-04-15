@@ -68,11 +68,11 @@ run filepath = do
                     , currVName=startValve
                     , rTime=simDuration
                     }
-            let ((finalValveState, totalPressureReleased, bestActions), finalMemoState) = runState (solve startState) M.empty
+            let ((totalPressureReleased, bestActions), finalMemoState) = runState (solve startState) M.empty
             print $ (show . length) bestActions
             mapM_ print bestActions
-            print $ "final valve state:" ++ show (vState finalValveState)
-            print $ "final valve state pressure per minute:" ++ show (evaluateValves finalValveState)
+            --print $ "final valve state:" ++ show (vState finalValveState)
+            --print $ "final valve state pressure per minute:" ++ show (evaluateValves finalValveState)
             print $ "total pressure released:" ++ show totalPressureReleased
             --let solutionPressurePerMinute = evaluateValves (foldl applyAction bestActions)
             --print $ "pressure per minute of final solution:" ++ show (evaluateValves
@@ -82,26 +82,26 @@ run filepath = do
             --mapM_ print answerActions
 
 -- finds the optimal list of actions to be taken at each minute
-solve :: ValveState -> State MemoSolutions (ValveState, Int, [Action])
+solve :: ValveState -> State MemoSolutions (Int, [Action])
 solve vs
-    | rTime vs == 0 = return (vs, 0, [])
-    | null (vState vs) = return (vs, 0, [])
+    | rTime vs == 0 = return (0, [])
+    | null (vState vs) = return (0, [])
     | otherwise = do
         memoedSolutions <- get
         case M.lookup vs memoedSolutions of
-            Just (totalPressureReleased, actions) -> trace "cache hit!" (return (vs, totalPressureReleased, actions))
+            Just (totalPressureReleased, actions) -> trace "cache hit!" (return (totalPressureReleased, actions))
             Nothing -> do
                 let possibleActions = generateActions vs
                 subSolutions <- mapM (solve . applyAction vs) possibleActions
                 let subSolutionsWithAction = zip possibleActions subSolutions
                     --evaluatedSubSolutions = map (\(newAction, (newVs, actionsTaken)) -> (newVs, newAction, actionsTaken)) subSolutionsWithAction
-                    bestSolution@(actionToTake, (subValveState, subPressureReleased, answerActions)) = maximumBy (compare `on` (\(_, (_, subTreeReleasedPressure, _)) -> subTreeReleasedPressure)) subSolutionsWithAction
+                    bestSolution@(actionToTake, (subPressureReleased, answerActions)) = maximumBy (compare `on` (\(_, (subTreeReleasedPressure, _)) -> subTreeReleasedPressure)) subSolutionsWithAction
                     allActions = actionToTake:answerActions
                     pressureReleased = subPressureReleased + evaluateValves vs
                 --this makes easier to see what is happening
                 --modify (\stateWithUpdatedMemos -> M.insert answerState allActions stateWithUpdatedMemos)
                 modify $ M.insert vs (subPressureReleased, allActions)
-                return (vs, pressureReleased, allActions)
+                return (pressureReleased, allActions)
 
 calcReleasedPressure :: ValveState -> [Action] -> Int
 calcReleasedPressure vs actions

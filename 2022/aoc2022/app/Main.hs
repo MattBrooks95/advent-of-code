@@ -84,6 +84,10 @@ import Day15 (
     run
     )
 
+import Day16 (
+    run
+    )
+
 
 main :: IO ()
 main = do
@@ -113,5 +117,6 @@ main = do
     --Day12.run fileLines
     --Day13.run filePath
     --Day14.run filePath
-    Day15.run filePath
+    --Day15.run filePath
+    Day16.run filePath
 

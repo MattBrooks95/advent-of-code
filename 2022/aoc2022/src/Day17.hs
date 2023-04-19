@@ -1,8 +1,12 @@
 module Day17 where
 
+import Debug.Trace
+
 import Text.Parsec
 
 import qualified Data.Map as M
+
+import qualified Data.List as L
 
 data Jet = JLeft | JRight deriving Show
 
@@ -11,7 +15,7 @@ boardWidth :: Int
 boardWidth = 7
 
 -- two units away from the left edge 0 - 1 - ####
-startPlacementLeftEdge :: Integer
+startPlacementLeftEdge :: Int
 startPlacementLeftEdge = 2
 
 -- spawns three units above the highest, settled rock
@@ -20,9 +24,67 @@ spawnDistanceFromTopItem :: Int
 spawnDistanceFromTopItem = 3
 
 floorY :: Int
-floorY = -1
+floorY = 0
 
 type Location = (Int, Int)
+
+type PlacePiece = Int -> Int -> [Location]
+
+-- ####
+horizBar :: PlacePiece
+horizBar distFromLeftEdge y = [ (x + distFromLeftEdge, y) | x <- [0..3]]
+
+-- #
+-- #
+-- #
+-- #
+verticalBar :: PlacePiece
+verticalBar distFromLeftEdge y = [ (distFromLeftEdge, y + dy) | dy <- [0..3] ]
+
+--  #
+-- ###
+--  #
+plusSign :: PlacePiece
+plusSign distFromLeftEdge y =
+    [(distFromLeftEdge + dx, horizBarY) | dx <- [0..2]]
+    ++ [(vertBarX, y + dy) | dy <- [0..2]]
+    where
+        horizBarY = y + 2
+        vertBarX = distFromLeftEdge + 1
+
+-- ##
+-- ##
+box :: PlacePiece
+box distFromLeftEdge y =
+    [ (distFromLeftEdge, y)
+    , (distFromLeftEdge, y + 1)
+    , (distFromLeftEdge + 1, y)
+    , (distFromLeftEdge + 1, y + 1)
+    ]
+
+--   #
+--   #
+-- ###
+backwardsL :: PlacePiece
+backwardsL distFromLeftEdge y = let verticalPartX = distFromLeftEdge + 2 in
+    [(distFromLeftEdge + dx, y) | dx <- [0..3]] ++ [(verticalPartX, y + 1), (verticalPartX, y + 2)]
+
+
+rocksPattern :: [PlacePiece]
+rocksPattern = cycle [
+    horizBar
+    , plusSign
+    , backwardsL
+    , verticalBar
+    , box
+    ]
+
+data LabeledPlacePiece = LabeledPlacePiece PlacePiece String
+instance Show LabeledPlacePiece where
+    show (LabeledPlacePiece _ s) = s
+
+getF :: LabeledPlacePiece -> PlacePiece
+getF (LabeledPlacePiece pp _) = pp
 
 data SimState = SimState {
     fallingPieces :: [Location]
@@ -31,10 +93,20 @@ data SimState = SimState {
     , rocksToProcess :: Int
     , rocksProcessed :: Int
     , jets :: [Jet]
+    , piecesPattern :: [LabeledPlacePiece]
     , stage :: Stage
     }
+instance Show SimState where
+    show ss =
+        "falling:" ++ show (fallingPieces ss)
+        ++ "tower height:" ++ show (towerHeight ss)
+        ++ " num settled:" ++ show (length (settledPieces ss))
+        ++ " next jet:" ++ show (head (jets ss))
+        ++ " next piece:" ++ show (head (piecesPattern ss))
+        ++ " next stage:" ++ show (stage ss)
+        ++ " rocks done/total:" ++ show (rocksProcessed ss) ++ "/" ++ show (rocksToProcess ss)
 
-data Stage = DoJet | DoGravity
+data Stage = DoJet | DoGravity deriving (Show)
 
 gravity :: Int
 gravity = 1
@@ -48,6 +120,13 @@ initSimState rocks js = SimState {
     , rocksProcessed=0
     , jets=cycle js
     , stage=DoGravity
+    , piecesPattern=cycle [
+        LabeledPlacePiece horizBar "horizBar"
+        , LabeledPlacePiece plusSign "plusSign"
+        , LabeledPlacePiece backwardsL "backwardsL"
+        , LabeledPlacePiece verticalBar "verticalBar"
+        , LabeledPlacePiece box "box"
+        ]
     }
 
 run :: String -> IO ()
@@ -57,21 +136,42 @@ run input = do
         Left e -> print e
         Right parseSuccess -> do
             print $ "parse success:" ++ show parseSuccess
+            let startSimState = initSimState 2022 parseSuccess
+                simResult = runSim startSimState
+            print $ "start sim state:" ++ show startSimState
+            print $ "end sim state:" ++ show simResult
 
 runSim :: SimState -> SimState
 runSim ss
-    | doneRocks == totalRocks = ss
+    | null fp = let nextPiece = genNextPiece startPlacementLeftEdge (towerH + 3) in
+        runSim $ ss { fallingPieces=nextPiece }
+    | trace (show doneRocks) doneRocks == totalRocks = ss
     | otherwise = case thisStage of
         DoJet ->
             let nextLocations = map (applyJet thisJet) fp in
                 if or (map isIllegal nextLocations ++ [locationsConflict nextLocations settled])
-                then ss { stage=DoGravity }
-                else ss { fallingPieces=nextLocations, stage=DoGravity }
+                then runSim $ ss { stage=DoGravity, jets=nextJets }
+                else runSim $ ss {
+                    fallingPieces=nextLocations
+                    , stage=DoGravity
+                    , jets=nextJets
+                    }
         DoGravity ->
             let nextLocations = map (applyGravity gravity) fp in
                 if any (isDoneFalling floorY settled) nextLocations
-                then ss -- add the newly settled pieces to the list, generate a new piece, switch to gravity stage
-                else ss -- movement succeeded, continue simulation with the new locations still falling, switch to gravity stage
+                then let newTowerHeight = maximum (map snd nextLocations) in
+                    runSim $ ss { -- add the newly settled pieces to the list, generate a new piece, switch to jet stage (each piece starts off at the jet stage, per the requirement)
+                            settledPieces=M.union (settledPieces ss) (M.fromList (zip nextLocations (repeat ())))
+                            , stage=DoJet
+                            , rocksProcessed=rocksProcessed ss + 1
+                            , fallingPieces=[]
+                            , piecesPattern=nextPiecesPattern
+                            , towerHeight=newTowerHeight
+                        }
+                else runSim $ ss { -- movement succeeded, continue simulation with the new locations still falling, switch to jet stage
+                    stage=DoJet
+                    , fallingPieces=nextLocations
+                    }
 
     where
         fp = fallingPieces ss
@@ -82,6 +182,9 @@ runSim ss
         thisJet = head (jets ss)
         nextJets = drop 1 (jets ss)
         thisStage = stage ss
+        genNextPiece = (getF . head) piecesP
+        nextPiecesPattern = drop 1 piecesP
+        piecesP = piecesPattern ss
 
 locationsConflict :: [Location] -> M.Map Location () -> Bool
 locationsConflict locs doneLocs = any (flip M.member doneLocs) locs

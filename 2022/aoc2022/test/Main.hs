@@ -10,6 +10,15 @@ testsDay17 = TestList [
     , testBackwardsL
     , doesntHitGround
     , hitsGround
+    , outOfBoundsXLeft
+    , outOfBoundsXRight
+    , inBoundsX
+    , inBoundsXEdgeLeft
+    , inBoundsXEdgeRight
+    , doesNotLandOnOtherRock
+    , doesLandOnOtherRock
+    , noConflict
+    , doesConflict
     ]
 
 main :: IO ()

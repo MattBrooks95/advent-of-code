@@ -8,7 +8,10 @@ import qualified Data.Map as M
 
 import qualified Data.List as L
 
-data Jet = JLeft | JRight deriving Show
+data Jet = JLeft | JRight
+instance Show Jet where
+    show JLeft = "<"
+    show JRight = ">"
 
 -- the board is 7 units wide, and there is no ceiling
 boardWidth :: Int
@@ -47,7 +50,7 @@ verticalBar distFromLeftEdge y = [ (distFromLeftEdge, y + dy) | dy <- [0..3] ]
 plusSign :: PlacePiece
 plusSign distFromLeftEdge y =
     [(distFromLeftEdge + dx, horizBarY) | dx <- [0..2]]
-    ++ [(vertBarX, y + dy) | dy <- [0..2]]
+    ++ [(vertBarX, y + 1), (vertBarX, y + 3)]
     where
         horizBarY = y + 2
         vertBarX = distFromLeftEdge + 1
@@ -67,7 +70,7 @@ box distFromLeftEdge y =
 -- ###
 backwardsL :: PlacePiece
 backwardsL distFromLeftEdge y = let verticalPartX = distFromLeftEdge + 2 in
-    [(distFromLeftEdge + dx, y) | dx <- [0..3]] ++ [(verticalPartX, y + 1), (verticalPartX, y + 2)]
+    [(distFromLeftEdge + dx, y) | dx <- [0..2]] ++ [(verticalPartX, y + 1), (verticalPartX, y + 2)]
 
 
 rocksPattern :: [PlacePiece]
@@ -119,13 +122,14 @@ initSimState rocks js = SimState {
     , rocksToProcess=rocks
     , rocksProcessed=0
     , jets=cycle js
-    , stage=DoGravity
+    , stage=DoJet
     , piecesPattern=cycle [
         LabeledPlacePiece horizBar "horizBar"
         , LabeledPlacePiece plusSign "plusSign"
         , LabeledPlacePiece backwardsL "backwardsL"
         , LabeledPlacePiece verticalBar "verticalBar"
         , LabeledPlacePiece box "box"
+        --LabeledPlacePiece backwardsL "backwardsL"
         ]
     }
 
@@ -136,43 +140,72 @@ run input = do
         Left e -> print e
         Right parseSuccess -> do
             print $ "parse success:" ++ show parseSuccess
-            let startSimState = initSimState 2022 parseSuccess
+            --let numRocks = 2022
+            let numRocks = 4
+            let startSimState = initSimState numRocks parseSuccess
                 simResult = runSim startSimState
+            let debugSettledPieces = settledPieces simResult
+            --print $ "settledPieces" ++ show debugSettledPieces
+            putStrLn (printLocations debugSettledPieces)
             print $ "start sim state:" ++ show startSimState
-            print $ "end sim state:" ++ show simResult
+            print $ "end sim state " ++ show simResult
+
+printLocations :: M.Map Location () -> String
+printLocations locs =
+    if M.null locs
+    then "no locations to print"
+    else L.intercalate "\n" (reverse (go (map fst (M.toList locs)) 1 []))
+    where
+        go :: [Location] -> Int -> [String] -> [String]
+        go goLocs currY acc = let rocksForY = filter (\(_, y) -> y == currY) goLocs in
+            if null (trace (show rocksForY) rocksForY)
+            then acc
+            else
+                go goLocs (currY + 1) (acc ++ [newStrings])
+            where
+                newStrings = [ if (atX, currY) `elem` goLocs then '#' else '.' | atX <- [1..boardWidth]]
 
 runSim :: SimState -> SimState
 runSim ss
-    | null fp = let nextPiece = genNextPiece startPlacementLeftEdge (towerH + 3) in
-        runSim $ ss { fallingPieces=nextPiece }
-    | trace (show doneRocks) doneRocks == totalRocks = ss
+    | null fp = let nextX = startPlacementLeftEdge
+                    nextY = (towerH + 4)
+                    nextPiece = genNextPiece nextX nextY
+                in trace ("towerHeight:" ++ show towerH ++ " new piece location:" ++ show (nextX, nextY)) runSim $ ss { fallingPieces=nextPiece }
+    | doneRocks == totalRocks = trace (show doneRocks) ss
     | otherwise = case thisStage of
         DoJet ->
             let nextLocations = map (applyJet thisJet) fp in
-                if or (map isIllegal nextLocations ++ [locationsConflict nextLocations settled])
+                -- if an illegal state would occur as a result of the rock being
+                -- blown by the jet stream, then we continue the simulation without
+                -- moving the rock, and skip to the gravity phase
+                trace ("jet:" ++ show thisJet) (if or (map isIllegal nextLocations ++ [locationsConflict nextLocations settled])
                 then runSim $ ss { stage=DoGravity, jets=nextJets }
                 else runSim $ ss {
                     fallingPieces=nextLocations
                     , stage=DoGravity
                     , jets=nextJets
-                    }
+                    })
         DoGravity ->
-            let nextLocations = map (applyGravity gravity) fp in
+            trace "gravity" (let nextLocations = map (applyGravity gravity) fp in
                 if any (isDoneFalling floorY settled) nextLocations
-                then let newTowerHeight = maximum (map snd nextLocations) in
-                    runSim $ ss { -- add the newly settled pieces to the list, generate a new piece, switch to jet stage (each piece starts off at the jet stage, per the requirement)
-                            settledPieces=M.union (settledPieces ss) (M.fromList (zip nextLocations (repeat ())))
-                            , stage=DoJet
-                            , rocksProcessed=rocksProcessed ss + 1
-                            , fallingPieces=[]
-                            , piecesPattern=nextPiecesPattern
-                            , towerHeight=newTowerHeight
-                        }
-                else runSim $ ss { -- movement succeeded, continue simulation with the new locations still falling, switch to jet stage
+                then
+                    let newTowerHeight = maximum (map snd (trace ("next locations:" ++ show nextLocations) fp))
+                        newSettledPieces = M.union (settledPieces ss) (M.fromList (zip fp (repeat ())))
+                    in
+                        -- add the newly settled pieces to the list, generate a new piece, switch to jet stage (each piece starts off at the jet stage, per the requirement)
+                        runSim $ ss {
+                                settledPieces=newSettledPieces
+                                , stage=DoJet
+                                , rocksProcessed=rocksProcessed ss + 1
+                                , fallingPieces=[]
+                                , piecesPattern=nextPiecesPattern
+                                , towerHeight=trace ("new tower height:" ++ show newTowerHeight) newTowerHeight
+                                }
+                -- movement succeeded, continue simulation with the new locations still falling, switch to jet stage
+                else runSim $ ss {
                     stage=DoJet
                     , fallingPieces=nextLocations
-                    }
-
+                    })
     where
         fp = fallingPieces ss
         towerH = towerHeight ss
@@ -203,8 +236,12 @@ updatePieceLocations :: (Location -> Location) -> [Location] -> [Location]
 updatePieceLocations f locs = map f locs
 
 isDoneFalling :: Int -> M.Map Location () -> Location -> Bool
-isDoneFalling floorHeight settledRocks checkLoc@(_, y) = 
-    M.member checkLoc settledRocks || y == floorHeight + 1
+isDoneFalling floorHeight settledRocks checkLoc@(_, y) =
+    let result = M.member checkLoc settledRocks || y == floorHeight in
+        if result then trace ("is done falling:" ++ printLoc) result else result
+    where
+        printLoc = show checkLoc
+
 
 parseLeft :: Parsec String () Jet
 parseLeft = char '<' >> return JLeft

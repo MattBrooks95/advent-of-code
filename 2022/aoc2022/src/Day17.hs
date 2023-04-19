@@ -239,9 +239,6 @@ applyJet JRight (x, y) = (x + 1, y)
 applyGravity :: Int -> Location -> Location
 applyGravity gravityAmount (x, y) = (x, y - gravityAmount)
 
-updatePieceLocations :: (Location -> Location) -> [Location] -> [Location]
-updatePieceLocations f locs = map f locs
-
 isDoneFalling :: Int -> M.Map Location () -> Location -> Bool
 isDoneFalling floorHeight settledRocks checkLoc@(_, y) =
     let result = conflicts || hitsFloor in

@@ -8,6 +8,8 @@ testsDay17 = TestList [
     , testBox
     , testPlus
     , testBackwardsL
+    , doesntHitGround
+    , hitsGround
     ]
 
 main :: IO ()

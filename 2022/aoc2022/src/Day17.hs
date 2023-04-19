@@ -8,7 +8,7 @@ import qualified Data.Map as M
 
 import qualified Data.List as L
 
-data Jet = JLeft | JRight
+data Jet = JLeft | JRight deriving (Eq)
 instance Show Jet where
     show JLeft = "<"
     show JRight = ">"
@@ -136,10 +136,13 @@ initSimState rocks js = SimState {
         ]
     }
 
+doParse :: String -> Either ParseError [Jet]
+doParse = runParser Day17.parse () ""
+
 run :: String -> IO ()
 run input = do
     print input
-    case runParser Day17.parse () "" input of
+    case doParse input of
         Left e -> print e
         Right parseSuccess -> do
             print $ "parse success:" ++ show parseSuccess

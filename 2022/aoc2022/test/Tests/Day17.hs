@@ -3,6 +3,8 @@ module Tests.Day17 where
 import Test.HUnit
 import Day17
 
+import qualified Data.Map as M
+
 testVertBar = TestCase (
     assertEqual "vertBar at 0 0"
     (verticalBar 0 0)
@@ -32,3 +34,20 @@ testBackwardsL = TestCase (
     (backwardsL 0 0)
     [(0, 0), (1, 0), (2,0), (2, 1), (2, 2)]
     )
+
+testParse = TestCase (
+    assertEqual "parsing >><"
+    (doParse ">><\n")
+    (Right [JLeft, JLeft, JRight])
+    )
+
+doesntHitGround = TestCase (
+    assertBool "does not hit ground"
+    (isDoneFalling 0 M.empty (1, 0))
+    )
+
+hitsGround = TestCase (
+    assertBool "does hit the ground"
+    (isDoneFalling 0 M.empty (0, 0))
+    )
+

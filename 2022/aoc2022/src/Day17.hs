@@ -130,7 +130,7 @@ initSimState rocks js = SimState {
     , towerHeight=0
     , rocksToProcess=rocks
     , rocksProcessed=0
-    , jets=cycle js
+    , jets=cycle js -- the jets that are cycled as a piece is falling
     , stage=DoJet
     , piecesPattern=cycle [
         LabeledPlacePiece horizBar "horizBar"
@@ -178,11 +178,15 @@ printLocations locs =
 
 runSim :: SimState -> SimState
 runSim ss
+    | doneRocks == totalRocks = trace (show doneRocks) ss
     | null fp = let nextX = startPlacementLeftEdge
                     nextY = (towerH + spawnDistanceFromTopItem)
                     nextPiece = genNextPiece nextX nextY
-                in trace ("=====================\ntowerHeight:" ++ show towerH ++ " new piece location:" ++ show (nextX, nextY)) runSim $ ss { fallingPieces=nextPiece }
-    | doneRocks == totalRocks = trace (show doneRocks) ss
+                in
+                trace ("=====================\ntowerHeight:" ++ show towerH ++ " new piece spawn origin:" ++ show (nextX, nextY) ++ " new piece locations" ++ show nextPiece)
+                runSim $ ss {
+                    fallingPieces=nextPiece
+                    }
     | otherwise = case thisStage of
         DoJet ->
             let nextLocations = map (applyJet thisJet) fp in
@@ -190,7 +194,13 @@ runSim ss
                 -- blown by the jet stream, then we continue the simulation without
                 -- moving the rock, and skip to the gravity phase
                 --trace ("jet:" ++ show thisJet)
-                (if or (map isIllegal nextLocations ++ [locationsConflict nextLocations settled])
+                (
+                let doneRocksMsg = "doneRocks:" ++ show doneRocks
+                    currentLocsMsg = " currentLocs:" ++ show fp
+                    nextLocsMsg = " next locs:" ++ show nextLocations
+                    afterJetMsg = " afterJet:" ++ show thisJet
+                in
+                if or (map isIllegal (trace (doneRocksMsg ++ currentLocsMsg ++ nextLocsMsg ++ afterJetMsg) nextLocations) ++ [locationsConflict nextLocations settled])
                 then runSim $ ss { stage=DoGravity, jets=nextJets }
                 else runSim $ ss {
                     fallingPieces=nextLocations
@@ -201,19 +211,21 @@ runSim ss
         DoGravity ->
             --trace "gravity"
             (let nextLocations = map (applyGravity gravity) fp in
-                if any (isDoneFalling floorY settled) nextLocations
+                if any (isDoneFalling floorY settled) (trace ("nextLocs gravity:" ++ show nextLocations) nextLocations)
                 then
-                    let newTowerHeight = maximum (map snd (trace ("stopped at:" ++ show fp) fp))
-                        newSettledPieces = M.union (settledPieces ss) (M.fromList (zip fp (repeat ())))
+                    let stoppedDebugMessage = ("stopped at:" ++ show fp)
+                        newTowerHeight = maximum (map snd (trace stoppedDebugMessage fp))
+                        printNewTowerHeight = ("new tower height:" ++ show newTowerHeight)
+                        newSettledPieces = M.union settled (M.fromList (zip fp (repeat ())))
                     in
                         -- add the newly settled pieces to the list, generate a new piece, switch to jet stage (each piece starts off at the jet stage, per the requirement)
                         runSim $ ss {
                                 settledPieces=newSettledPieces
                                 , stage=DoJet
-                                , rocksProcessed=rocksProcessed ss + 1
+                                , rocksProcessed=doneRocks + 1
                                 , fallingPieces=[]
                                 , piecesPattern=nextPiecesPattern
-                                , towerHeight=trace ("new tower height:" ++ show newTowerHeight) newTowerHeight
+                                , towerHeight=trace printNewTowerHeight newTowerHeight
                                 }
                 -- movement succeeded, continue simulation with the new locations still falling, switch to jet stage
                 else runSim $ ss {
@@ -252,12 +264,12 @@ applyGravity gravityAmount (x, y) = (x, y - gravityAmount)
 isDoneFalling :: Int -> M.Map Location () -> Location -> Bool
 isDoneFalling floorHeight settledRocks checkLoc@(_, y) =
     let result = conflicts || hitsFloor in
-        if result then trace ("is done falling because " ++ if hitsFloor then "hits floor" else "hits other rock" ++ ":" ++ printLoc) result else result
+        if result then trace debugMessage result else result
     where
         conflicts = M.member checkLoc settledRocks
         hitsFloor = y == floorHeight
         printLoc = show checkLoc
-
+        debugMessage = "is done falling because " ++ if hitsFloor then "hits floor" else "hits other rock" ++ ":" ++ printLoc
 
 parseLeft :: Parsec String () Jet
 parseLeft = char '<' >> return JLeft

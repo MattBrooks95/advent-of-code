@@ -1,5 +1,11 @@
 module Day17 where
 
+import System.Environment
+
+import Parsing (
+    integer
+    )
+
 import Debug.Trace
 
 import Text.Parsec
@@ -136,7 +142,7 @@ initSimState rocks js = SimState {
         ]
     }
 
-doParse :: String -> Either ParseError [Jet]
+doParse :: String -> Either ParseError (Int, [Jet])
 doParse = runParser Day17.parse () ""
 
 run :: String -> IO ()
@@ -144,11 +150,10 @@ run input = do
     print input
     case doParse input of
         Left e -> print e
-        Right parseSuccess -> do
+        Right parseSuccess@(numRocks, parsedJets) -> do
             print $ "parse success:" ++ show parseSuccess
             --let numRocks = 2022
-            let numRocks = 2022
-            let startSimState = initSimState numRocks parseSuccess
+            let startSimState = initSimState numRocks parsedJets
                 simResult = runSim startSimState
             let debugSettledPieces = settledPieces simResult
             --print $ "settledPieces" ++ show debugSettledPieces
@@ -229,6 +234,8 @@ runSim ss
         nextPiecesPattern = drop 1 piecesP
         piecesP = piecesPattern ss
 
+-- I think this is duplicated with the 'fall into another rock do to gravity'
+-- check code in isDoneFalling
 locationsConflict :: [Location] -> M.Map Location () -> Bool
 locationsConflict locs doneLocs = any (flip M.member doneLocs) locs
 
@@ -258,5 +265,8 @@ parseLeft = char '<' >> return JLeft
 parseRight :: Parsec String () Jet
 parseRight = char '>' >> return JRight
 
-parse :: Parsec String () [Jet]
-parse = many (parseLeft <|> parseRight) <* endOfLine <* eof
+parse :: Parsec String () (Int, [Jet])
+parse = do
+    numRocks <- integer <* endOfLine
+    parsedJets <- many (parseLeft <|> parseRight) <* endOfLine <* eof
+    return (numRocks, parsedJets)

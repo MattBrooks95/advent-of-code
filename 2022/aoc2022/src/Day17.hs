@@ -159,6 +159,7 @@ run input = do
             --putStrLn (printLocations debugSettledPieces)
             print $ "start sim state:" ++ show startSimState
             print $ "end sim state " ++ show simResult
+            print $ "tower height:" ++ show (towerHeight simResult)
 
 printLocations :: M.Map Location () -> String
 printLocations locs =
@@ -218,7 +219,10 @@ runSim ss
                 then
                     let stoppedDebugMessage = ("stopped at:" ++ show fp)
                         newSettledPieces = M.union settled (M.fromList (zip fp (repeat ())))
-                        newTowerHeight = maximum (map snd (M.keys newSettledPieces))
+                        -- an optimization to avoid calculating the maximum of the entire list of rocks was needed
+                        -- it should be enough to take the max of the newly settled rocks and the previous tower height
+                        -- that was saved with the simulation state
+                        newTowerHeight = maximum (towerH:map snd fp)
                         printNewTowerHeight = ("new tower height:" ++ show newTowerHeight)
                     in
                         -- add the newly settled pieces to the list, generate a new piece, switch to jet stage (each piece starts off at the jet stage, per the requirement)

@@ -1,7 +1,5 @@
 module Day17 where
 
-import System.Environment
-
 import Parsing (
     integer
     )
@@ -145,6 +143,7 @@ initSimState rocks js = SimState {
 doParse :: String -> Either ParseError (Int, [Jet])
 doParse = runParser Day17.parse () ""
 
+-- part 1 3065
 run :: String -> IO ()
 run input = do
     print input
@@ -214,9 +213,9 @@ runSim ss
                 if any (isDoneFalling floorY settled) (trace ("nextLocs gravity:" ++ show nextLocations) nextLocations)
                 then
                     let stoppedDebugMessage = ("stopped at:" ++ show fp)
-                        newTowerHeight = maximum (map snd (trace stoppedDebugMessage fp))
-                        printNewTowerHeight = ("new tower height:" ++ show newTowerHeight)
                         newSettledPieces = M.union settled (M.fromList (zip fp (repeat ())))
+                        newTowerHeight = maximum (map snd (M.keys newSettledPieces))
+                        printNewTowerHeight = ("new tower height:" ++ show newTowerHeight)
                     in
                         -- add the newly settled pieces to the list, generate a new piece, switch to jet stage (each piece starts off at the jet stage, per the requirement)
                         runSim $ ss {

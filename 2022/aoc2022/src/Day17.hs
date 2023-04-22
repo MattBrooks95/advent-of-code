@@ -150,13 +150,13 @@ run input = do
     case doParse input of
         Left e -> print e
         Right parseSuccess@(numRocks, parsedJets) -> do
-            print $ "parse success:" ++ show parseSuccess
+            --print $ "parse success:" ++ show parseSuccess
             --let numRocks = 2022
             let startSimState = initSimState numRocks parsedJets
                 simResult = runSim startSimState
             let debugSettledPieces = settledPieces simResult
             --print $ "settledPieces" ++ show debugSettledPieces
-            putStrLn (printLocations debugSettledPieces)
+            --putStrLn (printLocations debugSettledPieces)
             print $ "start sim state:" ++ show startSimState
             print $ "end sim state " ++ show simResult
 
@@ -168,7 +168,8 @@ printLocations locs =
     where
         go :: [Location] -> Int -> [String] -> [String]
         go goLocs currY acc = let rocksForY = filter (\(_, y) -> y == currY) goLocs in
-            if null (trace (show rocksForY) rocksForY)
+            --if null (trace (show rocksForY) rocksForY)
+            if null rocksForY
             then acc
             else
                 go goLocs (currY + 1) (acc ++ [newStrings])
@@ -177,12 +178,13 @@ printLocations locs =
 
 runSim :: SimState -> SimState
 runSim ss
-    | doneRocks == totalRocks = trace (show doneRocks) ss
+    -- | doneRocks == totalRocks = trace (show doneRocks) ss
+    | doneRocks == totalRocks = ss
     | null fp = let nextX = startPlacementLeftEdge
                     nextY = (towerH + spawnDistanceFromTopItem)
                     nextPiece = genNextPiece nextX nextY
                 in
-                trace ("=====================\ntowerHeight:" ++ show towerH ++ " new piece spawn origin:" ++ show (nextX, nextY) ++ " new piece locations" ++ show nextPiece)
+                --trace ("=====================\ntowerHeight:" ++ show towerH ++ " new piece spawn origin:" ++ show (nextX, nextY) ++ " new piece locations" ++ show nextPiece)
                 runSim $ ss {
                     fallingPieces=nextPiece
                     }
@@ -199,7 +201,8 @@ runSim ss
                     nextLocsMsg = " next locs:" ++ show nextLocations
                     afterJetMsg = " afterJet:" ++ show thisJet
                 in
-                if or (map isIllegal (trace (doneRocksMsg ++ currentLocsMsg ++ nextLocsMsg ++ afterJetMsg) nextLocations) ++ [locationsConflict nextLocations settled])
+                --if or (map isIllegal (trace (doneRocksMsg ++ currentLocsMsg ++ nextLocsMsg ++ afterJetMsg) nextLocations) ++ [locationsConflict nextLocations settled])
+                if or (map isIllegal nextLocations ++ [locationsConflict nextLocations settled])
                 then runSim $ ss { stage=DoGravity, jets=nextJets }
                 else runSim $ ss {
                     fallingPieces=nextLocations
@@ -210,7 +213,8 @@ runSim ss
         DoGravity ->
             --trace "gravity"
             (let nextLocations = map (applyGravity gravity) fp in
-                if any (isDoneFalling floorY settled) (trace ("nextLocs gravity:" ++ show nextLocations) nextLocations)
+                --if any (isDoneFalling floorY settled) (trace ("nextLocs gravity:" ++ show nextLocations) nextLocations)
+                if any (isDoneFalling floorY settled) nextLocations
                 then
                     let stoppedDebugMessage = ("stopped at:" ++ show fp)
                         newSettledPieces = M.union settled (M.fromList (zip fp (repeat ())))
@@ -224,7 +228,8 @@ runSim ss
                                 , rocksProcessed=doneRocks + 1
                                 , fallingPieces=[]
                                 , piecesPattern=nextPiecesPattern
-                                , towerHeight=trace printNewTowerHeight newTowerHeight
+                                , towerHeight=newTowerHeight
+                                --, towerHeight=trace printNewTowerHeight newTowerHeight
                                 }
                 -- movement succeeded, continue simulation with the new locations still falling, switch to jet stage
                 else runSim $ ss {
@@ -263,7 +268,8 @@ applyGravity gravityAmount (x, y) = (x, y - gravityAmount)
 isDoneFalling :: Int -> M.Map Location () -> Location -> Bool
 isDoneFalling floorHeight settledRocks checkLoc@(_, y) =
     let result = conflicts || hitsFloor in
-        if result then trace debugMessage result else result
+        --if result then trace debugMessage result else result
+        result
     where
         conflicts = M.member checkLoc settledRocks
         hitsFloor = y == floorHeight

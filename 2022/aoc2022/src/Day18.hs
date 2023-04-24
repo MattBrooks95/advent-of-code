@@ -23,6 +23,20 @@ getIndicesOfNeighbors (x, y, z) = [
     , (x, y, z - 1)
     ]
 
+-- get the indices of neighboring squires, with locations that are out of the bounds of
+-- the vector being filtered out
+getIndicesOfNeighborsGuard :: (Int, Int, Int) -> Cube -> [Cube]
+getIndicesOfNeighborsGuard (maxX, maxY, maxZ) cb = let possibleNhbrs = getIndicesOfNeighbors cb in
+    filter (\(x, y, z) -> and
+        [x <= maxX
+        , x > 0
+        , y <= maxY
+        , y > 0
+        , z <= maxZ
+        , z > 0
+        ])
+        possibleNhbrs
+
 getCoveredSidesForCube :: Cube -> S.Set Cube -> Int
 getCoveredSidesForCube cb cubes = let nhbrs = getIndicesOfNeighbors cb in
     length (filter (flip S.member cubes) nhbrs)
@@ -73,6 +87,13 @@ isCube :: ColoredLoc -> Bool
 isCube IsCube = True
 isCube _ = False
 
+type ColoredGraphItem = (Cube, ColoredLoc)
+type ColoredGraph = V.Vector ColoredGraphItem
+
+isUnchecked :: ColoredLoc -> Bool
+isUnchecked IsUnchecked = True
+isUnchecked _ = False
+
 -- idea: start just outside of the minimum or maximum point of the cube
 -- make a big vector of spaces that are colored, like in djikstra's algorithm
 -- then, from the start point do a breadth first search, coloring in the air spaces
@@ -85,12 +106,14 @@ part2 cubes = do
     print $ "min:" ++ show boundMin
     print $ "max:" ++ show boundMax
     print $ "dimensions:" ++ show vecDims
+    print $ "volume of 3d space" ++ show (maxX * maxY * maxZ)
     print $ "emptyGraph:" ++ show emptyGraph
     print $ "emptyGraph length:" ++ show (length emptyGraph)
     print $ "initialGraph:" ++ show initialGraph
+    print $ "initialGraph length:" ++ show (length initialGraph)
     print $ "num cubes original:" ++ show (length cubes)
     print $ "graph length:" ++ show (length initialGraph)
-    print $ "num cubes graph:" ++ show (length (V.filter isCube initialGraph))
+    print $ "num cubes graph:" ++ show (length (V.filter (\(_, color) -> isCube color) initialGraph))
     let checkCubesInGraph = map (\cube -> let idx = getIndexForCube cube in initialGraph V.!? idx) cubes
     print checkCubesInGraph
     -- check that 1,1,1 is NOT a cube
@@ -100,13 +123,38 @@ part2 cubes = do
     return (-1 :: Int)
     where
         initialGraph =  emptyGraph V.// indexedColoredLocsForCubes cubes getIndexForCube
-        emptyGraph = V.replicate (getIndexForCube boundMax + 1) IsUnchecked :: V.Vector ColoredLoc
+        --emptyGraph = V.replicate (getIndexForCube boundMax + 1) IsUnchecked :: V.Vector ColoredLoc
+        emptyGraph = V.fromList uncheckedGraphItems
+        uncheckedGraphItems = getUncheckedGraphItems vx vy vz :: [ColoredGraphItem]
         vecDims@(vx, vy, vz) = getVectorDims cubeBounds
         getIndexForCube = getIndexForLocation vx vy vz
-        cubeBounds@(boundMin, boundMax) = getBoundingBox cubes
+        isCubeOpenToAir = isOpenToAir vx vy vz
+        cubeBounds@(boundMin, boundMax@(maxX, maxY, maxZ)) = getBoundingBox cubes
 
-indexedColoredLocsForCubes :: [Cube] -> (Cube -> Int) -> [(Int, ColoredLoc)]
-indexedColoredLocsForCubes cubes getIndexForCube = [ (getIndexForCube c, IsCube) | c <- cubes]
+getUncheckedGraphItems :: Int -> Int -> Int -> [ColoredGraphItem]
+getUncheckedGraphItems vx vy vz = concat [concat [[((x, y, z), IsUnchecked) | z <- [0..vz] ] | y <- [0..vy] ] | x <- [0..vx]]
+
+colorLocations :: V.Vector ColoredLoc -> (Cube -> Bool) -> S.Set Cube -> V.Vector ColoredLoc
+colorLocations locs openToAir cubes = undefined
+    where
+        go :: V.Vector ColoredLoc -> [Cube] -> V.Vector ColoredLoc
+        go currLocs [] = undefined
+        --go currLocs [] = if length (V.filter (isUnchecked && isOpenToAir) currLocs) then undefined else undefined
+        go currLocs (cb:cbs) = undefined
+
+-- checks if the coordinates of a cube are on the outside layers of the grid area
+-- this is necessary because we shouldn't be able to start the breadth-first-search from
+-- the unchecked air pockets, as there is no way for the steam/water to get there
+-- the entry points for the bfs must be on the edges of the coordinate space
+isOpenToAir :: Int -> Int -> Int -> Cube -> Bool
+isOpenToAir maxX maxY maxZ (x, y, z) = and [
+    x == maxX || x == 1
+    , y == maxY || y == 1
+    , z == maxZ || z == 1
+    ]
+
+indexedColoredLocsForCubes :: [Cube] -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
+indexedColoredLocsForCubes cubes getIndexForCube = [ (getIndexForCube c, (c,  IsCube)) | c <- cubes]
 
 -- get an index for a cube that is being held in a 1d Vector
 -- this is one indexed!

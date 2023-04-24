@@ -3,6 +3,7 @@ module Tests.Day18 where
 import Day18
 
 import qualified Data.Set as S
+import qualified Data.Vector as V
 
 import Test.HUnit
 

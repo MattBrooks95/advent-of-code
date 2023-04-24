@@ -37,8 +37,8 @@ testBackwardsL = TestCase (
 
 testParse = TestCase (
     assertEqual "parsing >><"
-    (doParse ">><\n")
-    (Right [JLeft, JLeft, JRight])
+    (doParse "1\n2\n>><\n")
+    (Right (1, 2, [JLeft, JLeft, JRight]))
     )
 
 doesntHitGround = TestCase (
@@ -51,7 +51,7 @@ hitsGround = TestCase (
     (isDoneFalling 0 M.empty (0, 0))
     )
 
-settledRock = M.fromList [((2, 1), ())]
+settledRock = M.fromList (let locs = [(2, 1)] in zip locs locs)
 
 doesNotLandOnOtherRock = TestCase (
     assertBool "rock does not land on other rock"
@@ -88,8 +88,8 @@ inBoundsXEdgeRight = TestCase (
     (not $ isIllegal (0, 0))
     )
 
-cross :: M.Map Location ()
-cross = M.fromList (zip [(2, 1), (2, 2), (2, 3), (1, 2), (3, 2)] (repeat ()))
+cross :: SettledPieces
+cross = M.fromList (let locs = [(2, 1), (2, 2), (2, 3), (1, 2), (3, 2)] in zip locs locs)
 
 noConflict = TestCase (
     assertBool "does not conflict with other rock"

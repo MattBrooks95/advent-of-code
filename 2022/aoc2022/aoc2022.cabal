@@ -88,6 +88,7 @@ test-suite aoc2022-test
   main-is: Main.hs
   other-modules:
       Tests.Day17
+      Tests.Day18
       Paths_aoc2022
   hs-source-dirs:
       test

@@ -1,8 +1,9 @@
 import Test.HUnit
 
 import Tests.Day17
+import Tests.Day18
 
-testsDay17 = TestList [
+testsDay17 = [
     testVertBar
     , testHorizBar
     , testBox
@@ -21,7 +22,14 @@ testsDay17 = TestList [
     , doesConflict
     ]
 
+testsDay18 = [
+    getNeighbors
+    ]
+
 main :: IO ()
 main = do
-    countResults <- runTestTT testsDay17
+    countResults <- runTestTT (TestList (
+        testsDay17
+        ++ testsDay18
+        ))
     print countResults

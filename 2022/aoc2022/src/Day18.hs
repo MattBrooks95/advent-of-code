@@ -9,6 +9,16 @@ import Text.Parsec
 
 type Cube = (Int, Int, Int)
 
+getIndicesOfNeighbors :: Cube -> [Cube]
+getIndicesOfNeighbors (x, y, z) = [
+    (x+1, y, z) -- right
+    , (x, y + 1, z) -- above
+    , (x, y, z + 3) -- behind
+    , (x - 1, y, z) -- left
+    , (x, y - 1, z) -- below
+    , (x, y, z - 1)
+    ]
+
 run :: String -> IO ()
 run input = do
     print input

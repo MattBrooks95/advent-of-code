@@ -25,6 +25,7 @@ testsDay17 = [
 testsDay18 = [
     getNeighbors
     , oneCubeCoveredSides
+    , testUnchecked
     ]
 
 main :: IO ()

@@ -41,3 +41,15 @@ twoCubeCoveredSides =
         (getSurfaceArea cubesList)
         10
     )
+
+colorChecks :: [(ColoredLoc, Bool)]
+colorChecks = [
+    (IsUnchecked, True)
+    , (IsAir, False)
+    , (IsChecking, False)
+    , (IsCube, False)
+    ]
+
+testUnchecked :: Test
+testUnchecked = TestList $ map (\(color, answer) -> TestCase $ assertEqual ("color:" ++ show color) (isUnchecked color) answer) colorChecks
+

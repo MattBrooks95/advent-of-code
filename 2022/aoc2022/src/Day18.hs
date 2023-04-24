@@ -13,7 +13,7 @@ getIndicesOfNeighbors :: Cube -> [Cube]
 getIndicesOfNeighbors (x, y, z) = [
     (x+1, y, z) -- right
     , (x, y + 1, z) -- above
-    , (x, y, z + 3) -- behind
+    , (x, y, z + 1) -- behind
     , (x - 1, y, z) -- left
     , (x, y - 1, z) -- below
     , (x, y, z - 1)

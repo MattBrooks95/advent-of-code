@@ -49,7 +49,8 @@ getCoveredSidesForCube cb cubes = let nhbrs = getIndicesOfNeighbors cb in
 
 getCoveredSidesForCubePart2 :: (Cube -> Int) -> Cube -> ColoredGraph -> Int
 getCoveredSidesForCubePart2 getIdx cb graph = let nhbrs = getIndicesOfNeighbors cb in
-    length (filter (indexIsAir graph) (map getIdx nhbrs))
+    --length (filter (\nhbrIdx -> not (indexIsAir graph nhbrIdx)) (map getIdx nhbrs))
+    length (filter (not . indexIsAir graph) (map getIdx nhbrs))
 
 indexIsAir :: ColoredGraph -> Int -> Bool
 indexIsAir graph idx = case graph V.!? idx of
@@ -91,6 +92,7 @@ getBoundingBox cubes = go cubes (maxCubeLoc, minCubeLoc)
         go cbs (newMin, newMax)
 
 -- part1: 4628
+-- part2: 2544 is too low, but it was correct on the short input
 run :: String -> IO ()
 run input = do
     print input

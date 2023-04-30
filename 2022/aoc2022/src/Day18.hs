@@ -30,11 +30,11 @@ getIndicesOfNeighbors (x, y, z) = [
 isInBounds :: (Int, Int, Int) -> Cube -> Bool
 isInBounds (maxX, maxY, maxZ) (x, y, z) = and
         [x <= maxX
-        , x > 0
+        , x >= 0
         , y <= maxY
-        , y > 0
+        , y >= 0
         , z <= maxZ
-        , z > 0
+        , z >= 0
         ]
 
 -- get the indices of neighboring squires, with locations that are out of the bounds of
@@ -148,8 +148,8 @@ part2 cubes = do
         uncheckedGraphItems = getUncheckedGraphItems spaceDimension getIndexForCube :: [(Int, ColoredGraphItem)]
         vecDims@(vx, vy, vz) = getVectorDims cubeBounds
         getIndexForCube = getIndexForLocation spaceDimension
-        isCubeOpenToAir = isOpenToAir vx vy vz
-        cubeIsInBounds = isInBounds (vx, vy, vz)
+        isCubeOpenToAir = isOpenToAir (maxX + 1) (maxY + 1) (maxZ + 1)
+        cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0
         arrayLength = maximumIndex + 1
         spaceDimension = maximum [maxX, maxY, maxZ] + 1 :: Int
         cubeBounds@(_, boundMax@(maxX, maxY, maxZ)) = getBoundingBox cubes
@@ -167,17 +167,17 @@ getUncheckedGraphItems :: Int -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 getUncheckedGraphItems spaceDimension getCubeIndex = concat [concat [[(getCubeIndex (x, y, z), ((x, y, z), IsUnchecked)) | z <- [0..spaceDimension] ] | y <- [0..spaceDimension] ] | x <- [0..spaceDimension]]
 
 colorLocations :: ColoredGraph -> (Cube -> Bool) -> (Cube -> Bool) -> (Cube -> [Cube]) -> (Cube -> Int) ->  ColoredGraph
-colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs []
+colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs [(0, 0, 0)]
     where
         go :: ColoredGraph -> [Cube] -> ColoredGraph
-        go currLocs [] =
-            -- if there are no more locations queued, see if we can find a new start point
-            -- if we can't, the process is over and just return the colored graph
-            case V.find (\(cb, color) -> isUnchecked color && openToAir cb && cubeIsInBounds cb) currLocs of
-                Nothing -> currLocs
-                Just (newStart, clr) ->
-                    let newGraph = (currLocs V.// [(getIndexForCube (trace ("found:" ++ show newStart ++ " of color:" ++ show clr) newStart), (newStart, IsChecking))]) in
-                    go (trace ("new graph:" ++ show newGraph) newGraph) [newStart]
+        go currLocs [] = currLocs
+            ---- if there are no more locations queued, see if we can find a new start point
+            ---- if we can't, the process is over and just return the colored graph
+            --case V.find (\(cb, color) -> isUnchecked color && openToAir cb && cubeIsInBounds cb) currLocs of
+            --    Nothing -> currLocs
+            --    Just (newStart, clr) ->
+            --        let newGraph = (currLocs V.// [(getIndexForCube (trace ("found:" ++ show newStart ++ " of color:" ++ show clr) newStart), (newStart, IsChecking))]) in
+            --        go (trace ("new graph:" ++ show newGraph) newGraph) [newStart]
         go currLocs (cb:cbs) =
             let nhbrs = getNhbrs (trace ("inspecting:" ++ show cb) cb)
                 uncheckedNhbrs = filter (\ncb -> let (_, color) = getGraphNode currLocs getIndexForCube ncb in isUnchecked color) (trace ("nhbrs" ++ show nhbrs) nhbrs)
@@ -197,9 +197,9 @@ getGraphNode graph getIndexForCube cb =
 -- the entry points for the bfs must be on the edges of the coordinate space
 isOpenToAir :: Int -> Int -> Int -> Cube -> Bool
 isOpenToAir maxX maxY maxZ (x, y, z) = and [
-    x == maxX || x == 1
-    , y == maxY || y == 1
-    , z == maxZ || z == 1
+    x == maxX || x == 0
+    , y == maxY || y == 0
+    , z == maxZ || z == 0
     ]
 
 indexedColoredLocsForCubes :: [Cube] -> (Cube -> Int) -> [(Int, ColoredGraphItem)]

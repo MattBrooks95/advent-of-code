@@ -47,11 +47,26 @@ getCoveredSidesForCube :: Cube -> S.Set Cube -> Int
 getCoveredSidesForCube cb cubes = let nhbrs = getIndicesOfNeighbors cb in
     length (filter (flip S.member cubes) nhbrs)
 
+getCoveredSidesForCubePart2 :: (Cube -> Int) -> Cube -> ColoredGraph -> Int
+getCoveredSidesForCubePart2 getIdx cb graph = let nhbrs = getIndicesOfNeighbors cb in
+    length (filter (indexIsAir graph) (map getIdx nhbrs))
+
+indexIsAir :: ColoredGraph -> Int -> Bool
+indexIsAir graph idx = case graph V.!? idx of
+    Just (_, IsAir) -> True
+    _ -> False
+
 getSurfaceArea :: S.Set Cube -> Int
 getSurfaceArea cubes = totalPossibleSurfaceArea - numHiddenSides
     where
         totalPossibleSurfaceArea = length cubes * 6
         numHiddenSides = foldr (\cb acc -> acc + getCoveredSidesForCube cb cubes) 0 cubes
+
+getSurfaceAreaPart2 :: (Cube -> Int) -> [Cube] -> ColoredGraph -> Int
+getSurfaceAreaPart2 getIdx cubes graph = totalPossibleSurfaceArea - numHiddenSides
+    where
+        totalPossibleSurfaceArea = length cubes * 6
+        numHiddenSides = foldr (\cb acc -> acc + getCoveredSidesForCubePart2 getIdx cb graph) 0 cubes
 
 minInt :: Int
 minInt = minBound
@@ -137,6 +152,8 @@ part2 cubes = do
 
     let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
     print coloredGraph
+    let sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
+    print $ "surface area part2:" ++ show sa
     return (-1 :: Int)
     where
         initialGraph =  emptyGraph V.// trace ("cube color loc init:"  ++ show cubeColorLocInit) cubeColorLocInit
@@ -149,12 +166,21 @@ part2 cubes = do
         vecDims@(vx, vy, vz) = getVectorDims cubeBounds
         getIndexForCube = getIndexForLocation spaceDimension
         isCubeOpenToAir = isOpenToAir (maxX + 1) (maxY + 1) (maxZ + 1)
-        cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0
+        cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0 && dimIsInBounds spaceDimension c
         arrayLength = maximumIndex + 1
         spaceDimension = maximum [maxX, maxY, maxZ] + 1 :: Int
         cubeBounds@(_, boundMax@(maxX, maxY, maxZ)) = getBoundingBox cubes
         maximumIndex = getIndexForCube (spaceDimension, spaceDimension, spaceDimension)
         unInitializedLocation = ((-1, -1, -1), IsUnchecked)
+
+dimIsInBounds :: Int -> Cube -> Bool
+dimIsInBounds maxDim (cx, cy, cz) =
+        inBounds cx
+        && inBounds cy
+        && inBounds cz
+        where
+            inBounds x = x >= 0 && x <= maxDim
+    --length (filter (\x -> x >= 0 && x <= maxDim) [cy, cx, cz]) == 3
 
 testGetIndex :: (Cube -> Int) -> Cube -> ColoredGraph -> IO ()
 testGetIndex getIndexForCube cb graph =

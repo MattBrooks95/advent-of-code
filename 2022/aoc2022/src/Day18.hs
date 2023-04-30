@@ -196,11 +196,10 @@ getGraphNode graph getIndexForCube cb =
 -- the unchecked air pockets, as there is no way for the steam/water to get there
 -- the entry points for the bfs must be on the edges of the coordinate space
 isOpenToAir :: Int -> Int -> Int -> Cube -> Bool
-isOpenToAir maxX maxY maxZ (x, y, z) = and [
+isOpenToAir maxX maxY maxZ (x, y, z) =
     x == maxX || x == 0
-    , y == maxY || y == 0
-    , z == maxZ || z == 0
-    ]
+    && y == maxY || y == 0
+    && z == maxZ || z == 0
 
 indexedColoredLocsForCubes :: [Cube] -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 indexedColoredLocsForCubes cubes getIndexForCube = [ (getIndexForCube c, (c,  IsCube)) | c <- cubes]

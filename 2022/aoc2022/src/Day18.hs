@@ -100,8 +100,8 @@ run input = do
         Left e -> print e
         Right parseResult -> do
             print parseResult
-            --let surfaceArea = part1 parseResult
-            --print $ "surface area of " ++ show (length parseResult) ++ " is " ++ show surfaceArea
+            let surfaceArea = part1 parseResult
+            print $ "surface area of " ++ show (length parseResult) ++ " cubes is " ++ show surfaceArea
             exteriorSurfaceArea <- part2 parseResult
             print $ "external surface area is: " ++ show exteriorSurfaceArea
 
@@ -109,6 +109,10 @@ data ColoredLoc = IsCube | IsAir | IsUnchecked | IsChecking deriving Show
 isCube :: ColoredLoc -> Bool
 isCube IsCube = True
 isCube _ = False
+
+isAir :: ColoredLoc -> Bool
+isAir IsAir = True
+isAir _ = False
 
 type ColoredGraphItem = (Cube, ColoredLoc)
 type ColoredGraph = V.Vector ColoredGraphItem
@@ -154,26 +158,40 @@ part2 cubes = do
 
     let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
     print coloredGraph
+    mapM_ putStrLn [
+        "with " ++ show (length cubes) ++ " cubes," ++ " and a graph of size:" ++ show arrayLength
+        , show (length (V.filter(\(_, color) -> isAir color) coloredGraph)) ++ " sections where open to the atmosphere"
+        , "and " ++ show (length (V.filter(\(_, color) -> isUnchecked color) coloredGraph)) ++ " were unchecked"
+        ]
     let sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
     print $ "surface area part2:" ++ show sa
     return (-1 :: Int)
     where
-        initialGraph =  emptyGraph V.// trace ("cube color loc init:"  ++ show cubeColorLocInit) cubeColorLocInit
+        --initialGraph =  emptyGraph V.// trace ("cube color loc init:"  ++ show cubeColorLocInit) cubeColorLocInit
+        initialGraph =  emptyGraph V.// cubeColorLocInit
         cubeColorLocInit = indexedColoredLocsForCubes cubes getIndexForCube
         --emptyGraph = V.replicate (getIndexForCube boundMax + 1) IsUnchecked :: V.Vector ColoredLoc
         --emptyGraph = unInitGraph V.// uncheckedGraphItems
         --unInitGraph = V.replicate (spaceDimension ^ (3 :: Int)) unInitializedLocation
-        emptyGraph = V.replicate arrayLength unInitializedLocation
+        --emptyGraph = V.replicate arrayLength unInitializedLocation -- this worked for the short input of part2
+        ---- but the colors still being marked -1,-1,-1 made the 'find a new start point' logic incorrect
+        emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph spaceDimension getIndexForCube
         uncheckedGraphItems = getUncheckedGraphItems spaceDimension getIndexForCube :: [(Int, ColoredGraphItem)]
         vecDims@(vx, vy, vz) = getVectorDims cubeBounds
         getIndexForCube = getIndexForLocation spaceDimension
-        isCubeOpenToAir = isOpenToAir (maxX + 1) (maxY + 1) (maxZ + 1)
+        isCubeOpenToAir = isOpenToAir spaceDimension spaceDimension spaceDimension
         cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0 && dimIsInBounds spaceDimension c
         arrayLength = maximumIndex + 1
         spaceDimension = maximum [maxX, maxY, maxZ] + 1 :: Int
         cubeBounds@(_, boundMax@(maxX, maxY, maxZ)) = getBoundingBox cubes
         maximumIndex = getIndexForCube (spaceDimension, spaceDimension, spaceDimension)
         unInitializedLocation = ((-1, -1, -1), IsUnchecked)
+
+getEmptyGraph :: Int -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
+getEmptyGraph spaceDimension idxForCube =
+    concat [concat [[ let cb = (x, y, z) in (idxForCube cb, (cb, IsUnchecked)) | z <- dimRange] | y <- dimRange] | x <- dimRange]
+        where
+            dimRange = [0..spaceDimension]
 
 dimIsInBounds :: Int -> Cube -> Bool
 dimIsInBounds maxDim (cx, cy, cz) =
@@ -195,29 +213,49 @@ getUncheckedGraphItems :: Int -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 getUncheckedGraphItems spaceDimension getCubeIndex = concat [concat [[(getCubeIndex (x, y, z), ((x, y, z), IsUnchecked)) | z <- [0..spaceDimension] ] | y <- [0..spaceDimension] ] | x <- [0..spaceDimension]]
 
 colorLocations :: ColoredGraph -> (Cube -> Bool) -> (Cube -> Bool) -> (Cube -> [Cube]) -> (Cube -> Int) ->  ColoredGraph
-colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs [(0, 0, 0)]
+--colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs [(0, 0, 0)]
+colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs []
     where
         go :: ColoredGraph -> [Cube] -> ColoredGraph
-        go currLocs [] = currLocs
+        go currLocs [] = --currLocs
             ---- if there are no more locations queued, see if we can find a new start point
             ---- if we can't, the process is over and just return the colored graph
-            --case V.find (\(cb, color) -> isUnchecked color && openToAir cb && cubeIsInBounds cb) currLocs of
-            --    Nothing -> currLocs
-            --    Just (newStart, clr) ->
-            --        let newGraph = (currLocs V.// [(getIndexForCube (trace ("found:" ++ show newStart ++ " of color:" ++ show clr) newStart), (newStart, IsChecking))]) in
-            --        go (trace ("new graph:" ++ show newGraph) newGraph) [newStart]
+            --case V.find (\(cb, color) -> isUnchecked (trace (" looking for start:" ++ show color ++ " cube:" ++ show cb) color) && openToAir cb && cubeIsInBounds cb) currLocs of
+            case V.find (\item@(cb, color) -> isStartingPoint openToAir cubeIsInBounds item) currLocs of
+                Nothing -> currLocs
+                Just (newStart, clr) ->
+                    let newGraph = (currLocs V.// [(getIndexForCube (trace ("found:" ++ show newStart ++ " of color:" ++ show clr) newStart), (newStart, IsChecking))]) in
+                    go (trace ("new graph:" ++ show newGraph) newGraph) [newStart]
         go currLocs (cb:cbs) =
-            let nhbrs = getNhbrs (trace ("inspecting:" ++ show cb) cb)
-                uncheckedNhbrs = filter (\ncb -> let (_, color) = getGraphNode currLocs getIndexForCube ncb in isUnchecked color) (trace ("nhbrs" ++ show nhbrs) nhbrs)
-                listToUpdateNeighbors = map (\checkCb -> (getIndexForCube checkCb, (checkCb, IsChecking))) (trace ("\tuncheckedn:" ++ show uncheckedNhbrs) uncheckedNhbrs)
-                withNewPaintedNodes = currLocs V.// ((getIndexForCube cb, (cb, IsAir)):trace ("\tto update neighbors" ++ show listToUpdateNeighbors) listToUpdateNeighbors)
+            --let nhbrs = getNhbrs (trace ("inspecting:" ++ show cb) cb)
+            let nhbrs = getNhbrs cb
+                --uncheckedNhbrs = filter (\ncb -> let (_, color) = getGraphNode currLocs getIndexForCube ncb in isUnchecked color) (trace ("nhbrs" ++ show nhbrs) nhbrs)
+                uncheckedNhbrs = filter (\ncb -> let (_, color) = getGraphNode currLocs getIndexForCube ncb in isUnchecked color) nhbrs
+                --listToUpdateNeighbors = map (\checkCb -> (getIndexForCube checkCb, (checkCb, IsChecking))) (trace ("\tuncheckedn:" ++ show uncheckedNhbrs) uncheckedNhbrs)
+                listToUpdateNeighbors = map (\checkCb -> (getIndexForCube checkCb, (checkCb, IsChecking))) uncheckedNhbrs
+                --withNewPaintedNodes = currLocs V.// ((getIndexForCube cb, (cb, IsAir)):trace ("\tto update neighbors" ++ show listToUpdateNeighbors) listToUpdateNeighbors)
+                withNewPaintedNodes = currLocs V.// ((getIndexForCube cb, (cb, IsAir)):listToUpdateNeighbors)
             in go withNewPaintedNodes (uncheckedNhbrs++cbs)
+
+isStartingPoint :: (Cube -> Bool) -> (Cube -> Bool) -> ColoredGraphItem -> Bool
+isStartingPoint isOpenToAirF cubeIsInBounds (cb, color) =
+    trace ("cb:" ++ show cb ++ inBoundsMsg ++ openToAirMsg ++ isUncheckedMsg) 
+        inBounds && openToAir && isUncheckedRes
+    where
+        inBounds = cubeIsInBounds cb
+        inBoundsMsg = " is in bounds?:" ++ show inBounds
+        openToAirMsg = " is open to air?:" ++ show openToAir
+        openToAir = isOpenToAirF cb
+        isUncheckedRes = isUnchecked color
+        isUncheckedMsg = " is unchecked?:" ++ show isUncheckedRes
+--case V.find (\(cb, color) -> isUnchecked (trace (" looking for start:" ++ show color ++ " cube:" ++ show cb) color) && openToAir cb && cubeIsInBounds cb) currLocs of
 
 getGraphNode :: ColoredGraph -> (Cube -> Int) -> Cube -> ColoredGraphItem
 getGraphNode graph getIndexForCube cb =
     let idx = getIndexForCube cb
         result = graph V.! idx in
-    trace ("found cube:" ++ show cb ++ " which has index:" ++ show idx ++ " res:" ++ show result) result
+    --trace ("found cube:" ++ show cb ++ " which has index:" ++ show idx ++ " res:" ++ show result) result
+    result
 
 -- checks if the coordinates of a cube are on the outside layers of the grid area
 -- this is necessary because we shouldn't be able to start the breadth-first-search from
@@ -225,9 +263,9 @@ getGraphNode graph getIndexForCube cb =
 -- the entry points for the bfs must be on the edges of the coordinate space
 isOpenToAir :: Int -> Int -> Int -> Cube -> Bool
 isOpenToAir maxX maxY maxZ (x, y, z) =
-    x == maxX || x == 0
-    && y == maxY || y == 0
-    && z == maxZ || z == 0
+    x >= maxX || x == 0
+    || y >= maxY || y == 0
+    || z >= maxZ || z == 0
 
 indexedColoredLocsForCubes :: [Cube] -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 indexedColoredLocsForCubes cubes getIndexForCube = [ (getIndexForCube c, (c,  IsCube)) | c <- cubes]

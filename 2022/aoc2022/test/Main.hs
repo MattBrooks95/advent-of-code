@@ -27,6 +27,7 @@ testsDay18 = [
     , oneCubeCoveredSides
     , testUnchecked
     , solidCube
+    , testPart2
     ]
 
 main :: IO ()

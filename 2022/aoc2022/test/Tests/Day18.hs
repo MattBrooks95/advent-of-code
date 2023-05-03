@@ -91,3 +91,13 @@ solidCube =
             (getSurfaceAreaPart2 getIdx [(0, 1, 0)] smallTest)
         )
     ]
+
+testPart2 :: Test
+testPart2 = TestCase (
+        assertEqual "two non-touching cubes have a surface area of 12"
+        12
+        (runPart2 [
+        (1, 1, 1)
+        , (3, 3, 3)
+        ])
+    )

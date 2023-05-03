@@ -209,6 +209,25 @@ part2 cubes = do
         maximumIndex = getIndexForCube (spaceDimension, spaceDimension, spaceDimension)
         unInitializedLocation = ((-1, -1, -1), IsUnchecked)
 
+-- TODO de-duplicate this with the IO version
+runPart2 :: [Cube] -> Int
+runPart2 cubes = 
+    let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
+        sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
+    in sa
+    where
+        initialGraph =  emptyGraph V.// cubeColorLocInit
+        emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph spaceDimension getIndexForCube
+        arrayLength = maximumIndex + 1
+        unInitializedLocation = ((-1, -1, -1), IsUnchecked)
+        cubeColorLocInit = indexedColoredLocsForCubes cubes getIndexForCube
+        spaceDimension = maximum [maxX, maxY, maxZ] + 1 :: Int
+        getIndexForCube = getIndexForLocation spaceDimension
+        cubeBounds@(_, boundMax@(maxX, maxY, maxZ)) = getBoundingBox cubes
+        maximumIndex = getIndexForCube (spaceDimension, spaceDimension, spaceDimension)
+        isCubeOpenToAir = isOpenToAir spaceDimension spaceDimension spaceDimension
+        cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0 && dimIsInBounds spaceDimension c
+
 getEmptyGraph :: Int -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 getEmptyGraph spaceDimension idxForCube =
     concat [concat [[ let cb = (x, y, z) in (idxForCube cb, (cb, IsUnchecked)) | z <- dimRange] | y <- dimRange] | x <- dimRange]

@@ -11,12 +11,18 @@ import Parsing (
 
 import qualified Data.Set as S
 
+import Data.Maybe (
+    catMaybes
+    )
+
 import qualified Data.Vector as V
 
 import Text.Parsec
 
 type Cube = (Int, Int, Int)
 
+-- function name is bad, this returns the coordinate pairs for the neighbors
+-- not their index into the 3d array for part2
 getIndicesOfNeighbors :: Cube -> [Cube]
 getIndicesOfNeighbors (x, y, z) = [
     (x + 1, y, z) -- right
@@ -37,7 +43,7 @@ isInBounds (maxX, maxY, maxZ) (x, y, z) = and
         , z >= 0
         ]
 
--- get the indices of neighboring squires, with locations that are out of the bounds of
+-- get the indices of neighboring squares, with locations that are out of the bounds of
 -- the vector being filtered out
 getIndicesOfNeighborsGuard :: (Cube -> Bool) -> Cube -> [Cube]
 getIndicesOfNeighborsGuard inBoundsCheck cb = let possibleNhbrs = getIndicesOfNeighbors cb in
@@ -48,14 +54,24 @@ getCoveredSidesForCube cb cubes = let nhbrs = getIndicesOfNeighbors cb in
     length (filter (flip S.member cubes) nhbrs)
 
 getCoveredSidesForCubePart2 :: (Cube -> Int) -> Cube -> ColoredGraph -> Int
-getCoveredSidesForCubePart2 getIdx cb graph = let nhbrs = getIndicesOfNeighbors cb in
-    --length (filter (\nhbrIdx -> not (indexIsAir graph nhbrIdx)) (map getIdx nhbrs))
-    length (filter (not . indexIsAir graph) (map getIdx nhbrs))
+getCoveredSidesForCubePart2 getIdx cb graph =
+    let nhbrs = getIndicesOfNeighbors cb
+        cubes = getCubes graph getIdx nhbrs
+    in
+    --length (filter (not . indexIsAir graph) (map getIdx nhbrs)) -- 2544
+    length (filter (\(_, color) -> not (isAir color)) cubes) -- 2545?
 
-indexIsAir :: ColoredGraph -> Int -> Bool
-indexIsAir graph idx = case graph V.!? idx of
-    Just (_, IsAir) -> True
-    _ -> False
+getCubes :: ColoredGraph -> (Cube -> Int) -> [Cube] -> [ColoredGraphItem]
+getCubes graph getIdx cbs =
+    let ids = map getIdx cbs
+        cubes = map (graph V.!?) ids
+    in
+        catMaybes cubes
+
+--indexIsAir :: ColoredGraph -> Int -> Bool
+--indexIsAir graph idx = case graph V.!? idx of
+--    Just (_, IsAir) -> True
+--    _ -> False
 
 getSurfaceArea :: S.Set Cube -> Int
 getSurfaceArea cubes = totalPossibleSurfaceArea - numHiddenSides
@@ -68,6 +84,8 @@ getSurfaceAreaPart2 getIdx cubes graph = totalPossibleSurfaceArea - numHiddenSid
     where
         totalPossibleSurfaceArea = length cubes * 6
         numHiddenSides = foldr (\cb acc -> acc + getCoveredSidesForCubePart2 getIdx cb graph) 0 cubes
+        --numHiddenSides = length (V.filter (\(_, col) -> isUnchecked col) graph) * 6 --logic is wrong and of course guess 7692 was also wrong
+
 
 minInt :: Int
 minInt = minBound
@@ -93,13 +111,16 @@ getBoundingBox cubes = go cubes (maxCubeLoc, minCubeLoc)
 
 -- part1: 4628
 -- part2: 2544 is too low, but it was correct on the short input
+-- 7692 is too high, this is the number: numCubes * 6 - 6 * (number of unchecked locations)
+-- which makes sense, those unchecked locations are bordering eachother, so not all of them are going to
+-- take away 6 sides from the surface area of the cubes
 run :: String -> IO ()
 run input = do
-    print input
+    --print input
     case runParser parseInput () "" input of
         Left e -> print e
         Right parseResult -> do
-            print parseResult
+            --print parseResult
             let surfaceArea = part1 parseResult
             print $ "surface area of " ++ show (length parseResult) ++ " cubes is " ++ show surfaceArea
             exteriorSurfaceArea <- part2 parseResult
@@ -137,7 +158,7 @@ part2 cubes = do
     print $ "arrayLength" ++ show arrayLength ++ " maximum index:" ++ show maximumIndex
     print $ "empty graph length:" ++ show (length emptyGraph)
     print $ "empty graph element at:" ++ show maximumIndex ++ " " ++ show (emptyGraph V.!? (maximumIndex))
-    print $ "unchecked graph items:" ++ show uncheckedGraphItems
+    --print $ "unchecked graph items:" ++ show uncheckedGraphItems
     --print $ "init graph length:" ++ show (length unInitGraph)
     --print $ "emptyGraph:" ++ show emptyGraph
     --print $ "emptyGraph length:" ++ show (length emptyGraph)
@@ -148,6 +169,7 @@ part2 cubes = do
     --print $ "num cubes graph:" ++ show (length (V.filter (\(_, color) -> isCube color) initialGraph))
     --let checkCubesInGraph = map (\cube -> let idx = getIndexForCube cube in initialGraph V.!? idx) cubes
     --print checkCubesInGraph
+    --these checks are meaningful for the short input, not the real input
     ---- check that 1,1,1 is NOT a cube
     testGetIndex getIndexForCube (1, 1, 1) initialGraph
     ---- check the max element is in bounds
@@ -157,15 +179,15 @@ part2 cubes = do
     testGetIndex getIndexForCube (2, 2, 3) initialGraph
 
     let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
-    print coloredGraph
+    --print coloredGraph
     mapM_ putStrLn [
         "with " ++ show (length cubes) ++ " cubes," ++ " and a graph of size:" ++ show arrayLength
+        , "the total possible surface area is:" ++ show (length cubes * 6)
         , show (length (V.filter(\(_, color) -> isAir color) coloredGraph)) ++ " sections where open to the atmosphere"
         , "and " ++ show (length (V.filter(\(_, color) -> isUnchecked color) coloredGraph)) ++ " were unchecked"
         ]
     let sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
-    print $ "surface area part2:" ++ show sa
-    return (-1 :: Int)
+    return sa
     where
         --initialGraph =  emptyGraph V.// trace ("cube color loc init:"  ++ show cubeColorLocInit) cubeColorLocInit
         initialGraph =  emptyGraph V.// cubeColorLocInit
@@ -225,7 +247,8 @@ colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs 
                 Nothing -> currLocs
                 Just (newStart, clr) ->
                     let newGraph = (currLocs V.// [(getIndexForCube (trace ("found:" ++ show newStart ++ " of color:" ++ show clr) newStart), (newStart, IsChecking))]) in
-                    go (trace ("new graph:" ++ show newGraph) newGraph) [newStart]
+                    --go (trace ("new graph:" ++ show newGraph) newGraph) [newStart]
+                    go newGraph [newStart]
         go currLocs (cb:cbs) =
             --let nhbrs = getNhbrs (trace ("inspecting:" ++ show cb) cb)
             let nhbrs = getNhbrs cb
@@ -239,7 +262,7 @@ colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs 
 
 isStartingPoint :: (Cube -> Bool) -> (Cube -> Bool) -> ColoredGraphItem -> Bool
 isStartingPoint isOpenToAirF cubeIsInBounds (cb, color) =
-    trace ("cb:" ++ show cb ++ inBoundsMsg ++ openToAirMsg ++ isUncheckedMsg) 
+    --trace ("cb:" ++ show cb ++ inBoundsMsg ++ openToAirMsg ++ isUncheckedMsg)
         inBounds && openToAir && isUncheckedRes
     where
         inBounds = cubeIsInBounds cb

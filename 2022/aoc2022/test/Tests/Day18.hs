@@ -53,3 +53,41 @@ colorChecks = [
 testUnchecked :: Test
 testUnchecked = TestList $ map (\(color, answer) -> TestCase $ assertEqual ("color:" ++ show color) (isUnchecked color) answer) colorChecks
 
+genGraphItems :: Int -> ColoredLoc -> [ColoredGraphItem]
+genGraphItems dim color = concat [ concat [[ ((x, y, z), color) | z <- coordRange] | y <- coordRange] | x <- coordRange]
+    where
+        coordRange = [0..dim + 1]
+
+allCubes :: Int -> [ColoredGraphItem]
+allCubes dim = genGraphItems dim IsCube
+
+allCubesSmall :: (Cube -> Int, Int, V.Vector ColoredGraphItem)
+allCubesSmall =
+    let dim = 3
+        items = genGraphItems dim IsCube
+        maxIdx = getIdx (dim + 1, dim + 1, dim + 1)
+        empty = V.replicate (maxIdx + 1) ((-1, -1, -1), IsUnchecked)
+        getIdx = getIndexForLocation (dim + 1)
+    in (getIdx, maxIdx, empty V.// map (\item@((x, y, z), _) -> (getIdx (x, y, z), item)) items)
+
+solidCube :: Test
+solidCube =
+    let (getIdx, maxIdx, smallTest) = allCubesSmall
+    in
+    TestList [
+        TestCase (
+            assertEqual "3x3 solid cube center is completely covered"
+            0
+            (getSurfaceAreaPart2 getIdx [(2, 2, 2)] smallTest)
+        )
+        , TestCase (
+            assertEqual "cube on the corner has 3 showing sides"
+            3
+            (getSurfaceAreaPart2 getIdx [(0, 0, 0)] smallTest)
+        )
+        , TestCase (
+            assertEqual "cube on the side-middle has 1 showing sides"
+            1
+            (getSurfaceAreaPart2 getIdx [(0, 1, 0)] smallTest)
+        )
+    ]

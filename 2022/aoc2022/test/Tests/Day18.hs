@@ -6,6 +6,8 @@ import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Vector as V
 
+import Debug.Trace
+
 import Test.HUnit
 
 getNeighbors = TestCase (
@@ -138,9 +140,58 @@ testPart2 = TestList [
                 )
             )
     , TestCase (
+            assertEqual "3x3 cube with a piece on the edge removed, SA becomes 56"
+            56
+            (let cubes = L.delete (2, 1, 1) (genCube 3) in
+                runPart2 cubes
+                )
+            )
+    , TestCase (
             assertEqual "3x3 cube with a hole through the center, SA becomes 64"
             64
             (let cubes = genCube 3 L.\\ [(2, 2, 1), (2, 2, 2), (2, 2, 3)] in
+                runPart2 cubes
+                )
+            )
+    , TestCase (
+            assertEqual "4x4 cube, SA is 96"
+            96
+            (let cubes = genCube 4 in
+                runPart2 cubes
+                )
+            )
+    , TestCase (
+            assertEqual "4x4 cube with a 3x3 cube cut out of it, SA is still 96"
+            96
+            (
+            let outerCubes = genCube 4
+                innerCubes = map (\(x, y, z) -> (x + 1, y + 1, z + 1)) (genCube 3) in
+                runPart2 $ outerCubes L.\\ innerCubes
+                )
+            )
+    , TestCase (
+            assertEqual "4x4 cube with a peice on the edge removed"
+            98
+            (
+            let outerCubes = genCube 4
+                cutCubes = [
+                    (2, 1, 1)
+                    ]
+                cubes = outerCubes L.\\ cutCubes
+            in
+                runPart2 $ trace (show cubes) cubes
+                )
+            )
+    , TestCase (
+            assertEqual "4x4 cube with a peice on the interior of a side removed"
+            100
+            (
+            let outerCubes = genCube 4
+                cutCubes = [
+                    (2, 2, 1)
+                    ]
+                cubes = outerCubes L.\\ cutCubes
+            in
                 runPart2 cubes
                 )
             )

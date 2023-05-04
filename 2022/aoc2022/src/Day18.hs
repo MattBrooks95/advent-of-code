@@ -210,11 +210,11 @@ part2 cubes = do
         unInitializedLocation = ((-1, -1, -1), IsUnchecked)
 
 -- TODO de-duplicate this with the IO version
-runPart2 :: [Cube] -> Int
+runPart2 :: [Cube] -> (Int, ColoredGraph)
 runPart2 cubes = 
     let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
         sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
-    in sa
+    in (sa, coloredGraph)
     where
         initialGraph =  emptyGraph V.// cubeColorLocInit
         emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph spaceDimension getIndexForCube

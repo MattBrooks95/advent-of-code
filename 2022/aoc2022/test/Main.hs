@@ -1,5 +1,7 @@
 import Test.HUnit
 
+import System.Exit
+
 import Tests.Day17
 import Tests.Day18
 
@@ -30,10 +32,17 @@ testsDay18 = [
     , testPart2
     ]
 
-main :: IO ()
+main :: IO Int
 main = do
     countResults <- runTestTT (TestList (
         testsDay17
         ++ testsDay18
         ))
     print countResults
+    let err = errors countResults
+        failed = failures countResults
+    if err > 0 || failed > 0
+    then exitFailure
+    else exitSuccess
+
+

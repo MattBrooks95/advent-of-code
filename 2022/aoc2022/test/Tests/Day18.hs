@@ -93,11 +93,21 @@ solidCube =
     ]
 
 testPart2 :: Test
-testPart2 = TestCase (
-        assertEqual "two non-touching cubes have a surface area of 12"
-        12
+testPart2 = TestList [
+    TestCase (
+            assertEqual "two non-touching cubes have a surface area of 12"
+            12
+            (runPart2 [
+                (1, 1, 1)
+                , (3, 3, 3)
+                ])
+        )
+    , TestCase (
+        assertEqual "two touching cubes have a surface area of 10"
+        10
         (runPart2 [
-        (1, 1, 1)
-        , (3, 3, 3)
-        ])
-    )
+            (1,1,1)
+            , (1,1,2)
+            ])
+        )
+    ]

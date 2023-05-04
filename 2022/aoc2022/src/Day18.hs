@@ -126,7 +126,10 @@ run input = do
             exteriorSurfaceArea <- part2 parseResult
             print $ "external surface area is: " ++ show exteriorSurfaceArea
 
-data ColoredLoc = IsCube | IsAir | IsUnchecked | IsChecking deriving Show
+data ColoredLoc = IsCube | IsAir | IsUnchecked | IsChecking deriving (
+    Show
+    , Eq
+    )
 isCube :: ColoredLoc -> Bool
 isCube IsCube = True
 isCube _ = False
@@ -210,11 +213,11 @@ part2 cubes = do
         unInitializedLocation = ((-1, -1, -1), IsUnchecked)
 
 -- TODO de-duplicate this with the IO version
-runPart2 :: [Cube] -> (Int, ColoredGraph)
+runPart2 :: [Cube] -> (Int, Cube -> Int, ColoredGraph)
 runPart2 cubes = 
     let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
         sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
-    in (sa, coloredGraph)
+    in (sa, getIndexForCube, coloredGraph)
     where
         initialGraph =  emptyGraph V.// cubeColorLocInit
         emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph spaceDimension getIndexForCube

@@ -96,7 +96,8 @@ solidCube =
         )
     ]
 
-runPart2Sa = fst . runPart2
+runPart2Sa :: [Cube] -> Int
+runPart2Sa cubes = let (sa, _, _) = runPart2 cubes in sa
 
 testPart2 :: Test
 testPart2 = TestList [
@@ -201,19 +202,21 @@ testPart2 = TestList [
                     )
         )
         )
-    , TestCase (
-        assertEqual "4x4 cube with a peice on the interior of the right side removed"
-        100
-        (
-            let outerCubes = genCube 4
-                cutCubes = [
-                    (2, 2, 1) -- removing (4, 4, 2) is correct, but this isn't
-                    ]
-                cubes = outerCubes L.\\ cutCubes
-            in
-                let (sa, graph) = runPart2 cubes
-                in
-                    trace (show graph) sa
-        )
-        )
     ]
+
+testPart2Interesting :: Test
+testPart2Interesting = let (sa, getIdx, graph) = runPart2 (genCube 4 L.\\ [(2, 2, 1)]) in
+    TestList [
+        TestCase (
+            assertEqual "removed cube is counted as being air"
+            IsAir
+            (snd $ graph V.! getIdx (2, 2, 1))
+            )
+        , TestCase (
+            assertEqual "4x4 cube with a peice on the interior of the right side removed"
+            100
+            sa
+            )
+        ]
+
+

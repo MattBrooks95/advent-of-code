@@ -228,6 +228,11 @@ runPart2 cubes =
         isCubeOpenToAir = isOpenToAir spaceDimension spaceDimension spaceDimension
         cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0 && dimIsInBounds spaceDimension c
 
+genCube :: Int -> [Cube]
+genCube dim = concat [ concat [ [(x, y, z) | z <- dimRange] | y <- dimRange ] | x <- dimRange]
+    where
+        dimRange = [1..dim]
+
 getEmptyGraph :: Int -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 getEmptyGraph spaceDimension idxForCube =
     concat [concat [[ let cb = (x, y, z) in (idxForCube cb, (cb, IsUnchecked)) | z <- dimRange] | y <- dimRange] | x <- dimRange]

@@ -2,6 +2,7 @@ module Tests.Day18 where
 
 import Day18
 
+import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Vector as V
 
@@ -110,4 +111,37 @@ testPart2 = TestList [
             , (1,1,2)
             ])
         )
+    , TestCase (
+        assertEqual "3x3 cube has a surface area of 54"
+        54
+        (let cubes = genCube 3 in runPart2 cubes)
+        )
+    , TestCase (
+        assertEqual "3x3 cube with a hole in the middle, still has SA of 54"
+        54
+        (let cubes = L.delete (2, 2, 2) (genCube 3) in
+            runPart2 cubes
+            )
+        )
+    , TestCase (
+            assertEqual "3x3 cube with a hole in the middle of a side, SA becomes 58"
+            58
+            (let cubes = L.delete (1, 2, 2) (genCube 3) in
+                runPart2 cubes
+                )
+            )
+    , TestCase (
+            assertEqual "3x3 cube with a corner removed, SA stays 54"
+            54
+            (let cubes = L.delete (1, 1, 1) (genCube 3) in
+                runPart2 cubes
+                )
+            )
+    , TestCase (
+            assertEqual "3x3 cube with a hole through the center, SA becomes 64"
+            64
+            (let cubes = genCube 3 L.\\ [(2, 2, 1), (2, 2, 2), (2, 2, 3)] in
+                runPart2 cubes
+                )
+            )
     ]

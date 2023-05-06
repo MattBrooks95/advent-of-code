@@ -114,6 +114,7 @@ getBoundingBox cubes = go cubes (maxCubeLoc, minCubeLoc)
 -- 7692 is too high, this is the number: numCubes * 6 - 6 * (number of unchecked locations)
 -- which makes sense, those unchecked locations are bordering eachother, so not all of them are going to
 -- take away 6 sides from the surface area of the cubes
+-- part2: 2582!!!
 run :: String -> IO ()
 run input = do
     --print input
@@ -123,8 +124,15 @@ run input = do
             --print parseResult
             let surfaceArea = part1 parseResult
             print $ "surface area of " ++ show (length parseResult) ++ " cubes is " ++ show surfaceArea
-            exteriorSurfaceArea <- part2 parseResult
+            exteriorSurfaceArea <- part2 (map fixItemIndices parseResult)
             print $ "external surface area is: " ++ show exteriorSurfaceArea
+
+-- some of the items have an x, y or z index of 0, which doesn't
+-- work with my 3d array indexing scheme. So, it was necessary to add 1 to
+-- every dimension of every cube
+-- I should refactor it so I don't have to do this.... but I'm over it
+fixItemIndices :: Cube -> Cube
+fixItemIndices (x, y, z) = (x + 1, y + 1, z + 1)
 
 data ColoredLoc = IsCube | IsAir | IsUnchecked | IsChecking deriving (
     Show

@@ -133,91 +133,91 @@ testPart2 = TestList [
             , (1,1,2)
             ])
         )
-    --, TestCase (
-    --    assertEqual "3x3 cube has a surface area of 54"
-    --    54
-    --    (let cubes = genCube 3 in runPart2Sa cubes)
-    --    )
-    --, TestCase (
-    --    assertEqual "3x3 cube with a hole in the middle, still has SA of 54"
-    --    54
-    --    (let cubes = L.delete (2, 2, 2) (genCube 3) in
-    --        runPart2Sa cubes
-    --        )
-    --    )
-    --, TestCase (
-    --        assertEqual "3x3 cube with a hole in the middle of a side, SA becomes 58"
-    --        58
-    --        (let cubes = L.delete (1, 2, 2) (genCube 3) in
-    --            runPart2Sa cubes
-    --            )
-    --        )
-    --, TestCase (
-    --        assertEqual "3x3 cube with a corner removed, SA stays 54"
-    --        54
-    --        (let cubes = L.delete (1, 1, 1) (genCube 3) in
-    --            runPart2Sa cubes
-    --            )
-    --        )
-    --, TestCase (
-    --        assertEqual "3x3 cube with a piece on the edge removed, SA becomes 56"
-    --        56
-    --        (let cubes = L.delete (2, 1, 1) (genCube 3) in
-    --            runPart2Sa cubes
-    --            )
-    --        )
-    --, TestCase (
-    --        assertEqual "3x3 cube with a hole through the center, SA becomes 64"
-    --        64
-    --        (let cubes = genCube 3 L.\\ [(2, 2, 1), (2, 2, 2), (2, 2, 3)] in
-    --            runPart2Sa cubes
-    --            )
-    --        )
-    --, TestCase (
-    --        assertEqual "4x4 cube, SA is 96"
-    --        96
-    --        (let cubes = genCube 4 in
-    --            runPart2Sa cubes
-    --            )
-    --        )
-    --, TestCase (
-    --        assertEqual "4x4 cube with a 3x3 cube cut out of it, SA is still 96"
-    --        96
-    --        (
-    --        let outerCubes = genCube 4
-    --            innerCubes = map (\(x, y, z) -> (x + 1, y + 1, z + 1)) (genCube 3) in
-    --            runPart2Sa $ outerCubes L.\\ innerCubes
-    --            )
-    --        )
-    --, TestCase (
-    --    assertEqual "4x4 cube with a peice on the edge removed"
-    --    98
-    --    (
-    --    let outerCubes = genCube 4
-    --        cutCubes = [
-    --            (2, 1, 1)
-    --            ]
-    --        cubes = outerCubes L.\\ cutCubes
-    --    in
-    --        runPart2Sa cubes
-    --        )
-    --    )
-    --, TestCase (
-    --    assertEqual "4x4 cube with a peice on the interior of the right side removed"
-    --    100
-    --    (
-    --        let outerCubes = genCube 4
-    --            cutCubes = [
-    --                (4, 2, 2)
-    --                ]
-    --            cubes = outerCubes L.\\ cutCubes
-    --        in
-    --            runPart2Sa (trace
-    --                ("outerCubes:" ++ show (length outerCubes) ++ " after removal:" ++ show (length cubes))
-    --                trace (show cubes) cubes
-    --                )
-    --    )
-    --    )
+    , TestCase (
+        assertEqual "3x3 cube has a surface area of 54"
+        54
+        (let cubes = genCube 3 in runPart2Sa cubes)
+        )
+    , TestCase (
+        assertEqual "3x3 cube with a hole in the middle, still has SA of 54"
+        54
+        (let cubes = L.delete (2, 2, 2) (genCube 3) in
+            runPart2Sa cubes
+            )
+        )
+    , TestCase (
+            assertEqual "3x3 cube with a hole in the middle of a side, SA becomes 58"
+            58
+            (let cubes = L.delete (1, 2, 2) (genCube 3) in
+                runPart2Sa cubes
+                )
+            )
+    , TestCase (
+            assertEqual "3x3 cube with a corner removed, SA stays 54"
+            54
+            (let cubes = L.delete (1, 1, 1) (genCube 3) in
+                runPart2Sa cubes
+                )
+            )
+    , TestCase (
+            assertEqual "3x3 cube with a piece on the edge removed, SA becomes 56"
+            56
+            (let cubes = L.delete (2, 1, 1) (genCube 3) in
+                runPart2Sa cubes
+                )
+            )
+    , TestCase (
+            assertEqual "3x3 cube with a hole through the center, SA becomes 64"
+            64
+            (let cubes = genCube 3 L.\\ [(2, 2, 1), (2, 2, 2), (2, 2, 3)] in
+                runPart2Sa cubes
+                )
+            )
+    , TestCase (
+            assertEqual "4x4 cube, SA is 96"
+            96
+            (let cubes = genCube 4 in
+                runPart2Sa cubes
+                )
+            )
+    , TestCase (
+            assertEqual "4x4 cube with a 3x3 cube cut out of it, SA is still 96"
+            96
+            (
+            let outerCubes = genCube 4
+                innerCubes = map (\(x, y, z) -> (x + 1, y + 1, z + 1)) (genCube 3) in
+                runPart2Sa $ outerCubes L.\\ innerCubes
+                )
+            )
+    , TestCase (
+        assertEqual "4x4 cube with a peice on the edge removed"
+        98
+        (
+        let outerCubes = genCube 4
+            cutCubes = [
+                (2, 1, 1)
+                ]
+            cubes = outerCubes L.\\ cutCubes
+        in
+            runPart2Sa cubes
+            )
+        )
+    , TestCase (
+        assertEqual "4x4 cube with a peice on the interior of the right side removed"
+        100
+        (
+            let outerCubes = genCube 4
+                cutCubes = [
+                    (4, 2, 2)
+                    ]
+                cubes = outerCubes L.\\ cutCubes
+            in
+                runPart2Sa (trace
+                    ("outerCubes:" ++ show (length outerCubes) ++ " after removal:" ++ show (length cubes))
+                    trace (show cubes) cubes
+                    )
+        )
+        )
     ]
 
 testPart2Indexing :: Test

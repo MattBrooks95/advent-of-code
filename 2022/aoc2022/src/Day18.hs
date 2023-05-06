@@ -240,13 +240,13 @@ cubeIsInBounds getIndexForCube dimInBounds maximumIndex c =
     let idx = getIndexForCube c
         res = idx <= maximumIndex && idx >= 0 && dimInBounds c
     in
-        trace ("is " ++ show c ++ "with indx:" ++ show idx ++ " checked against max idx:" ++ show maximumIndex ++ " in bounds?:" ++ show res)
+        --trace ("is " ++ show c ++ "with indx:" ++ show idx ++ " checked against max idx:" ++ show maximumIndex ++ " in bounds?:" ++ show res)
         res
 
 genCube :: Int -> [Cube]
 genCube dim = concat [ concat [ [(x, y, z) | z <- dimRange] | y <- dimRange ] | x <- dimRange]
     where
-        dimRange = [0..dim - 1]
+        dimRange = [1..dim]
 
 getEmptyGraph :: Int -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 getEmptyGraph maxDimension idxForCube =

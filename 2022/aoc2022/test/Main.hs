@@ -29,7 +29,7 @@ testsDay18 = [
     , oneCubeCoveredSides
     , testUnchecked
     , solidCube
-    --, testPart2
+    , testPart2
     --, testPart2Indexing
     --, testPart2Interesting
     ]

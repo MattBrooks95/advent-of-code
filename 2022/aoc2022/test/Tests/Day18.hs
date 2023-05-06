@@ -117,22 +117,22 @@ runPart2Sa cubes = let (sa, _, _) = runPart2 cubes in sa
 
 testPart2 :: Test
 testPart2 = TestList [
-    --TestCase (
-    --        assertEqual "two non-touching cubes have a surface area of 12"
-    --        12
-    --        (runPart2Sa [
-    --            (1, 1, 1)
-    --            , (3, 3, 3)
-    --            ])
-    --    )
-    --, TestCase (
-    --    assertEqual "two touching cubes have a surface area of 10"
-    --    10
-    --    (runPart2Sa [
-    --        (1,1,1)
-    --        , (1,1,2)
-    --        ])
-    --    )
+    TestCase (
+            assertEqual "two non-touching cubes have a surface area of 12"
+            12
+            (runPart2Sa [
+                (1, 1, 1)
+                , (3, 3, 3)
+                ])
+        )
+    , TestCase (
+        assertEqual "two touching cubes have a surface area of 10"
+        10
+        (runPart2Sa [
+            (1,1,1)
+            , (1,1,2)
+            ])
+        )
     --, TestCase (
     --    assertEqual "3x3 cube has a surface area of 54"
     --    54

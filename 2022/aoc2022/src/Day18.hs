@@ -217,9 +217,9 @@ part2 cubes = let (sa, _, _) = runPart2 cubes in return sa
 -- TODO de-duplicate this with the IO version
 runPart2 :: [Cube] -> (Int, Cube -> Int, ColoredGraph)
 runPart2 cubes = 
-    let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeInBounds (getIndicesOfNeighborsGuard cubeInBounds) getIndexForCube
-        sa = getSurfaceAreaPart2 getIndexForCube (getIndicesOfNeighborsGuard cubeInBounds) cubes coloredGraph
-    in (sa, getIndexForCube, coloredGraph)
+    let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeInBounds getNhbrsGuard getIndexForCube
+        sa = getSurfaceAreaPart2 getIndexForCube getNhbrsGuard cubes (trace ("made colored graph:" ++ show (length coloredGraph)) coloredGraph)
+    in (trace "made sa" sa, getIndexForCube, coloredGraph)
     where
         initialGraph =  emptyGraph V.// cubeColorLocInit
         emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph maxDimension getIndexForCube
@@ -227,18 +227,21 @@ runPart2 cubes =
         unInitializedLocation = ((-1, -1, -1), IsUnchecked)
         cubeColorLocInit = indexedColoredLocsForCubes cubes getIndexForCube
         maxDimension = maximum [maxX, maxY, maxZ]
-        spaceDimension = maxDimension + 1 :: Int
-        getIndexForCube = getIndexForLocation spaceDimension
+        --spaceDimension = maxDimension + 1 :: Int
+        getIndexForCube = getIndexForLocation maxDimension
         (_, (maxX, maxY, maxZ)) = getBoundingBox cubes
+        getNhbrsGuard = getIndicesOfNeighborsGuard cubeInBounds
         maximumIndex = getIndexForCube (maxDimension, maxDimension, maxDimension)
         isCubeOpenToAir = isOpenToAir maxDimension maxDimension maxDimension
-        cubeInBounds = cubeIsInBounds getIndexForCube (dimIsInBounds maxDimension) maxDimension
+        cubeInBounds = cubeIsInBounds getIndexForCube (dimIsInBounds maxDimension) maximumIndex
 
 cubeIsInBounds :: (Cube -> Int) -> (Cube -> Bool) -> Int -> Cube -> Bool
 cubeIsInBounds getIndexForCube dimInBounds maximumIndex c =
     let idx = getIndexForCube c
+        res = idx <= maximumIndex && idx >= 0 && dimInBounds c
     in
-        idx <= maximumIndex && idx >= 0 && dimInBounds c
+        trace ("is " ++ show c ++ "with indx:" ++ show idx ++ " checked against max idx:" ++ show maximumIndex ++ " in bounds?:" ++ show res)
+        res
 
 genCube :: Int -> [Cube]
 genCube dim = concat [ concat [ [(x, y, z) | z <- dimRange] | y <- dimRange ] | x <- dimRange]
@@ -249,7 +252,7 @@ getEmptyGraph :: Int -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 getEmptyGraph maxDimension idxForCube =
     concat [concat [[ let cb = (x, y, z) in (idxForCube cb, (cb, IsUnchecked)) | z <- dimRange] | y <- dimRange] | x <- dimRange]
         where
-            dimRange = [0..maxDimension]
+            dimRange = [1..maxDimension]
 
 dimIsInBounds :: Int -> Cube -> Bool
 dimIsInBounds maxDim (cx, cy, cz) =
@@ -272,14 +275,14 @@ getUncheckedGraphItems spaceDimension getCubeIndex = concat [concat [[(getCubeIn
 
 colorLocations :: ColoredGraph -> (Cube -> Bool) -> (Cube -> Bool) -> (Cube -> [Cube]) -> (Cube -> Int) ->  ColoredGraph
 --colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs [(0, 0, 0)]
-colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs []
+colorLocations locs openToAir cubeInBounds getNhbrs getIndexForCube = go locs []
     where
         go :: ColoredGraph -> [Cube] -> ColoredGraph
         go currLocs [] = --currLocs
             ---- if there are no more locations queued, see if we can find a new start point
             ---- if we can't, the process is over and just return the colored graph
             --case V.find (\(cb, color) -> isUnchecked (trace (" looking for start:" ++ show color ++ " cube:" ++ show cb) color) && openToAir cb && cubeIsInBounds cb) currLocs of
-            case V.find (\item@(cb, color) -> isStartingPoint openToAir cubeIsInBounds item) currLocs of
+            case V.find (\item@(cb, color) -> isStartingPoint openToAir cubeInBounds item) currLocs of
                 Nothing -> currLocs
                 Just (newStart, clr) ->
                     let newGraph = (currLocs V.// [(getIndexForCube (trace ("found:" ++ show newStart ++ " of color:" ++ show clr) newStart), (newStart, IsChecking))]) in
@@ -297,11 +300,11 @@ colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs 
             in go withNewPaintedNodes (uncheckedNhbrs++cbs)
 
 isStartingPoint :: (Cube -> Bool) -> (Cube -> Bool) -> ColoredGraphItem -> Bool
-isStartingPoint isOpenToAirF cubeIsInBounds (cb, color) =
+isStartingPoint isOpenToAirF cubeInBounds (cb, color) =
     --trace ("cb:" ++ show cb ++ inBoundsMsg ++ openToAirMsg ++ isUncheckedMsg)
         inBounds && openToAir && isUncheckedRes
     where
-        inBounds = cubeIsInBounds cb
+        inBounds = cubeInBounds cb
         inBoundsMsg = " is in bounds?:" ++ show inBounds
         openToAirMsg = " is open to air?:" ++ show openToAir
         openToAir = isOpenToAirF cb

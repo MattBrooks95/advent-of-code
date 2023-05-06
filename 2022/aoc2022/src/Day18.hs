@@ -53,13 +53,13 @@ getCoveredSidesForCube :: Cube -> S.Set Cube -> Int
 getCoveredSidesForCube cb cubes = let nhbrs = getIndicesOfNeighbors cb in
     length (filter (flip S.member cubes) nhbrs)
 
-getCoveredSidesForCubePart2 :: (Cube -> Int) -> Cube -> ColoredGraph -> Int
-getCoveredSidesForCubePart2 getIdx cb graph =
-    let nhbrs = getIndicesOfNeighbors cb
-        cubes = getCubes graph getIdx nhbrs
+getCoveredSidesForCubePart2 :: (Cube -> Int) -> (Cube -> [Cube]) ->  Cube -> ColoredGraph -> Int
+getCoveredSidesForCubePart2 getIdx getNhbrs cb graph =
+    let nhbrs = getNhbrs cb
+        cubes = getCubes graph getIdx (trace ("nhbrs:" ++ show nhbrs) nhbrs)
     in
     --length (filter (not . indexIsAir graph) (map getIdx nhbrs)) -- 2544
-    length (filter (\(_, color) -> not (isAir color)) cubes) -- 2545?
+    length (filter (\(_, color) -> not (isAir color)) (trace ("cubes:" ++ show cubes) cubes)) -- 2545?
 
 getCubes :: ColoredGraph -> (Cube -> Int) -> [Cube] -> [ColoredGraphItem]
 getCubes graph getIdx cbs =
@@ -79,11 +79,11 @@ getSurfaceArea cubes = totalPossibleSurfaceArea - numHiddenSides
         totalPossibleSurfaceArea = length cubes * 6
         numHiddenSides = foldr (\cb acc -> acc + getCoveredSidesForCube cb cubes) 0 cubes
 
-getSurfaceAreaPart2 :: (Cube -> Int) -> [Cube] -> ColoredGraph -> Int
-getSurfaceAreaPart2 getIdx cubes graph = totalPossibleSurfaceArea - numHiddenSides
+getSurfaceAreaPart2 :: (Cube -> Int) -> (Cube -> [Cube]) -> [Cube] -> ColoredGraph -> Int
+getSurfaceAreaPart2 getIdx getNhbrs cubes graph = totalPossibleSurfaceArea - numHiddenSides
     where
         totalPossibleSurfaceArea = length cubes * 6
-        numHiddenSides = foldr (\cb acc -> acc + getCoveredSidesForCubePart2 getIdx cb graph) 0 cubes
+        numHiddenSides = foldr (\cb acc -> acc + getCoveredSidesForCubePart2 getIdx getNhbrs cb graph) 0 cubes
         --numHiddenSides = length (V.filter (\(_, col) -> isUnchecked col) graph) * 6 --logic is wrong and of course guess 7692 was also wrong
 
 
@@ -217,8 +217,8 @@ part2 cubes = let (sa, _, _) = runPart2 cubes in return sa
 -- TODO de-duplicate this with the IO version
 runPart2 :: [Cube] -> (Int, Cube -> Int, ColoredGraph)
 runPart2 cubes = 
-    let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
-        sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
+    let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeInBounds (getIndicesOfNeighborsGuard cubeInBounds) getIndexForCube
+        sa = getSurfaceAreaPart2 getIndexForCube (getIndicesOfNeighborsGuard cubeInBounds) cubes coloredGraph
     in (sa, getIndexForCube, coloredGraph)
     where
         initialGraph =  emptyGraph V.// cubeColorLocInit
@@ -231,8 +231,14 @@ runPart2 cubes =
         getIndexForCube = getIndexForLocation spaceDimension
         (_, (maxX, maxY, maxZ)) = getBoundingBox cubes
         maximumIndex = getIndexForCube (maxDimension, maxDimension, maxDimension)
-        isCubeOpenToAir = isOpenToAir maximumIndex maximumIndex maximumIndex
-        cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0 && dimIsInBounds spaceDimension c
+        isCubeOpenToAir = isOpenToAir maxDimension maxDimension maxDimension
+        cubeInBounds = cubeIsInBounds getIndexForCube (dimIsInBounds maxDimension) maxDimension
+
+cubeIsInBounds :: (Cube -> Int) -> (Cube -> Bool) -> Int -> Cube -> Bool
+cubeIsInBounds getIndexForCube dimInBounds maximumIndex c =
+    let idx = getIndexForCube c
+    in
+        idx <= maximumIndex && idx >= 0 && dimInBounds c
 
 genCube :: Int -> [Cube]
 genCube dim = concat [ concat [ [(x, y, z) | z <- dimRange] | y <- dimRange ] | x <- dimRange]
@@ -251,7 +257,7 @@ dimIsInBounds maxDim (cx, cy, cz) =
         && inBounds cy
         && inBounds cz
         where
-            inBounds x = x >= 0 && x <= maxDim
+            inBounds x = x >= 1 && x <= maxDim
     --length (filter (\x -> x >= 0 && x <= maxDim) [cy, cx, cz]) == 3
 
 testGetIndex :: (Cube -> Int) -> Cube -> ColoredGraph -> IO ()
@@ -316,9 +322,9 @@ getGraphNode graph getIndexForCube cb =
 -- the entry points for the bfs must be on the edges of the coordinate space
 isOpenToAir :: Int -> Int -> Int -> Cube -> Bool
 isOpenToAir maxX maxY maxZ (x, y, z) =
-    x == maxX || x == 0
-    || y == maxY || y == 0
-    || z == maxZ || z == 0
+    x == maxX || x == 1
+    || y == maxY || y == 1
+    || z == maxZ || z == 1
 
 indexedColoredLocsForCubes :: [Cube] -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 indexedColoredLocsForCubes cubes getIndexForCube = [ (getIndexForCube c, (c,  IsCube)) | c <- cubes]

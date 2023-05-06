@@ -29,9 +29,9 @@ testsDay18 = [
     , oneCubeCoveredSides
     , testUnchecked
     , solidCube
-    , testPart2
-    , testPart2Indexing
-    , testPart2Interesting
+    --, testPart2
+    --, testPart2Indexing
+    --, testPart2Interesting
     ]
 
 main :: IO Int

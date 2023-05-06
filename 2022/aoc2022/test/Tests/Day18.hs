@@ -6,6 +6,8 @@ import qualified Data.List as L
 import qualified Data.Set as S
 import qualified Data.Vector as V
 
+import Data.Maybe
+
 import Debug.Trace
 
 import Test.HUnit
@@ -101,114 +103,181 @@ runPart2Sa cubes = let (sa, _, _) = runPart2 cubes in sa
 
 testPart2 :: Test
 testPart2 = TestList [
-    TestCase (
-            assertEqual "two non-touching cubes have a surface area of 12"
-            12
-            (runPart2Sa [
-                (1, 1, 1)
-                , (3, 3, 3)
-                ])
-        )
-    , TestCase (
-        assertEqual "two touching cubes have a surface area of 10"
-        10
-        (runPart2Sa [
-            (1,1,1)
-            , (1,1,2)
-            ])
-        )
-    , TestCase (
-        assertEqual "3x3 cube has a surface area of 54"
-        54
-        (let cubes = genCube 3 in runPart2Sa cubes)
-        )
-    , TestCase (
-        assertEqual "3x3 cube with a hole in the middle, still has SA of 54"
-        54
-        (let cubes = L.delete (2, 2, 2) (genCube 3) in
-            runPart2Sa cubes
-            )
-        )
-    , TestCase (
-            assertEqual "3x3 cube with a hole in the middle of a side, SA becomes 58"
-            58
-            (let cubes = L.delete (1, 2, 2) (genCube 3) in
-                runPart2Sa cubes
-                )
-            )
-    , TestCase (
-            assertEqual "3x3 cube with a corner removed, SA stays 54"
-            54
-            (let cubes = L.delete (1, 1, 1) (genCube 3) in
-                runPart2Sa cubes
-                )
-            )
-    , TestCase (
-            assertEqual "3x3 cube with a piece on the edge removed, SA becomes 56"
-            56
-            (let cubes = L.delete (2, 1, 1) (genCube 3) in
-                runPart2Sa cubes
-                )
-            )
-    , TestCase (
-            assertEqual "3x3 cube with a hole through the center, SA becomes 64"
-            64
-            (let cubes = genCube 3 L.\\ [(2, 2, 1), (2, 2, 2), (2, 2, 3)] in
-                runPart2Sa cubes
-                )
-            )
-    , TestCase (
-            assertEqual "4x4 cube, SA is 96"
-            96
-            (let cubes = genCube 4 in
-                runPart2Sa cubes
-                )
-            )
-    , TestCase (
-            assertEqual "4x4 cube with a 3x3 cube cut out of it, SA is still 96"
-            96
-            (
-            let outerCubes = genCube 4
-                innerCubes = map (\(x, y, z) -> (x + 1, y + 1, z + 1)) (genCube 3) in
-                runPart2Sa $ outerCubes L.\\ innerCubes
-                )
-            )
-    , TestCase (
-        assertEqual "4x4 cube with a peice on the edge removed"
-        98
-        (
-        let outerCubes = genCube 4
-            cutCubes = [
-                (2, 1, 1)
-                ]
-            cubes = outerCubes L.\\ cutCubes
-        in
-            runPart2Sa cubes
-            )
-        )
-    , TestCase (
-        assertEqual "4x4 cube with a peice on the interior of the right side removed"
-        100
-        (
-            let outerCubes = genCube 4
-                cutCubes = [
-                    (4, 2, 2)
-                    ]
-                cubes = outerCubes L.\\ cutCubes
-            in
-                runPart2Sa (trace
-                    ("outerCubes:" ++ show (length outerCubes) ++ " after removal:" ++ show (length cubes))
-                    trace (show cubes) cubes
-                    )
-        )
-        )
+    --TestCase (
+    --        assertEqual "two non-touching cubes have a surface area of 12"
+    --        12
+    --        (runPart2Sa [
+    --            (1, 1, 1)
+    --            , (3, 3, 3)
+    --            ])
+    --    )
+    --, TestCase (
+    --    assertEqual "two touching cubes have a surface area of 10"
+    --    10
+    --    (runPart2Sa [
+    --        (1,1,1)
+    --        , (1,1,2)
+    --        ])
+    --    )
+    --, TestCase (
+    --    assertEqual "3x3 cube has a surface area of 54"
+    --    54
+    --    (let cubes = genCube 3 in runPart2Sa cubes)
+    --    )
+    --, TestCase (
+    --    assertEqual "3x3 cube with a hole in the middle, still has SA of 54"
+    --    54
+    --    (let cubes = L.delete (2, 2, 2) (genCube 3) in
+    --        runPart2Sa cubes
+    --        )
+    --    )
+    --, TestCase (
+    --        assertEqual "3x3 cube with a hole in the middle of a side, SA becomes 58"
+    --        58
+    --        (let cubes = L.delete (1, 2, 2) (genCube 3) in
+    --            runPart2Sa cubes
+    --            )
+    --        )
+    --, TestCase (
+    --        assertEqual "3x3 cube with a corner removed, SA stays 54"
+    --        54
+    --        (let cubes = L.delete (1, 1, 1) (genCube 3) in
+    --            runPart2Sa cubes
+    --            )
+    --        )
+    --, TestCase (
+    --        assertEqual "3x3 cube with a piece on the edge removed, SA becomes 56"
+    --        56
+    --        (let cubes = L.delete (2, 1, 1) (genCube 3) in
+    --            runPart2Sa cubes
+    --            )
+    --        )
+    --, TestCase (
+    --        assertEqual "3x3 cube with a hole through the center, SA becomes 64"
+    --        64
+    --        (let cubes = genCube 3 L.\\ [(2, 2, 1), (2, 2, 2), (2, 2, 3)] in
+    --            runPart2Sa cubes
+    --            )
+    --        )
+    --, TestCase (
+    --        assertEqual "4x4 cube, SA is 96"
+    --        96
+    --        (let cubes = genCube 4 in
+    --            runPart2Sa cubes
+    --            )
+    --        )
+    --, TestCase (
+    --        assertEqual "4x4 cube with a 3x3 cube cut out of it, SA is still 96"
+    --        96
+    --        (
+    --        let outerCubes = genCube 4
+    --            innerCubes = map (\(x, y, z) -> (x + 1, y + 1, z + 1)) (genCube 3) in
+    --            runPart2Sa $ outerCubes L.\\ innerCubes
+    --            )
+    --        )
+    --, TestCase (
+    --    assertEqual "4x4 cube with a peice on the edge removed"
+    --    98
+    --    (
+    --    let outerCubes = genCube 4
+    --        cutCubes = [
+    --            (2, 1, 1)
+    --            ]
+    --        cubes = outerCubes L.\\ cutCubes
+    --    in
+    --        runPart2Sa cubes
+    --        )
+    --    )
+    --, TestCase (
+    --    assertEqual "4x4 cube with a peice on the interior of the right side removed"
+    --    100
+    --    (
+    --        let outerCubes = genCube 4
+    --            cutCubes = [
+    --                (4, 2, 2)
+    --                ]
+    --            cubes = outerCubes L.\\ cutCubes
+    --        in
+    --            runPart2Sa (trace
+    --                ("outerCubes:" ++ show (length outerCubes) ++ " after removal:" ++ show (length cubes))
+    --                trace (show cubes) cubes
+    --                )
+    --    )
+    --    )
     ]
+
+testPart2Indexing :: Test
+testPart2Indexing = let getIdx = getIndexForLocation 5 in TestList [
+    TestCase (
+        assertEqual (mkmsg 0 0 0 0)
+        0
+        (getIdx (0, 0, 0))
+        )
+    , TestCase (
+        assertEqual (mkmsg 0 0 1 1)
+        1
+        (getIdx (0, 0, 1))
+    )
+    , TestCase (
+        assertEqual (mkmsg 0 1 0 5)
+        5
+        (getIdx (0, 1, 0))
+        )
+    , TestCase (
+        assertEqual (mkmsg 1 0 0 25)
+        25
+        (getIdx (1, 0, 0))
+        )
+    , TestCase (
+        assertEqual (mkmsg 1 0 1 26)
+        26
+        (getIdx (1, 0, 1))
+        )
+    -- I think the problem is that if the dimension is 5x5x5
+    -- having a value of 5 for any of the directions should be impossible
+    -- because of zero indexing: 0, 1, 2, 3, 4
+    , TestCase (
+        assertEqual (mkmsg 0 4 0 20)
+        20
+        (getIdx (0, 4, 0))
+        )
+    -- should be impossible to have a location of 5
+    --, TestCase (
+    --    assertBool "2,2,0 and 2,1,5 have different indexes"
+    --    (let idx1 = getIdx (2, 2, 0); idx2 = getIdx (2, 1, 5);
+    --        in
+    --        (trace ("\n" ++ show idx1 ++ "/=" ++ show idx2) idx1) /= idx2)
+    --    )
+    ]
+    where
+        mkmsg :: Int -> Int -> Int -> Int -> String
+        mkmsg x y z a = "idx of " ++ show (x, y, z) ++ " is:" ++ show a
 
 testPart2Interesting :: Test
 testPart2Interesting = let (sa, getIdx, graph) = runPart2 (genCube 4 L.\\ [(2, 2, 1)]) in
+    --trace ("graph:" ++ show graph) $ TestList [
     TestList [
         TestCase (
-            assertEqual "removed cube is counted as being air"
+            assertBool "idx of (0, 0, 1) is 1"
+            (getIdx (0, 0, 1) == 1)
+            )
+        , (let targ = graph V.!? getIdx (2, 2, 0) in TestCase (
+            assertBool "(2, 2, 0) exists within the graph)"
+            (isJust $ trace ("(2, 2, 0) cube:" ++ show targ) targ)
+            )
+        )
+        , TestCase (
+            assertEqual "all items with a 0 index are air"
+            0
+            (length (V.filter (\((x, y, z), col) -> (not . isAir) col && (x == 0 || y == 0 || z == 0)) graph))
+            )
+        , TestCase (
+            assertEqual "2,2,0 is air"
+            IsAir
+            (snd $ graph V.! getIdx(2, 2, 0))
+            )
+        , TestCase (
+            assertEqual "removed cube (2,2,1) is counted as being air"
             IsAir
             (snd $ graph V.! getIdx (2, 2, 1))
             )

@@ -145,6 +145,8 @@ isUnchecked :: ColoredLoc -> Bool
 isUnchecked IsUnchecked = True
 isUnchecked _ = False
 
+part2 :: [Cube] -> IO Int
+part2 cubes = let (sa, _, _) = runPart2 cubes in return sa
 -- idea: start just outside of the minimum or maximum point of the cube
 -- make a big vector of spaces that are colored, like in djikstra's algorithm
 -- then, from the start point do a breadth first search, coloring in the air spaces
@@ -152,65 +154,65 @@ isUnchecked _ = False
 -- then, every point in the lava droplet that is accessible from the outside will be known
 -- the air pockets inside the lava will not be found by the BFS, so we don't count
 -- them as being a neighbor of a cube when we determine the surface area
-part2 :: [Cube] -> IO Int
-part2 cubes = do
-    --print $ "min:" ++ show boundMin
-    print $ "max:" ++ show boundMax
-    print $ "space dim:" ++ show spaceDimension
-    print $ "dimensions:" ++ show vecDims
-    print $ "arrayLength" ++ show arrayLength ++ " maximum index:" ++ show maximumIndex
-    print $ "empty graph length:" ++ show (length emptyGraph)
-    print $ "empty graph element at:" ++ show maximumIndex ++ " " ++ show (emptyGraph V.!? (maximumIndex))
-    --print $ "unchecked graph items:" ++ show uncheckedGraphItems
-    --print $ "init graph length:" ++ show (length unInitGraph)
-    --print $ "emptyGraph:" ++ show emptyGraph
-    --print $ "emptyGraph length:" ++ show (length emptyGraph)
-    --print $ "initialGraph:" ++ show initialGraph
-    --print $ "initialGraph length:" ++ show (length initialGraph)
-    --print $ "num cubes original:" ++ show (length cubes)
-    --print $ "graph length:" ++ show (length initialGraph)
-    --print $ "num cubes graph:" ++ show (length (V.filter (\(_, color) -> isCube color) initialGraph))
-    --let checkCubesInGraph = map (\cube -> let idx = getIndexForCube cube in initialGraph V.!? idx) cubes
-    --print checkCubesInGraph
-    --these checks are meaningful for the short input, not the real input
-    ---- check that 1,1,1 is NOT a cube
-    testGetIndex getIndexForCube (1, 1, 1) initialGraph
-    ---- check the max element is in bounds
-    testGetIndex getIndexForCube (vx, vy, vz) initialGraph
-    testGetIndex getIndexForCube (1, 1, 5) initialGraph
-    testGetIndex getIndexForCube (1, 2, 2) initialGraph
-    testGetIndex getIndexForCube (2, 2, 3) initialGraph
-
-    let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
-    --print coloredGraph
-    mapM_ putStrLn [
-        "with " ++ show (length cubes) ++ " cubes," ++ " and a graph of size:" ++ show arrayLength
-        , "the total possible surface area is:" ++ show (length cubes * 6)
-        , show (length (V.filter(\(_, color) -> isAir color) coloredGraph)) ++ " sections where open to the atmosphere"
-        , "and " ++ show (length (V.filter(\(_, color) -> isUnchecked color) coloredGraph)) ++ " were unchecked"
-        ]
-    let sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
-    return sa
-    where
-        --initialGraph =  emptyGraph V.// trace ("cube color loc init:"  ++ show cubeColorLocInit) cubeColorLocInit
-        initialGraph =  emptyGraph V.// cubeColorLocInit
-        cubeColorLocInit = indexedColoredLocsForCubes cubes getIndexForCube
-        --emptyGraph = V.replicate (getIndexForCube boundMax + 1) IsUnchecked :: V.Vector ColoredLoc
-        --emptyGraph = unInitGraph V.// uncheckedGraphItems
-        --unInitGraph = V.replicate (spaceDimension ^ (3 :: Int)) unInitializedLocation
-        --emptyGraph = V.replicate arrayLength unInitializedLocation -- this worked for the short input of part2
-        ---- but the colors still being marked -1,-1,-1 made the 'find a new start point' logic incorrect
-        emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph spaceDimension getIndexForCube
-        uncheckedGraphItems = getUncheckedGraphItems spaceDimension getIndexForCube :: [(Int, ColoredGraphItem)]
-        vecDims@(vx, vy, vz) = getVectorDims cubeBounds
-        getIndexForCube = getIndexForLocation spaceDimension
-        isCubeOpenToAir = isOpenToAir spaceDimension spaceDimension spaceDimension
-        cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0 && dimIsInBounds spaceDimension c
-        arrayLength = maximumIndex + 1
-        spaceDimension = maximum [maxX, maxY, maxZ] + 1 :: Int
-        cubeBounds@(_, boundMax@(maxX, maxY, maxZ)) = getBoundingBox cubes
-        maximumIndex = getIndexForCube (spaceDimension, spaceDimension, spaceDimension)
-        unInitializedLocation = ((-1, -1, -1), IsUnchecked)
+--part2 :: [Cube] -> IO Int
+--part2 cubes = do
+--    --print $ "min:" ++ show boundMin
+--    print $ "max:" ++ show boundMax
+--    print $ "space dim:" ++ show spaceDimension
+--    print $ "dimensions:" ++ show vecDims
+--    print $ "arrayLength" ++ show arrayLength ++ " maximum index:" ++ show maximumIndex
+--    print $ "empty graph length:" ++ show (length emptyGraph)
+--    print $ "empty graph element at:" ++ show maximumIndex ++ " " ++ show (emptyGraph V.!? (maximumIndex))
+--    --print $ "unchecked graph items:" ++ show uncheckedGraphItems
+--    --print $ "init graph length:" ++ show (length unInitGraph)
+--    --print $ "emptyGraph:" ++ show emptyGraph
+--    --print $ "emptyGraph length:" ++ show (length emptyGraph)
+--    --print $ "initialGraph:" ++ show initialGraph
+--    --print $ "initialGraph length:" ++ show (length initialGraph)
+--    --print $ "num cubes original:" ++ show (length cubes)
+--    --print $ "graph length:" ++ show (length initialGraph)
+--    --print $ "num cubes graph:" ++ show (length (V.filter (\(_, color) -> isCube color) initialGraph))
+--    --let checkCubesInGraph = map (\cube -> let idx = getIndexForCube cube in initialGraph V.!? idx) cubes
+--    --print checkCubesInGraph
+--    --these checks are meaningful for the short input, not the real input
+--    ---- check that 1,1,1 is NOT a cube
+--    testGetIndex getIndexForCube (1, 1, 1) initialGraph
+--    ---- check the max element is in bounds
+--    testGetIndex getIndexForCube (vx, vy, vz) initialGraph
+--    testGetIndex getIndexForCube (1, 1, 5) initialGraph
+--    testGetIndex getIndexForCube (1, 2, 2) initialGraph
+--    testGetIndex getIndexForCube (2, 2, 3) initialGraph
+--
+--    let coloredGraph = colorLocations initialGraph isCubeOpenToAir cubeIsInBounds (getIndicesOfNeighborsGuard cubeIsInBounds) getIndexForCube
+--    --print coloredGraph
+--    mapM_ putStrLn [
+--        "with " ++ show (length cubes) ++ " cubes," ++ " and a graph of size:" ++ show arrayLength
+--        , "the total possible surface area is:" ++ show (length cubes * 6)
+--        , show (length (V.filter(\(_, color) -> isAir color) coloredGraph)) ++ " sections where open to the atmosphere"
+--        , "and " ++ show (length (V.filter(\(_, color) -> isUnchecked color) coloredGraph)) ++ " were unchecked"
+--        ]
+--    let sa = getSurfaceAreaPart2 getIndexForCube cubes coloredGraph
+--    return sa
+--    where
+--        --initialGraph =  emptyGraph V.// trace ("cube color loc init:"  ++ show cubeColorLocInit) cubeColorLocInit
+--        initialGraph =  emptyGraph V.// cubeColorLocInit
+--        cubeColorLocInit = indexedColoredLocsForCubes cubes getIndexForCube
+--        --emptyGraph = V.replicate (getIndexForCube boundMax + 1) IsUnchecked :: V.Vector ColoredLoc
+--        --emptyGraph = unInitGraph V.// uncheckedGraphItems
+--        --unInitGraph = V.replicate (spaceDimension ^ (3 :: Int)) unInitializedLocation
+--        --emptyGraph = V.replicate arrayLength unInitializedLocation -- this worked for the short input of part2
+--        ---- but the colors still being marked -1,-1,-1 made the 'find a new start point' logic incorrect
+--        emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph spaceDimension getIndexForCube
+--        uncheckedGraphItems = getUncheckedGraphItems spaceDimension getIndexForCube :: [(Int, ColoredGraphItem)]
+--        vecDims@(vx, vy, vz) = getVectorDims cubeBounds
+--        getIndexForCube = getIndexForLocation spaceDimension
+--        isCubeOpenToAir = isOpenToAir spaceDimension spaceDimension spaceDimension
+--        cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0 && dimIsInBounds spaceDimension c
+--        arrayLength = maximumIndex + 1
+--        spaceDimension = maximum [maxX, maxY, maxZ] + 1 :: Int
+--        cubeBounds@(_, boundMax@(maxX, maxY, maxZ)) = getBoundingBox cubes
+--        maximumIndex = getIndexForCube (spaceDimension, spaceDimension, spaceDimension)
+--        unInitializedLocation = ((-1, -1, -1), IsUnchecked)
 
 -- TODO de-duplicate this with the IO version
 runPart2 :: [Cube] -> (Int, Cube -> Int, ColoredGraph)
@@ -220,27 +222,28 @@ runPart2 cubes =
     in (sa, getIndexForCube, coloredGraph)
     where
         initialGraph =  emptyGraph V.// cubeColorLocInit
-        emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph spaceDimension getIndexForCube
+        emptyGraph = V.replicate arrayLength unInitializedLocation V.// getEmptyGraph maxDimension getIndexForCube
         arrayLength = maximumIndex + 1
         unInitializedLocation = ((-1, -1, -1), IsUnchecked)
         cubeColorLocInit = indexedColoredLocsForCubes cubes getIndexForCube
-        spaceDimension = maximum [maxX, maxY, maxZ] + 1 :: Int
+        maxDimension = maximum [maxX, maxY, maxZ]
+        spaceDimension = maxDimension + 1 :: Int
         getIndexForCube = getIndexForLocation spaceDimension
-        cubeBounds@(_, boundMax@(maxX, maxY, maxZ)) = getBoundingBox cubes
-        maximumIndex = getIndexForCube (spaceDimension, spaceDimension, spaceDimension)
-        isCubeOpenToAir = isOpenToAir spaceDimension spaceDimension spaceDimension
+        (_, (maxX, maxY, maxZ)) = getBoundingBox cubes
+        maximumIndex = getIndexForCube (maxDimension, maxDimension, maxDimension)
+        isCubeOpenToAir = isOpenToAir maximumIndex maximumIndex maximumIndex
         cubeIsInBounds c = let idx = getIndexForCube c in idx <= maximumIndex && idx >= 0 && dimIsInBounds spaceDimension c
 
 genCube :: Int -> [Cube]
 genCube dim = concat [ concat [ [(x, y, z) | z <- dimRange] | y <- dimRange ] | x <- dimRange]
     where
-        dimRange = [1..dim]
+        dimRange = [0..dim - 1]
 
 getEmptyGraph :: Int -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
-getEmptyGraph spaceDimension idxForCube =
+getEmptyGraph maxDimension idxForCube =
     concat [concat [[ let cb = (x, y, z) in (idxForCube cb, (cb, IsUnchecked)) | z <- dimRange] | y <- dimRange] | x <- dimRange]
         where
-            dimRange = [0..spaceDimension]
+            dimRange = [0..maxDimension]
 
 dimIsInBounds :: Int -> Cube -> Bool
 dimIsInBounds maxDim (cx, cy, cz) =
@@ -281,7 +284,7 @@ colorLocations locs openToAir cubeIsInBounds getNhbrs getIndexForCube = go locs 
             let nhbrs = getNhbrs cb
                 --uncheckedNhbrs = filter (\ncb -> let (_, color) = getGraphNode currLocs getIndexForCube ncb in isUnchecked color) (trace ("nhbrs" ++ show nhbrs) nhbrs)
                 uncheckedNhbrs = filter (\ncb -> let (_, color) = getGraphNode currLocs getIndexForCube ncb in isUnchecked color) nhbrs
-                --listToUpdateNeighbors = map (\checkCb -> (getIndexForCube checkCb, (checkCb, IsChecking))) (trace ("\tuncheckedn:" ++ show uncheckedNhbrs) uncheckedNhbrs)
+                --listToUpdateNeighbors = map (\checkCb -> (getIndexForCube checkCb, (checkCb, IsChecking))) (trace ("\t cube:" ++ show cb ++ " uncheckedn:" ++ show uncheckedNhbrs) uncheckedNhbrs)
                 listToUpdateNeighbors = map (\checkCb -> (getIndexForCube checkCb, (checkCb, IsChecking))) uncheckedNhbrs
                 --withNewPaintedNodes = currLocs V.// ((getIndexForCube cb, (cb, IsAir)):trace ("\tto update neighbors" ++ show listToUpdateNeighbors) listToUpdateNeighbors)
                 withNewPaintedNodes = currLocs V.// ((getIndexForCube cb, (cb, IsAir)):listToUpdateNeighbors)
@@ -313,9 +316,9 @@ getGraphNode graph getIndexForCube cb =
 -- the entry points for the bfs must be on the edges of the coordinate space
 isOpenToAir :: Int -> Int -> Int -> Cube -> Bool
 isOpenToAir maxX maxY maxZ (x, y, z) =
-    x >= maxX || x == 0
-    || y >= maxY || y == 0
-    || z >= maxZ || z == 0
+    x == maxX || x == 0
+    || y == maxY || y == 0
+    || z == maxZ || z == 0
 
 indexedColoredLocsForCubes :: [Cube] -> (Cube -> Int) -> [(Int, ColoredGraphItem)]
 indexedColoredLocsForCubes cubes getIndexForCube = [ (getIndexForCube c, (c,  IsCube)) | c <- cubes]
@@ -323,8 +326,13 @@ indexedColoredLocsForCubes cubes getIndexForCube = [ (getIndexForCube c, (c,  Is
 -- get an index for a cube that is being held in a 1d Vector
 -- this is one indexed!
 getIndexForLocation :: Int -> Cube -> Int
-getIndexForLocation spaceDimension (x, y, z) = 
-    (x * (spaceDimension ^ 2) + y * spaceDimension + z)
+getIndexForLocation spaceDimension (x, y, z) =
+    realX * (spaceDimension * spaceDimension) + realY * spaceDimension + realZ
+    where
+        realX = x - 1
+        realY = y - 1
+        realZ = z - 1
+
 
 getVectorDims :: (Cube, Cube) -> (Int, Int, Int)
 getVectorDims ((minx, miny, minz), (maxx, maxy, maxz)) =

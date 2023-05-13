@@ -4,6 +4,7 @@ import System.Exit
 
 import Tests.Day17
 import Tests.Day18
+import Tests.Day19
 
 testsDay17 = [
     testVertBar
@@ -34,11 +35,16 @@ testsDay18 = [
     --, testPart2Interesting
     ]
 
+testsDay19 = [
+    parsingTests
+    ]
+
 main :: IO Int
 main = do
     countResults <- runTestTT (TestList (
         testsDay17
         ++ testsDay18
+        ++ testsDay19
         ))
     print countResults
     let err = errors countResults

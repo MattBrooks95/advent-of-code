@@ -11,6 +11,7 @@ parsingTests = TestList [
     parseReqTypes
     , parseCostsTests
     , parseRobotTests
+    , parseBlueprintTests
     ]
 
 parseReqTypes :: Test
@@ -55,22 +56,40 @@ parseRobotTests :: Test
 parseRobotTests = TestList [
     TestCase (
         assertEqual "geode robot"
-        (runParser parseRobotType () "" "geode")
         (Right (Geode, GiveGeodes))
+        (runParser parseRobotType () "" "geode")
     )
     , TestCase (
         assertEqual "ore robot"
-        (runParser parseRobotType () "" "ore")
         (Right (Ore, GiveOre))
+        (runParser parseRobotType () "" "ore")
     )
     , TestCase (
         assertEqual "obsidian robot"
-        (runParser parseRobotType () "" "obsidian")
         (Right (Obsidian, GiveObs))
+        (runParser parseRobotType () "" "obsidian")
     )
     , TestCase (
         assertEqual "clay robot"
-        (runParser parseRobotType () "" "clay")
         (Right (Clay, GiveClay))
+        (runParser parseRobotType () "" "clay")
+    )
+    ]
+
+parseBlueprintTests :: Test
+parseBlueprintTests = TestList [
+    TestCase (
+        assertEqual "parse first line of input"
+        (Right (BluePrint {
+            bpId=1
+            , robots = [
+                Robot Ore [CreationRequirement ReqOre 3] GiveOre
+                , Robot Clay [CreationRequirement ReqOre 3] GiveClay
+                , Robot Obsidian [CreationRequirement ReqOre 2, CreationRequirement ReqClay 15] GiveObs
+                , Robot Geode [CreationRequirement ReqOre 3, CreationRequirement ReqOb 9] GiveGeodes
+            ]
+            })
+        )
+        (runParser parseBlueprint () "" "Blueprint 1: Each ore robot costs 3 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 15 clay. Each geode robot costs 3 ore and 9 obsidian.")
     )
     ]

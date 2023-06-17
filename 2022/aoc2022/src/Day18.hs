@@ -56,10 +56,12 @@ getCoveredSidesForCube cb cubes = let nhbrs = getIndicesOfNeighbors cb in
 getCoveredSidesForCubePart2 :: (Cube -> Int) -> (Cube -> [Cube]) ->  Cube -> ColoredGraph -> Int
 getCoveredSidesForCubePart2 getIdx getNhbrs cb graph =
     let nhbrs = getNhbrs cb
-        cubes = getCubes graph getIdx (trace ("nhbrs:" ++ show nhbrs) nhbrs)
+        --cubes = getCubes graph getIdx (trace ("nhbrs:" ++ show nhbrs) nhbrs)
+        cubes = getCubes graph getIdx nhbrs
     in
     --length (filter (not . indexIsAir graph) (map getIdx nhbrs)) -- 2544
-    length (filter (\(_, color) -> not (isAir color)) (trace ("cubes:" ++ show cubes) cubes)) -- 2545?
+    length (filter (\(_, color) -> not (isAir color)) cubes) -- 2545?
+    --length (filter (\(_, color) -> not (isAir color)) (trace ("cubes:" ++ show cubes) cubes)) -- 2545?
 
 getCubes :: ColoredGraph -> (Cube -> Int) -> [Cube] -> [ColoredGraphItem]
 getCubes graph getIdx cbs =

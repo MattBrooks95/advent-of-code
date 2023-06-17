@@ -3,6 +3,10 @@ module Day19 where
 import qualified Text.Parsec as P
 import qualified Parsing as PS
 
+import Data.List (
+    intercalate
+    )
+
 data Giveable = GiveOre | GiveClay | GiveObs | GiveGeodes deriving (Show, Eq)
 
 data ReqType = ReqOre | ReqClay | ReqOb
@@ -14,7 +18,7 @@ data RobotType = Ore | Clay | Obsidian | Geode
     deriving (Show, Eq)
 
 data Robot = Robot RobotType [CreationRequirement] Giveable
-    deriving (Show)
+    deriving (Show, Eq)
 
 makeOreRobot :: CreationRequirement -> Robot
 makeOreRobot req = Robot Ore [req] GiveOre
@@ -23,16 +27,20 @@ data Blueprint = BluePrint {
     bpId :: Int
     , robots :: [Robot]
     } deriving (
-        Show
+         Eq
         )
+instance Show Blueprint where
+    show bp = "\n(BP " ++ show (bpId bp)
+        ++ "\n\t" ++ intercalate "\n\t" (map show (robots bp))
+        ++ "\n)"
 
 run :: String -> IO ()
 run input = do
     print "day19"
---    case P.runParser parseBlueprint () "" input of
---        Left e -> print e
---        Right blueprint -> do
---            print blueprint
+    case P.runParser parse () "" input of
+        Left e -> print e
+        Right blueprint -> do
+            print blueprint
 
 
 parseObs :: P.Parsec String () String
@@ -79,16 +87,19 @@ parseRobot = do
     _ <- P.string " Each "
     (robotType, giveable) <- parseRobotType
     firstCost <- parseCost
-    additionalCosts <- P.many parseAdditionalCost
+    additionalCosts <- P.many parseAdditionalCost --TODO do I need a try here?
     return $ Robot robotType (firstCost:additionalCosts) giveable
 
---parseBlueprint :: P.Parsec String () Blueprint
---parseBlueprint = do
---    _ <- P.string "Blueprint "
---    bpId <- digits
---    _ <- string ":"
---    robots <- P.many parseRobot
---    undefined
---
---parse :: String -> P.Parsec String () [Blueprint]
---parse input = (P.many parseBlueprint `P.sepBy` P.endOfLine) <* P.eof
+parseBlueprint :: P.Parsec String () Blueprint
+parseBlueprint = do
+    _ <- P.string "Blueprint "
+    thisBpId <- PS.digits
+    _ <- P.string ":"
+    thisRobots <- P.many parseRobot
+    return BluePrint {
+        robots=thisRobots
+        , bpId=thisBpId
+    }
+
+parse :: P.Parsec String () [Blueprint]
+parse = (parseBlueprint `P.sepBy` P.endOfLine) <* P.eof

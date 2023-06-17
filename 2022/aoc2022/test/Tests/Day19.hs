@@ -74,6 +74,11 @@ parseRobotTests = TestList [
         (Right (Clay, GiveClay))
         (runParser parseRobotType () "" "clay")
     )
+    , TestCase (
+        assertEqual "ore robot with cost"
+        (Right $ Robot Ore [CreationRequirement ReqOre 3] GiveOre)
+        (runParser parseRobot () "" " Each ore robot costs 3 ore.")
+    )
     ]
 
 parseBlueprintTests :: Test

@@ -86,8 +86,10 @@ parseRobot :: P.Parsec String () Robot
 parseRobot = do
     _ <- P.string " Each "
     (robotType, giveable) <- parseRobotType
+    _ <- P.string " robot"
     firstCost <- parseCost
     additionalCosts <- P.many parseAdditionalCost --TODO do I need a try here?
+    _ <- P.char '.'
     return $ Robot robotType (firstCost:additionalCosts) giveable
 
 parseBlueprint :: P.Parsec String () Blueprint

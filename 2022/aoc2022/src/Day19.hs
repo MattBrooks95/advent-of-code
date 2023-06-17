@@ -39,8 +39,8 @@ run input = do
     print "day19"
     case P.runParser parse () "" input of
         Left e -> print e
-        Right blueprint -> do
-            print blueprint
+        Right blueprints -> do
+            print blueprints
 
 
 parseObs :: P.Parsec String () String
@@ -104,4 +104,6 @@ parseBlueprint = do
     }
 
 parse :: P.Parsec String () [Blueprint]
-parse = (parseBlueprint `P.sepBy` P.endOfLine) <* P.eof
+--still need to figure out why just P.sepBy doesn't work
+--parse = (parseBlueprint `P.sepBy` P.endOfLine) <* P.eof
+parse = P.many (parseBlueprint <* P.endOfLine) <* P.eof

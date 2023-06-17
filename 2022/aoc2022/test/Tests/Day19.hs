@@ -81,20 +81,42 @@ parseRobotTests = TestList [
     )
     ]
 
+lineOneBlueprint :: Blueprint
+lineOneBlueprint = BluePrint {
+    bpId=1
+    , robots = [
+        Robot Ore [CreationRequirement ReqOre 3] GiveOre
+        , Robot Clay [CreationRequirement ReqOre 3] GiveClay
+        , Robot Obsidian [CreationRequirement ReqOre 2, CreationRequirement ReqClay 15] GiveObs
+        , Robot Geode [CreationRequirement ReqOre 3, CreationRequirement ReqOb 9] GiveGeodes
+    ]
+    }
+
 parseBlueprintTests :: Test
 parseBlueprintTests = TestList [
     TestCase (
         assertEqual "parse first line of input"
-        (Right (BluePrint {
-            bpId=1
-            , robots = [
-                Robot Ore [CreationRequirement ReqOre 3] GiveOre
-                , Robot Clay [CreationRequirement ReqOre 3] GiveClay
-                , Robot Obsidian [CreationRequirement ReqOre 2, CreationRequirement ReqClay 15] GiveObs
-                , Robot Geode [CreationRequirement ReqOre 3, CreationRequirement ReqOb 9] GiveGeodes
-            ]
-            })
-        )
+        (Right lineOneBlueprint)
         (runParser parseBlueprint () "" "Blueprint 1: Each ore robot costs 3 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 15 clay. Each geode robot costs 3 ore and 9 obsidian.")
+    )
+    , TestCase (
+        assertEqual "parse two line file"
+        (Right [
+            lineOneBlueprint
+            , BluePrint {
+                bpId=2
+                --Blueprint 2: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 5 clay. Each geode robot costs 3 ore and 7 obsidian."
+                , robots = [
+                    Robot Ore [CreationRequirement ReqOre 4] GiveOre
+                    , Robot Clay [CreationRequirement ReqOre 4] GiveClay
+                    , Robot Obsidian [CreationRequirement ReqOre 4, CreationRequirement ReqClay 5] GiveObs
+                    , Robot Geode [CreationRequirement ReqOre 3, CreationRequirement ReqOb 7] GiveGeodes
+                ]
+            }
+            ]
+        )
+        (runParser Day19.parse () ""
+            "Blueprint 1: Each ore robot costs 3 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 15 clay. Each geode robot costs 3 ore and 9 obsidian.\nBlueprint 2: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 5 clay. Each geode robot costs 3 ore and 7 obsidian."
+            )
     )
     ]

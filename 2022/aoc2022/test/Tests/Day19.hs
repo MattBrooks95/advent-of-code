@@ -120,3 +120,25 @@ parseBlueprintTests = TestList [
             )
     )
     ]
+
+resourcesTest :: Test
+resourcesTest = TestList [
+    TestCase (
+        assertEqual "add two resources"
+        (Resources 1 1 1 1)
+        (addRes (Resources 0 0 0 0) (Resources 1 1 1 1))
+    )
+    , TestCase (
+        assertEqual "add clay"
+        (Resources 3 0 0 0)
+        (addRes (Resources 3 0 0 0) (Resources 0 0 0 0))
+        )
+    , TestCase (
+        assertEqual "robots give resources"
+        (Resources 1 0 1 0)
+        (sumGenResources [
+            Robot Ore [CreationRequirement ReqOre 0] GiveOre
+            , Robot Obsidian [CreationRequirement ReqOre 0] GiveObs
+            ])
+        )
+    ]

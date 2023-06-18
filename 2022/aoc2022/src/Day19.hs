@@ -17,11 +17,54 @@ data CreationRequirement = CreationRequirement ReqType Int
 data RobotType = Ore | Clay | Obsidian | Geode
     deriving (Show, Eq)
 
+data Resources = Resources {
+    oreRes :: Int
+    , clayRes :: Int
+    , obsRes :: Int
+    , geodeRes :: Int
+} deriving (Show, Eq)
+
+emptyResources :: Resources
+emptyResources = Resources {
+    oreRes=0
+    , clayRes=0
+    , obsRes=0
+    , geodeRes=0
+}
+
+addRes :: Resources -> Resources -> Resources
+addRes (Resources { oreRes=ore1, clayRes=clay1, obsRes=obs1, geodeRes=geode1 }) (Resources { oreRes=ore2, clayRes=clay2, obsRes=obs2, geodeRes=geode2}) =
+    Resources {
+        oreRes = ore1 + ore2
+        , clayRes = clay1 + clay2
+        , obsRes = obs1 + obs2
+        , geodeRes = geode1 + geode2
+    }
+
 data Robot = Robot RobotType [CreationRequirement] Giveable
     deriving (Show, Eq)
 
 makeOreRobot :: CreationRequirement -> Robot
 makeOreRobot req = Robot Ore [req] GiveOre
+
+data Simulation = Simulation {
+    blueprint :: Blueprint
+    , rbts :: [Robot]
+    , resources :: Resources
+    , timeRemaining :: Int
+    }
+
+sumGenResources :: [Robot] -> Resources
+sumGenResources currRobots = let madeRes = genResources currRobots in foldl addRes emptyResources madeRes
+
+genResources :: [Robot] -> [Resources]
+genResources = map getRes
+
+getRes :: Robot -> Resources
+getRes (Robot _ _ GiveOre) = Resources { oreRes=1, clayRes=0, obsRes=0, geodeRes=0 }
+getRes (Robot _ _ GiveClay) = Resources { oreRes=0, clayRes=1, obsRes=0, geodeRes=0 }
+getRes (Robot _ _ GiveObs) = Resources { oreRes=0, clayRes=0, obsRes=1, geodeRes=0 }
+getRes (Robot _ _ GiveGeodes) = Resources { oreRes=0, clayRes=0, obsRes=0, geodeRes=1 }
 
 data Blueprint = BluePrint {
     bpId :: Int

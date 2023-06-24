@@ -18,17 +18,17 @@ parseReqTypes :: Test
 parseReqTypes = TestList [
     TestCase (
         assertEqual "cost type ore"
-        (Right ReqOre)
+        (Right (ReqType Ore))
         (runParser parseReqType () "" "ore")
     )
     , TestCase (
         assertEqual "cost type clay"
-        (Right ReqClay)
+        (Right (ReqType Clay))
         (runParser parseReqType () "" "clay")
     )
     , TestCase (
         assertEqual "cost type obsidian"
-        (Right ReqOb)
+        (Right (ReqType Obsidian))
         (runParser parseReqType () "" "obsidian")
     )
     ]
@@ -37,17 +37,17 @@ parseCostsTests :: Test
 parseCostsTests = TestList [
     TestCase (
         assertEqual "costs 4 ore"
-        (Right (CreationRequirement ReqOre 4))
+        (Right (CreationRequirement (ReqType Ore) 4))
         (runParser parseCost () "" " costs 4 ore")
     )
     , TestCase (
         assertEqual "costs 2 clay"
-        (Right (CreationRequirement ReqClay 2))
+        (Right (CreationRequirement (ReqType Clay) 2))
         (runParser parseCost () "" " costs 2 clay")
     )
     , TestCase (
         assertEqual "costs 1 obsidian"
-        (Right (CreationRequirement ReqOb 1))
+        (Right (CreationRequirement (ReqType Obsidian) 1))
         (runParser parseCost () "" " costs 1 obsidian")
     )
     ]
@@ -56,27 +56,27 @@ parseRobotTests :: Test
 parseRobotTests = TestList [
     TestCase (
         assertEqual "geode robot"
-        (Right (Geode, GiveGeodes))
+        (Right (RobotType Geode, GiveGeodes))
         (runParser parseRobotType () "" "geode")
     )
     , TestCase (
         assertEqual "ore robot"
-        (Right (Ore, GiveOre))
+        (Right (RobotType Ore, GiveOre))
         (runParser parseRobotType () "" "ore")
     )
     , TestCase (
         assertEqual "obsidian robot"
-        (Right (Obsidian, GiveObs))
+        (Right (RobotType Obsidian, GiveObs))
         (runParser parseRobotType () "" "obsidian")
     )
     , TestCase (
         assertEqual "clay robot"
-        (Right (Clay, GiveClay))
+        (Right (RobotType Clay, GiveClay))
         (runParser parseRobotType () "" "clay")
     )
     , TestCase (
         assertEqual "ore robot with cost"
-        (Right $ Robot Ore [CreationRequirement ReqOre 3] GiveOre)
+        (Right $ Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre)
         (runParser parseRobot () "" " Each ore robot costs 3 ore.")
     )
     ]
@@ -85,10 +85,10 @@ lineOneBlueprint :: Blueprint
 lineOneBlueprint = BluePrint {
     bpId=1
     , robots = [
-        Robot Ore [CreationRequirement ReqOre 3] GiveOre
-        , Robot Clay [CreationRequirement ReqOre 3] GiveClay
-        , Robot Obsidian [CreationRequirement ReqOre 2, CreationRequirement ReqClay 15] GiveObs
-        , Robot Geode [CreationRequirement ReqOre 3, CreationRequirement ReqOb 9] GiveGeodes
+        Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre
+        , Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay
+        , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 2, CreationRequirement (ReqType Clay) 15] GiveObs
+        , Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes
     ]
     }
 
@@ -107,10 +107,10 @@ parseBlueprintTests = TestList [
                 bpId=2
                 --Blueprint 2: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 5 clay. Each geode robot costs 3 ore and 7 obsidian."
                 , robots = [
-                    Robot Ore [CreationRequirement ReqOre 4] GiveOre
-                    , Robot Clay [CreationRequirement ReqOre 4] GiveClay
-                    , Robot Obsidian [CreationRequirement ReqOre 4, CreationRequirement ReqClay 5] GiveObs
-                    , Robot Geode [CreationRequirement ReqOre 3, CreationRequirement ReqOb 7] GiveGeodes
+                    Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 4] GiveOre
+                    , Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 4] GiveClay
+                    , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 4, CreationRequirement (ReqType Clay) 5] GiveObs
+                    , Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 7] GiveGeodes
                 ]
             }
             ]
@@ -137,8 +137,8 @@ resourcesTest = TestList [
         assertEqual "robots give resources"
         (Resources 1 0 1 0)
         (sumGenResources [
-            Robot Ore [CreationRequirement ReqOre 0] GiveOre
-            , Robot Obsidian [CreationRequirement ReqOre 0] GiveObs
+            Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 0] GiveOre
+            , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 0] GiveObs
             ])
         )
     ]

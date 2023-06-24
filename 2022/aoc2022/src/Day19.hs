@@ -9,12 +9,16 @@ import Data.List (
 
 data Giveable = GiveOre | GiveClay | GiveObs | GiveGeodes deriving (Show, Eq)
 
-data ReqType = ReqOre | ReqClay | ReqOb
+data Resource = Ore | Clay | Obsidian | Geode
     deriving (Show, Eq)
+
+newtype ReqType = ReqType Resource
+    deriving (Show, Eq)
+
 data CreationRequirement = CreationRequirement ReqType Int
     deriving (Show, Eq)
 
-data RobotType = Ore | Clay | Obsidian | Geode
+newtype RobotType = RobotType Resource
     deriving (Show, Eq)
 
 data Resources = Resources {
@@ -45,7 +49,7 @@ data Robot = Robot RobotType [CreationRequirement] Giveable
     deriving (Show, Eq)
 
 makeOreRobot :: CreationRequirement -> Robot
-makeOreRobot req = Robot Ore [req] GiveOre
+makeOreRobot req = Robot (RobotType Ore) [req] GiveOre
 
 data Simulation = Simulation {
     blueprint :: Blueprint
@@ -54,11 +58,23 @@ data Simulation = Simulation {
     , timeRemaining :: Int
     }
 
+runSimulation :: Simulation -> Simulation
+runSimulation s = s
+
 sumGenResources :: [Robot] -> Resources
 sumGenResources currRobots = let madeRes = genResources currRobots in foldl addRes emptyResources madeRes
 
 genResources :: [Robot] -> [Resources]
 genResources = map getRes
+
+--genActions :: Blueprint -> Resources -> [Robot]
+--genActions bp res = foldl canBuyRobot
+
+canAffordRobot :: Blueprint -> Resources -> Robot -> Bool
+canAffordRobot bp res rbt = and []
+
+--hasResources :: Resources -> CreationRequirement -> Bool
+--hasResources res reqRes = case find 
 
 getRes :: Robot -> Resources
 getRes (Robot _ _ GiveOre) = Resources { oreRes=1, clayRes=0, obsRes=0, geodeRes=0 }
@@ -100,9 +116,9 @@ parseGeode = P.string "geode"
 
 parseReqType :: P.Parsec String () ReqType
 parseReqType = P.choice [
-    P.try parseOre >> return ReqOre
-    , parseObs >> return ReqOb
-    , parseClay >> return ReqClay
+    P.try parseOre >> return (ReqType Ore)
+    , parseObs >> return (ReqType Obsidian)
+    , parseClay >> return (ReqType Clay)
     ]
 
 parseCostDetails :: P.Parsec String () CreationRequirement
@@ -119,10 +135,10 @@ parseAdditionalCost = P.string " and " >> parseCostDetails
 parseRobotType :: P.Parsec String () (RobotType, Giveable)
 parseRobotType =
     P.choice [
-        P.try parseOre >> return (Ore, GiveOre)
-        , parseClay >> return (Clay, GiveClay)
-        , parseObs >> return (Obsidian, GiveObs)
-        , parseGeode >> return (Geode, GiveGeodes)
+        P.try parseOre >> return (RobotType Ore, GiveOre)
+        , parseClay >> return (RobotType Clay, GiveClay)
+        , parseObs >> return (RobotType Obsidian, GiveObs)
+        , parseGeode >> return (RobotType Geode, GiveGeodes)
         ]
 
 parseRobot :: P.Parsec String () Robot

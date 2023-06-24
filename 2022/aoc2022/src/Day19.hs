@@ -3,8 +3,15 @@ module Day19 where
 import qualified Text.Parsec as P
 import qualified Parsing as PS
 
+import Debug.Trace
+
 import Data.List (
     intercalate
+    , maximumBy
+    )
+
+import Data.Function (
+    on
     )
 
 data Giveable = GiveOre | GiveClay | GiveObs | GiveGeodes deriving (Show, Eq)
@@ -27,6 +34,12 @@ data Resources = Resources {
     , obsRes :: Int
     , geodeRes :: Int
 } deriving (Show, Eq)
+
+getAvailableResource :: Resources -> Resource -> Int
+getAvailableResource (Resources { oreRes=availOre} ) Ore = availOre
+getAvailableResource (Resources { clayRes=availClay} ) Clay = availClay
+getAvailableResource (Resources { obsRes=availObs} ) Obsidian = availObs
+getAvailableResource (Resources { geodeRes=availGeode }) Geode = availGeode
 
 emptyResources :: Resources
 emptyResources = Resources {
@@ -57,24 +70,74 @@ data Simulation = Simulation {
     , resources :: Resources
     , timeRemaining :: Int
     }
+    deriving (Show)
+
+time :: Simulation -> Simulation
+time s@(Simulation { timeRemaining=rTime }) = s { timeRemaining=rTime - 1 }
+
+addResources :: Simulation -> Resources -> Simulation
+addResources s newResources = s { resources=addRes (resources s) newResources }
+
+numGeodes :: Simulation -> Int
+numGeodes = flip getAvailableResource Geode . resources
+--let res = resources s in getAvailableResource res Geode
 
 runSimulation :: Simulation -> Simulation
-runSimulation s = s
+runSimulation s@Simulation { timeRemaining=remaining}
+    | trace (show ("time remaining:" ++ show remaining)) remaining == 0 = s
+    | otherwise = maximumBy (compare `on` numGeodes) (map runSimulation (makeNextSimulations s canBeMadeRobots))
+        where
+            receivedResources = addRes (sumGenResources (rbts s)) (resources s)
+            canBeMadeRobots = genActions (blueprint s) receivedResources
+
+makeNextSimulations :: Simulation -> [Robot] -> [Simulation]
+makeNextSimulations s [] = [time s { resources=sumGenResources (rbts s) }] -- can I re-use the newResources where clause if I rewrite this to use guards?
+makeNextSimulations s newRobots = map (`addResources` newResources) nextSims
+--makeNextSimulations s newRobots = map (flip addResources newResources) nextSimsWithRobots
+    where
+        nextSims = map (time . addRobotToSim s) newRobots
+        --nextSimsWithTime = map time nextSimsWithRobots
+        --nextSimsWithRobots = map (addRobotToSim s) newRobots
+        newResources = sumGenResources (rbts s)
+
+addRobotToSim :: Simulation -> Robot -> Simulation
+addRobotToSim s newRobot@(Robot _ creationRequirements _) =
+    s {
+        rbts=newRobot:rbts s
+        , resources=subResources (resources s) creationRequirements
+    }
+
+subResources :: Resources -> [CreationRequirement] -> Resources
+subResources = foldr (flip subResource)
+--the compiler told me that I didn't need to write all of this
+--subResources res requirements =
+    --foldr (\createReq prevRes -> subResource prevRes createReq) res requirements
+
+subResource :: Resources -> CreationRequirement -> Resources
+subResource res (CreationRequirement (ReqType Ore) number) = res { oreRes=oreRes res - number }
+subResource res (CreationRequirement (ReqType Clay) number) = res { clayRes=clayRes res - number }
+subResource res (CreationRequirement (ReqType Obsidian) number) = res { obsRes=obsRes res - number }
+subResource _ (CreationRequirement (ReqType Geode) _) = undefined -- geodes can't be used to make anything
 
 sumGenResources :: [Robot] -> Resources
-sumGenResources currRobots = let madeRes = genResources currRobots in foldl addRes emptyResources madeRes
+sumGenResources currRobots =
+    let madeRes = genResources currRobots in
+        foldl addRes emptyResources madeRes
 
 genResources :: [Robot] -> [Resources]
 genResources = map getRes
 
---genActions :: Blueprint -> Resources -> [Robot]
---genActions bp res = foldl canBuyRobot
+genActions :: Blueprint -> Resources -> [Robot]
+genActions (BluePrint { robots=checkRobots }) res = filter (canAffordRobot res) checkRobots
 
-canAffordRobot :: Blueprint -> Resources -> Robot -> Bool
-canAffordRobot bp res rbt = and []
+canAffordRobot :: Resources -> Robot -> Bool
+canAffordRobot res (Robot _ creationReqs _) =
+    all (hasResources res) creationReqs
 
---hasResources :: Resources -> CreationRequirement -> Bool
---hasResources res reqRes = case find 
+hasResources :: Resources -> CreationRequirement -> Bool
+hasResources res (CreationRequirement (ReqType needRes) numNeeded) =
+    let availRes = getAvailableResource res needRes in
+        numNeeded <= availRes
 
 getRes :: Robot -> Resources
 getRes (Robot _ _ GiveOre) = Resources { oreRes=1, clayRes=0, obsRes=0, geodeRes=0 }
@@ -99,7 +162,17 @@ run input = do
     case P.runParser parse () "" input of
         Left e -> print e
         Right blueprints -> do
-            print blueprints
+            let numBlueprints = 1
+                numMinutes = 24
+                simulations = map (\bp -> Simulation {
+                    blueprint=bp
+                    , rbts=[Robot (RobotType Ore) [] GiveOre]
+                    , resources=emptyResources
+                    , timeRemaining=numMinutes
+                    }
+                    ) blueprints
+            --print blueprints
+            mapM_ print (take numBlueprints (map runSimulation simulations))
 
 
 parseObs :: P.Parsec String () String

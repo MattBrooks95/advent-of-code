@@ -295,7 +295,8 @@ colorLocations locs openToAir cubeInBounds getNhbrs getIndexForCube = go locs []
             case V.find (\item@(cb, color) -> isStartingPoint openToAir cubeInBounds item) currLocs of
                 Nothing -> currLocs
                 Just (newStart, clr) ->
-                    let newGraph = (currLocs V.// [(getIndexForCube (trace ("found:" ++ show newStart ++ " of color:" ++ show clr) newStart), (newStart, IsChecking))]) in
+                    --let newGraph = (currLocs V.// [(getIndexForCube (trace ("found:" ++ show newStart ++ " of color:" ++ show clr) newStart), (newStart, IsChecking))]) in
+                    let newGraph = (currLocs V.// [(getIndexForCube newStart, (newStart, IsChecking))]) in
                     --go (trace ("new graph:" ++ show newGraph) newGraph) [newStart]
                     go newGraph [newStart]
         go currLocs (cb:cbs) =

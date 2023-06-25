@@ -88,10 +88,12 @@ runSimulation s@Simulation { timeRemaining=remaining}
     | otherwise = maximumBy (compare `on` numGeodes) (map runSimulation (makeNextSimulations s canBeMadeRobots))
         where
             receivedResources = addRes (sumGenResources (rbts s)) (resources s)
-            canBeMadeRobots = genActions (blueprint s) receivedResources
+            canBeMadeRobots = genActions (blueprint s) (trace ("received:" ++ show receivedResources) receivedResources)
 
 makeNextSimulations :: Simulation -> [Robot] -> [Simulation]
-makeNextSimulations s [] = [time s { resources=sumGenResources (rbts s) }] -- can I re-use the newResources where clause if I rewrite this to use guards?
+-- can't make any robots, just add in the resources from the next minute and decrease the time remaining
+makeNextSimulations s [] = [trace ("no new robots case" ++ show (resources s)) (time $ s { resources=sumGenResources (rbts s) })]
+-- make simulations for the result of each choice we could have made
 makeNextSimulations s newRobots = map (`addResources` newResources) nextSims
 --makeNextSimulations s newRobots = map (flip addResources newResources) nextSimsWithRobots
     where
@@ -132,7 +134,7 @@ genActions (BluePrint { robots=checkRobots }) res = filter (canAffordRobot res) 
 
 canAffordRobot :: Resources -> Robot -> Bool
 canAffordRobot res (Robot _ creationReqs _) =
-    all (hasResources res) creationReqs
+    all (hasResources res) (trace ("creation requirement:" ++ show creationReqs) creationReqs)
 
 hasResources :: Resources -> CreationRequirement -> Bool
 hasResources res (CreationRequirement (ReqType needRes) numNeeded) =

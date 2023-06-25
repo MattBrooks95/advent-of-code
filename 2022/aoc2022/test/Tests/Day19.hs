@@ -12,6 +12,7 @@ parsingTests = TestList [
     , parseCostsTests
     , parseRobotTests
     , parseBlueprintTests
+    , simulationTests
     ]
 
 parseReqTypes :: Test
@@ -122,9 +123,13 @@ parseBlueprintTests = TestList [
     ]
 
 resourcesTest :: Test
-resourcesTest = TestList [
+resourcesTest =
+    let dummyResources = (Resources { clayRes=16, oreRes=2, obsRes=0, geodeRes=0 })
+    in TestList [
     TestCase (
         assertEqual "add two resources"
+         -- I think this is terrible because reordering the record fields will mess up the test result
+         -- it's probably more proper to write out the field names
         (Resources 1 1 1 1)
         (addRes (Resources 0 0 0 0) (Resources 1 1 1 1))
     )
@@ -141,4 +146,70 @@ resourcesTest = TestList [
             , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 0] GiveObs
             ])
         )
+    , TestCase (
+        assertEqual "can look up resource amount by resource type: clay"
+        16
+        (getAvailableResource dummyResources Clay)
+    )
+    , TestCase (
+        assertEqual "can look up resource amount by resource type: ore"
+        2
+        (getAvailableResource dummyResources Ore)
+    )
+    , TestCase (
+        assertBool "hasResources, true case"
+        (hasResources dummyResources (CreationRequirement (ReqType Ore) 16))
+    )
+    , TestCase (
+        assertBool "hasResources, fail case"
+        (hasResources dummyResources (CreationRequirement (ReqType Ore) 17))
+    )
     ]
+
+oreRobot :: Robot
+oreRobot = Robot (RobotType Ore) [CreationRequirement (ReqType Clay) 2] GiveOre
+
+clayRobot :: Robot
+clayRobot = Robot (RobotType Clay) [] GiveClay
+
+simulationTests :: Test
+simulationTests = TestList [
+    TestCase (
+        assertEqual "1 clay robot makes resources"
+        (Resources 1 0 0 0)
+        (sumGenResources [oreRobot])
+    )
+    , TestCase (
+        assertEqual "one clay and one ore robot makes one clay and one ore per tick"
+        (Resources 1 1 0 0)
+        (sumGenResources [oreRobot, clayRobot])
+    )
+    , TestCase (
+        assertBool "can make robot"
+        (canAffordRobot (Resources { oreRes=2, clayRes=2, obsRes=2, geodeRes=2 }) oreRobot)
+    )
+    , TestCase (
+        assertBool "can not make robot"
+        (not $ canAffordRobot (Resources { oreRes=0, clayRes=2, obsRes=2, geodeRes=2 }) oreRobot)
+    )
+    , TestCase (
+        assertEqual "can make robots with resources"
+        [Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre, Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay]
+        (genActions lineOneBlueprint (Resources { oreRes=3, clayRes=0, obsRes=0, geodeRes=0 }))
+    )
+    , TestCase (
+        assertEqual "can not make robots with resources"
+        []
+        (genActions lineOneBlueprint (Resources { oreRes=0, clayRes=0, obsRes=0, geodeRes=0 }))
+    )
+    ]
+--lineOneBlueprint :: Blueprint
+--lineOneBlueprint = BluePrint {
+--    bpId=1
+--    , robots = [
+--        Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre
+--        , Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay
+--        , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 2, CreationRequirement (ReqType Clay) 15] GiveObs
+--        , Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes
+--    ]
+--    }

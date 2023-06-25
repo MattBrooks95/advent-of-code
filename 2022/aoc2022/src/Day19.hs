@@ -76,7 +76,8 @@ time :: Simulation -> Simulation
 time s@(Simulation { timeRemaining=rTime }) = s { timeRemaining=rTime - 1 }
 
 addResources :: Simulation -> Resources -> Simulation
-addResources s newResources = s { resources=addRes (resources s) newResources }
+addResources s@(Simulation { resources=prevResources }) newResources
+    = s { resources=addRes prevResources newResources }
 
 numGeodes :: Simulation -> Int
 numGeodes = flip getAvailableResource Geode . resources
@@ -87,27 +88,33 @@ runSimulation s@Simulation { timeRemaining=remaining}
     | trace (show ("time remaining:" ++ show remaining)) remaining == 0 = s
     | otherwise = maximumBy (compare `on` numGeodes) (map runSimulation (makeNextSimulations s canBeMadeRobots))
         where
-            receivedResources = addRes (sumGenResources (rbts s)) (resources s)
-            canBeMadeRobots = genActions (blueprint s) (trace ("received:" ++ show receivedResources) receivedResources)
+            --totalResources = addRes re (resources s)
+            --resourcesAddedNextMinute = sumGenResources (rbts s)
+            startResources = resources s
+            canBeMadeRobots = genActions (blueprint s) (trace ("total available resources:" ++ show startResources) startResources)
 
 makeNextSimulations :: Simulation -> [Robot] -> [Simulation]
 -- can't make any robots, just add in the resources from the next minute and decrease the time remaining
-makeNextSimulations s [] = [trace ("no new robots case" ++ show (resources s)) (time $ s { resources=sumGenResources (rbts s) })]
--- make simulations for the result of each choice we could have made
-makeNextSimulations s newRobots = map (`addResources` newResources) nextSims
---makeNextSimulations s newRobots = map (flip addResources newResources) nextSimsWithRobots
-    where
-        nextSims = map (time . addRobotToSim s) newRobots
-        --nextSimsWithTime = map time nextSimsWithRobots
-        --nextSimsWithRobots = map (addRobotToSim s) newRobots
-        newResources = sumGenResources (rbts s)
+makeNextSimulations s newRobots
+    | null newRobots = [trace ("no new robots case" ++ show (resources s)) (time $ s { resources=(resources s) `addRes` newResources })]
+    | otherwise = nextSims
+        -- make simulations for the result of each choice we could have made
+        --makeNextSimulations s newRobots = nextSims
+        --makeNextSimulations s newRobots = map (flip addResources newResources) nextSimsWithRobots
+            where
+                nextSims = map ((`addResources` (trace ("new resources:" ++ show newResources) newResources)) . time . addRobotToSim s) newRobots
+                --nextSimsWithTime = map time nextSimsWithRobots
+                --nextSimsWithRobots = map (addRobotToSim s) newRobots
+                newResources = sumGenResources (rbts s)
 
 addRobotToSim :: Simulation -> Robot -> Simulation
 addRobotToSim s newRobot@(Robot _ creationRequirements _) =
     s {
-        rbts=newRobot:rbts s
-        , resources=subResources (resources s) creationRequirements
+        rbts=trace ("made new robot" ++ show newRobot) newRobot:rbts s
+        , resources=trace ("resources after" ++ show resourcesAfter) resourcesAfter
     }
+    where
+        resourcesAfter = subResources (resources s) creationRequirements
 
 subResources :: Resources -> [CreationRequirement] -> Resources
 subResources = foldr (flip subResource)

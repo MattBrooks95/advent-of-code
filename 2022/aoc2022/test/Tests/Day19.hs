@@ -164,6 +164,19 @@ resourcesTest =
         assertBool "hasResources, fail case"
         (hasResources dummyResources (CreationRequirement (ReqType Ore) 17))
     )
+    , TestCase (
+        assertEqual "add resources to simulation"
+        (Resources { oreRes=2, clayRes=2, obsRes=2, geodeRes=2 })
+        (resources $ addResources
+            (Simulation {
+                resources=Resources { oreRes=1, clayRes=1, obsRes=1, geodeRes=1 }
+                , blueprint=lineOneBlueprint
+                , rbts=[]
+                , timeRemaining=0
+                })
+            (Resources {oreRes=1, clayRes=1, obsRes=1, geodeRes=1 })
+        )
+    )
     ]
 
 oreRobot :: Robot

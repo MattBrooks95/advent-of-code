@@ -167,7 +167,7 @@ resourcesTest =
     ]
 
 oreRobot :: Robot
-oreRobot = Robot (RobotType Ore) [CreationRequirement (ReqType Clay) 2] GiveOre
+oreRobot = Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 2] GiveOre
 
 clayRobot :: Robot
 clayRobot = Robot (RobotType Clay) [] GiveClay

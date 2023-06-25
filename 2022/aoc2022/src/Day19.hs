@@ -10,6 +10,8 @@ import Data.List (
     , maximumBy
     )
 
+import Data.Maybe
+
 import Data.Function (
     on
     )
@@ -23,7 +25,9 @@ newtype ReqType = ReqType Resource
     deriving (Show, Eq)
 
 data CreationRequirement = CreationRequirement ReqType Int
-    deriving (Show, Eq)
+    deriving (Eq)
+instance Show CreationRequirement where
+    show (CreationRequirement (ReqType reqType) num) = "(Req " ++ show reqType ++ " " ++ show num ++ ")"
 
 newtype RobotType = RobotType Resource
     deriving (Show, Eq)
@@ -33,7 +37,15 @@ data Resources = Resources {
     , clayRes :: Int
     , obsRes :: Int
     , geodeRes :: Int
-} deriving (Show, Eq)
+} deriving (Eq)
+
+instance Show Resources where
+    show r =
+        "Resources (" ++ resourceCounts ++ ")"
+        where
+            resourceCounts = unwords
+                (map (\(res, resName) -> resName ++ ": " ++ show (getAvailableResource r res)) resPairs)
+            resPairs = [(Ore, "ore"), (Clay, "clay"), (Obsidian, "obs"), (Geode, "geode")]
 
 getAvailableResource :: Resources -> Resource -> Int
 getAvailableResource (Resources { oreRes=availOre} ) Ore = availOre
@@ -59,7 +71,18 @@ addRes (Resources { oreRes=ore1, clayRes=clay1, obsRes=obs1, geodeRes=geode1 }) 
     }
 
 data Robot = Robot RobotType [CreationRequirement] Giveable
-    deriving (Show, Eq)
+    deriving (Eq)
+
+instance Show Robot where
+    show (Robot (RobotType rType) reqs gives) =
+        "(Robot type:"
+        ++ show rType
+        ++ " " ++ show reqs
+        ++ " " ++ show gives
+        ++ ")"
+
+getRobotType :: Robot -> Resource
+getRobotType (Robot (RobotType rType) _ _) = rType
 
 makeOreRobot :: CreationRequirement -> Robot
 makeOreRobot req = Robot (RobotType Ore) [req] GiveOre
@@ -70,7 +93,16 @@ data Simulation = Simulation {
     , resources :: Resources
     , timeRemaining :: Int
     }
-    deriving (Show)
+
+instance Show Simulation where
+    show s = intercalate "\n" [
+        "=========== Simulation ============="
+        , show (blueprint s)
+        , "Robots (" ++ unwords (map (show . getRobotType) (rbts s)) ++ ")"
+        , show (resources s)
+        , "timeRemaining:" ++ show (timeRemaining s)
+        , "=========== Simulation ============="
+        ]
 
 time :: Simulation -> Simulation
 time s@(Simulation { timeRemaining=rTime }) = s { timeRemaining=rTime - 1 }
@@ -86,32 +118,37 @@ numGeodes = flip getAvailableResource Geode . resources
 runSimulation :: Simulation -> Simulation
 runSimulation s@Simulation { timeRemaining=remaining}
     | trace (show ("time remaining:" ++ show remaining)) remaining == 0 = s
+    -- | remaining == 0 = s
     | otherwise = maximumBy (compare `on` numGeodes) (map runSimulation (makeNextSimulations s canBeMadeRobots))
         where
             --totalResources = addRes re (resources s)
             --resourcesAddedNextMinute = sumGenResources (rbts s)
             startResources = resources s
-            canBeMadeRobots = genActions (blueprint s) (trace ("total available resources:" ++ show startResources) startResources)
+            --canBeMadeRobots = genActions (blueprint s) (trace ("total available resources:" ++ show startResources) startResources)
+            canBeMadeRobots = genActions (blueprint s) startResources
 
-makeNextSimulations :: Simulation -> [Robot] -> [Simulation]
+makeNextSimulations :: Simulation -> [Maybe Robot] -> [Simulation]
 -- can't make any robots, just add in the resources from the next minute and decrease the time remaining
 makeNextSimulations s newRobots
-    | null newRobots = [trace ("no new robots case" ++ show (resources s)) (time $ s { resources=(resources s) `addRes` newResources })]
+    | null (catMaybes newRobots) = [time $ s { resources=resources s `addRes` newResources }]
     | otherwise = nextSims
         -- make simulations for the result of each choice we could have made
         --makeNextSimulations s newRobots = nextSims
         --makeNextSimulations s newRobots = map (flip addResources newResources) nextSimsWithRobots
             where
-                nextSims = map ((`addResources` (trace ("new resources:" ++ show newResources) newResources)) . time . addRobotToSim s) newRobots
+                --nextSims = map ((`addResources` (trace ("new resources:" ++ show newResources) newResources)) . time . addRobotToSim s) newRobots
+                nextSims = map ((`addResources` newResources) . time . addRobotToSim s) newRobots
                 --nextSimsWithTime = map time nextSimsWithRobots
                 --nextSimsWithRobots = map (addRobotToSim s) newRobots
                 newResources = sumGenResources (rbts s)
 
-addRobotToSim :: Simulation -> Robot -> Simulation
-addRobotToSim s newRobot@(Robot _ creationRequirements _) =
+addRobotToSim :: Simulation -> Maybe Robot -> Simulation
+addRobotToSim s Nothing = s
+addRobotToSim s (Just newRobot@(Robot _ creationRequirements _)) =
     s {
-        rbts=trace ("made new robot" ++ show newRobot) newRobot:rbts s
-        , resources=trace ("resources after" ++ show resourcesAfter) resourcesAfter
+        --rbts=trace ("made new robot" ++ show newRobot) newRobot:rbts s
+        rbts=newRobot:rbts s
+        , resources=resourcesAfter
     }
     where
         resourcesAfter = subResources (resources s) creationRequirements
@@ -136,12 +173,13 @@ sumGenResources currRobots =
 genResources :: [Robot] -> [Resources]
 genResources = map getRes
 
-genActions :: Blueprint -> Resources -> [Robot]
-genActions (BluePrint { robots=checkRobots }) res = filter (canAffordRobot res) checkRobots
+genActions :: Blueprint -> Resources -> [Maybe Robot]
+genActions (BluePrint { robots=checkRobots }) res = Nothing:map Just (filter (canAffordRobot res) checkRobots)
 
 canAffordRobot :: Resources -> Robot -> Bool
 canAffordRobot res (Robot _ creationReqs _) =
-    all (hasResources res) (trace ("creation requirement:" ++ show creationReqs) creationReqs)
+    --all (hasResources res) (trace ("creation requirement:" ++ show creationReqs) creationReqs)
+    all (hasResources res) creationReqs
 
 hasResources :: Resources -> CreationRequirement -> Bool
 hasResources res (CreationRequirement (ReqType needRes) numNeeded) =

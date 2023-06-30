@@ -142,7 +142,9 @@ alwaysMakeGeode _ canMakeRobots = case find ((== Geode) . getRobotType) (catMayb
 preferHighestLevel :: RobotStrategy
 preferHighestLevel _ [Nothing] = [Nothing]
 preferHighestLevel alreadyHaveRobots canMakeRobots =
-    if null newRobotTypes then [Nothing] else [Just $ maximum newRobotTypes]
+    case newRobotTypes of
+        [] -> canMakeRobots
+        newTypes -> map Just newTypes
     where
         newRobotTypes = filter (robotTypeNotExist . getRobotTypeWrapped) justRobots
         justRobots = catMaybes canMakeRobots

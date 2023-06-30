@@ -136,8 +136,10 @@ type RobotStrategy = [RobotType] -> [Maybe Robot] -> [Maybe Robot]
 
 alwaysMakeGeode :: RobotStrategy
 alwaysMakeGeode _ canMakeRobots = case find ((== Geode) . getRobotType) (catMaybes canMakeRobots) of
-    Just rbt@(Robot (RobotType Geode) _ _) -> trace " forced geode" [Just rbt]
-    _ -> trace ("num can make robots" ++ show (map (show . getRobotType) (catMaybes canMakeRobots))) canMakeRobots
+    --Just rbt@(Robot (RobotType Geode) _ _) -> trace " forced geode" [Just rbt]
+    Just rbt@(Robot (RobotType Geode) _ _) -> [Just rbt]
+    --_ -> trace ("num can make robots" ++ show (map (show . getRobotType) (catMaybes canMakeRobots))) canMakeRobots
+    _ -> canMakeRobots
 
 preferHighestLevel :: RobotStrategy
 preferHighestLevel _ [Nothing] = [Nothing]
@@ -153,13 +155,15 @@ preferHighestLevel alreadyHaveRobots canMakeRobots =
 
 runSimulation :: [RobotStrategy] -> Simulation -> Simulation
 runSimulation strategies s@Simulation { timeRemaining=remaining}
-    | trace (show ("time remaining:" ++ show remaining)) remaining == 0 = s
+    -- | trace (show ("time remaining:" ++ show remaining)) remaining == 0 = s
+    | remaining == 0 = s
     -- | remaining == 0 = s
     | otherwise = maximumBy (compare `on` numGeodes) (map (runSimulation strategies) (makeNextSimulations s (applyRobotStrategies strategies (map getRobotTypeWrapped (rbts s)) canBeMadeRobots)))
         where
             --totalResources = addRes re (resources s)
             --resourcesAddedNextMinute = sumGenResources (rbts s)
-            startResources = trace ("resources:" ++ show (resources s)) resources s
+            --startResources = trace ("resources:" ++ show (resources s)) resources s
+            startResources = resources s
             --canBeMadeRobots = genActions (blueprint s) (trace ("total available resources:" ++ show startResources) startResources)
             canBeMadeRobots = genActions (blueprint s) startResources
 
@@ -252,7 +256,9 @@ run input = do
     case P.runParser parse () "" input of
         Left e -> print e
         Right blueprints -> do
-            let numBlueprints = 1
+            let
+                --numBlueprints = 1
+                numBlueprints = length blueprints
                 numMinutes = 24
                 simulations = map (\bp -> Simulation {
                     blueprint=bp

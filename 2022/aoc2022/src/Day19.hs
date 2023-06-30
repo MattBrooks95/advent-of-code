@@ -8,6 +8,8 @@ import Debug.Trace
 import Data.List (
     intercalate
     , maximumBy
+    , find
+    , foldl'
     )
 
 import Data.Maybe
@@ -31,6 +33,15 @@ instance Show CreationRequirement where
 
 newtype RobotType = RobotType Resource
     deriving (Show, Eq)
+
+robotTypeToNumber :: RobotType -> Int
+robotTypeToNumber (RobotType Ore) = 0
+robotTypeToNumber (RobotType Clay) = 0
+robotTypeToNumber (RobotType Obsidian) = 0
+robotTypeToNumber (RobotType Geode) = 0
+
+instance Ord RobotType where
+    type1 <= type2 = robotTypeToNumber type1 <= robotTypeToNumber type2
 
 data Resources = Resources {
     oreRes :: Int
@@ -73,6 +84,9 @@ addRes (Resources { oreRes=ore1, clayRes=clay1, obsRes=obs1, geodeRes=geode1 }) 
 data Robot = Robot RobotType [CreationRequirement] Giveable
     deriving (Eq)
 
+instance Ord Robot where
+    (Robot rbtType _ _) <= (Robot rbtType2 _ _) = rbtType <= rbtType2
+
 instance Show Robot where
     show (Robot (RobotType rType) reqs gives) =
         "(Robot type:"
@@ -80,6 +94,9 @@ instance Show Robot where
         ++ " " ++ show reqs
         ++ " " ++ show gives
         ++ ")"
+
+getRobotTypeWrapped :: Robot -> RobotType
+getRobotTypeWrapped (Robot robotType _ _) = robotType
 
 getRobotType :: Robot -> Resource
 getRobotType (Robot (RobotType rType) _ _) = rType
@@ -115,17 +132,41 @@ numGeodes :: Simulation -> Int
 numGeodes = flip getAvailableResource Geode . resources
 --let res = resources s in getAvailableResource res Geode
 
-runSimulation :: Simulation -> Simulation
-runSimulation s@Simulation { timeRemaining=remaining}
+type RobotStrategy = [RobotType] -> [Maybe Robot] -> [Maybe Robot]
+
+alwaysMakeGeode :: RobotStrategy
+alwaysMakeGeode _ canMakeRobots = case find ((== Geode) . getRobotType) (catMaybes canMakeRobots) of
+    Just rbt@(Robot (RobotType Geode) _ _) -> trace " forced geode" [Just rbt]
+    _ -> trace ("num can make robots" ++ show (map (show . getRobotType) (catMaybes canMakeRobots))) canMakeRobots
+
+preferHighestLevel :: RobotStrategy
+preferHighestLevel _ [Nothing] = [Nothing]
+preferHighestLevel alreadyHaveRobots canMakeRobots =
+    if null newRobotTypes then [Nothing] else [Just $ maximum newRobotTypes]
+    where
+        newRobotTypes = filter (robotTypeNotExist . getRobotTypeWrapped) justRobots
+        justRobots = catMaybes canMakeRobots
+        robotTypeNotExist = flip notElem alreadyHaveRobots
+
+
+runSimulation :: [RobotStrategy] -> Simulation -> Simulation
+runSimulation strategies s@Simulation { timeRemaining=remaining}
     | trace (show ("time remaining:" ++ show remaining)) remaining == 0 = s
     -- | remaining == 0 = s
-    | otherwise = maximumBy (compare `on` numGeodes) (map runSimulation (makeNextSimulations s canBeMadeRobots))
+    | otherwise = maximumBy (compare `on` numGeodes) (map (runSimulation strategies) (makeNextSimulations s (applyRobotStrategies strategies (map getRobotTypeWrapped (rbts s)) canBeMadeRobots)))
         where
             --totalResources = addRes re (resources s)
             --resourcesAddedNextMinute = sumGenResources (rbts s)
-            startResources = resources s
+            startResources = trace ("resources:" ++ show (resources s)) resources s
             --canBeMadeRobots = genActions (blueprint s) (trace ("total available resources:" ++ show startResources) startResources)
             canBeMadeRobots = genActions (blueprint s) startResources
+
+applyRobotStrategies :: [RobotStrategy] -> [RobotType] -> [Maybe Robot] -> [Maybe Robot]
+applyRobotStrategies strategies alreadyRobotTypes canMakeRobots =
+    foldl' (\acc nextStrat -> nextStrat acc) canMakeRobots strategiesGivenAlreadyRobots
+    where
+        strategiesGivenAlreadyRobots = map (\x -> x alreadyRobotTypes) strategies
+
 
 makeNextSimulations :: Simulation -> [Maybe Robot] -> [Simulation]
 -- can't make any robots, just add in the resources from the next minute and decrease the time remaining
@@ -219,7 +260,9 @@ run input = do
                     }
                     ) blueprints
             --print blueprints
-            mapM_ print (take numBlueprints (map runSimulation simulations))
+            mapM_ print (take numBlueprints (map (runSimulation strategies) simulations))
+        where
+            strategies = [preferHighestLevel, alwaysMakeGeode]
 
 
 parseObs :: P.Parsec String () String

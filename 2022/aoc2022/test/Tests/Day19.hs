@@ -207,13 +207,18 @@ simulationTests = TestList [
     )
     , TestCase (
         assertEqual "can make robots with resources"
-        [Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre, Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay]
+        [Nothing, Just $ Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre, Just $ Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay]
         (genActions lineOneBlueprint (Resources { oreRes=3, clayRes=0, obsRes=0, geodeRes=0 }))
     )
     , TestCase (
         assertEqual "can not make robots with resources"
-        []
+        [Nothing]
         (genActions lineOneBlueprint (Resources { oreRes=0, clayRes=0, obsRes=0, geodeRes=0 }))
+    )
+    , TestCase (
+        assertEqual "can make geode robot, always makes geode robot"
+        [Just $ Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes]
+        (alwaysMakeGeode $ genActions lineOneBlueprint (Resources { oreRes=3, clayRes=0, obsRes=9, geodeRes=0 }))
     )
     ]
 --lineOneBlueprint :: Blueprint

@@ -3,7 +3,10 @@ module Day19 where
 import qualified Text.Parsec as P
 import qualified Parsing as PS
 
-import Debug.Trace
+--import Debug.Trace
+import Control.Monad.ST
+import Control.Monad
+import Data.STRef
 
 import Data.List (
     intercalate
@@ -141,9 +144,9 @@ alwaysMakeGeode _ canMakeRobots = case find ((== Geode) . getRobotType) (catMayb
     --_ -> trace ("num can make robots" ++ show (map (show . getRobotType) (catMaybes canMakeRobots))) canMakeRobots
     _ -> canMakeRobots
 
-preferHighestLevel :: RobotStrategy
-preferHighestLevel _ [Nothing] = [Nothing]
-preferHighestLevel alreadyHaveRobots canMakeRobots =
+preferNewRobot :: RobotStrategy
+preferNewRobot _ [Nothing] = [Nothing]
+preferNewRobot alreadyHaveRobots canMakeRobots =
     case newRobotTypes of
         [] -> canMakeRobots
         newTypes -> map Just newTypes
@@ -169,7 +172,7 @@ runSimulation strategies s@Simulation { timeRemaining=remaining}
 
 applyRobotStrategies :: [RobotStrategy] -> [RobotType] -> [Maybe Robot] -> [Maybe Robot]
 applyRobotStrategies strategies alreadyRobotTypes canMakeRobots =
-    foldl' (\acc nextStrat -> nextStrat acc) canMakeRobots strategiesGivenAlreadyRobots
+    foldr (\nextStrat acc -> nextStrat acc) canMakeRobots strategiesGivenAlreadyRobots
     where
         strategiesGivenAlreadyRobots = map (\x -> x alreadyRobotTypes) strategies
 
@@ -201,7 +204,7 @@ addRobotToSim s (Just newRobot@(Robot _ creationRequirements _)) =
         resourcesAfter = subResources (resources s) creationRequirements
 
 subResources :: Resources -> [CreationRequirement] -> Resources
-subResources = foldr (flip subResource)
+subResources = foldl' subResource
 --the compiler told me that I didn't need to write all of this
 --subResources res requirements =
     --foldr (\createReq prevRes -> subResource prevRes createReq) res requirements
@@ -212,10 +215,16 @@ subResource res (CreationRequirement (ReqType Clay) number) = res { clayRes=clay
 subResource res (CreationRequirement (ReqType Obsidian) number) = res { obsRes=obsRes res - number }
 subResource _ (CreationRequirement (ReqType Geode) _) = undefined -- geodes can't be used to make anything
 
+--sumGenResources :: [Robot] -> Resources
+--sumGenResources makeResRobots = runST $ do
+--    newRes <- newSTRef emptyResources
+--    forM_ makeResRobots $ \rbt -> do
+--        modifySTRef' newRes $ addRes (getRes rbt)
+--    readSTRef newRes
+
 sumGenResources :: [Robot] -> Resources
-sumGenResources currRobots =
-    let madeRes = genResources currRobots in
-        foldl addRes emptyResources madeRes
+sumGenResources =
+    foldl' (\resAcc rbt ->  resAcc `addRes` getRes rbt) emptyResources
 
 genResources :: [Robot] -> [Resources]
 genResources = map getRes
@@ -243,7 +252,7 @@ data Blueprint = BluePrint {
     bpId :: Int
     , robots :: [Robot]
     } deriving (
-         Eq
+        Eq
         )
 instance Show Blueprint where
     show bp = "\n(BP " ++ show (bpId bp)
@@ -257,8 +266,8 @@ run input = do
         Left e -> print e
         Right blueprints -> do
             let
-                --numBlueprints = 1
-                numBlueprints = length blueprints
+                numBlueprints = 1
+                --numBlueprints = length blueprints
                 numMinutes = 24
                 simulations = map (\bp -> Simulation {
                     blueprint=bp
@@ -268,10 +277,15 @@ run input = do
                     }
                     ) blueprints
             --print blueprints
-            mapM_ print (take numBlueprints (map (runSimulation strategies) simulations))
+                solvedSimulations = take numBlueprints (map (runSimulation strategies) simulations)
+                answers = map (\s -> (qualityLevel s, bpId (blueprint s))) solvedSimulations
+            mapM_ print answers
         where
-            strategies = [preferHighestLevel, alwaysMakeGeode]
+            strategies = [preferNewRobot, alwaysMakeGeode]
+            --strategies = [alwaysMakeGeode]
 
+qualityLevel :: Simulation -> Int
+qualityLevel s = let bp = blueprint s in bpId bp * getAvailableResource (resources s) Geode
 
 parseObs :: P.Parsec String () String
 parseObs = P.string "obsidian"

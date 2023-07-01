@@ -218,7 +218,7 @@ simulationTests = TestList [
     , TestCase (
         assertEqual "can make geode robot, always makes geode robot"
         [Just $ Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes]
-        (alwaysMakeGeode $ genActions lineOneBlueprint (Resources { oreRes=3, clayRes=0, obsRes=9, geodeRes=0 }))
+        (alwaysMakeGeode [] $ genActions lineOneBlueprint (Resources { oreRes=3, clayRes=0, obsRes=9, geodeRes=0 }))
     )
     ]
 --lineOneBlueprint :: Blueprint

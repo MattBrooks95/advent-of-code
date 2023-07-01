@@ -3,10 +3,10 @@ module Day19 where
 import qualified Text.Parsec as P
 import qualified Parsing as PS
 
---import Debug.Trace
-import Control.Monad.ST
-import Control.Monad
-import Data.STRef
+import Debug.Trace
+--import Control.Monad.ST
+--import Control.Monad
+--import Data.STRef
 
 import Data.List (
     intercalate
@@ -139,36 +139,45 @@ type RobotStrategy = [RobotType] -> [Maybe Robot] -> [Maybe Robot]
 
 alwaysMakeGeode :: RobotStrategy
 alwaysMakeGeode _ canMakeRobots = case find ((== Geode) . getRobotType) (catMaybes canMakeRobots) of
-    --Just rbt@(Robot (RobotType Geode) _ _) -> trace " forced geode" [Just rbt]
     Just rbt@(Robot (RobotType Geode) _ _) -> [Just rbt]
-    --_ -> trace ("num can make robots" ++ show (map (show . getRobotType) (catMaybes canMakeRobots))) canMakeRobots
     _ -> canMakeRobots
 
-preferNewRobot :: RobotStrategy
-preferNewRobot _ [Nothing] = [Nothing]
-preferNewRobot alreadyHaveRobots canMakeRobots =
-    case newRobotTypes of
-        [] -> canMakeRobots
-        newTypes -> map Just newTypes
-    where
-        newRobotTypes = filter (robotTypeNotExist . getRobotTypeWrapped) justRobots
-        justRobots = catMaybes canMakeRobots
-        robotTypeNotExist = flip notElem alreadyHaveRobots
+--preferNewRobot :: RobotStrategy
+--preferNewRobot _ [Nothing] = [Nothing]
+--preferNewRobot alreadyHaveRobots canMakeRobots =
+--    case newRobotTypes of
+--        [] -> canMakeRobots
+--        newTypes -> map Just newTypes
+--    where
+--        newRobotTypes = filter (robotTypeNotExist . getRobotTypeWrapped) justRobots
+--        justRobots = catMaybes canMakeRobots
+--        robotTypeNotExist = flip notElem alreadyHaveRobots
 
 
-runSimulation :: [RobotStrategy] -> Simulation -> Simulation
-runSimulation strategies s@Simulation { timeRemaining=remaining}
-    -- | trace (show ("time remaining:" ++ show remaining)) remaining == 0 = s
-    | remaining == 0 = s
+runSimulation :: [RobotStrategy] -> Simulation -> [Simulation]
+runSimulation strategies s = let (doneSims, _) = go ([], [s]) in doneSims
     -- | remaining == 0 = s
-    | otherwise = maximumBy (compare `on` numGeodes) (map (runSimulation strategies) (makeNextSimulations s (applyRobotStrategies strategies (map getRobotTypeWrapped (rbts s)) canBeMadeRobots)))
-        where
-            --totalResources = addRes re (resources s)
-            --resourcesAddedNextMinute = sumGenResources (rbts s)
-            --startResources = trace ("resources:" ++ show (resources s)) resources s
-            startResources = resources s
-            --canBeMadeRobots = genActions (blueprint s) (trace ("total available resources:" ++ show startResources) startResources)
-            canBeMadeRobots = genActions (blueprint s) startResources
+    -- | remaining == 0 = s
+    -- | otherwise = maximumBy (compare `on` numGeodes) (map (runSimulation strategies) (makeNextSimulations s (applyRobotStrategies strategies (map getRobotTypeWrapped (rbts s)) canBeMadeRobots)))
+    --     where
+    --         --totalResources = addRes re (resources s)
+    --         --resourcesAddedNextMinute = sumGenResources (rbts s)
+    --         startResources = resources s
+    --         canBeMadeRobots = genActions (blueprint s) startResources
+    where
+        go :: ([Simulation], [Simulation]) -> ([Simulation], [Simulation])
+        go final@(_, []) = final
+        go (doneSims, processSim:remainingSims) = case timeRemaining (trace (show processSim) processSim) of
+            0 -> go (processSim:doneSims, remainingSims)
+            _ ->
+                let nextSims = makeNextSimulations processSim canBeMadeRobotsAfterStrategies
+                in
+                    go (doneSims, nextSims `seq` (nextSims ++ remainingSims))
+            where
+                startResources = resources processSim
+                canBeMadeRobots = genActions (blueprint s) startResources
+                currRobotTypes = map getRobotTypeWrapped (rbts s)
+                canBeMadeRobotsAfterStrategies = applyRobotStrategies strategies currRobotTypes canBeMadeRobots
 
 applyRobotStrategies :: [RobotStrategy] -> [RobotType] -> [Maybe Robot] -> [Maybe Robot]
 applyRobotStrategies strategies alreadyRobotTypes canMakeRobots =
@@ -180,23 +189,28 @@ applyRobotStrategies strategies alreadyRobotTypes canMakeRobots =
 makeNextSimulations :: Simulation -> [Maybe Robot] -> [Simulation]
 -- can't make any robots, just add in the resources from the next minute and decrease the time remaining
 makeNextSimulations s newRobots
-    | null (catMaybes newRobots) = [time $ s { resources=resources s `addRes` newResources }]
+    | null (catMaybes newRobots) = let newSim = time $ addResources s newResources in
+        [newSim]
     | otherwise = nextSims
         -- make simulations for the result of each choice we could have made
         --makeNextSimulations s newRobots = nextSims
         --makeNextSimulations s newRobots = map (flip addResources newResources) nextSimsWithRobots
             where
-                --nextSims = map ((`addResources` (trace ("new resources:" ++ show newResources) newResources)) . time . addRobotToSim s) newRobots
-                nextSims = map ((`addResources` newResources) . time . addRobotToSim s) newRobots
+                nextSims = map (\r -> nextStepSim newResources r s) newRobots
+                --nextSims = map ((`addResources` newResources) . time . addRobotToSim s) newRobots
                 --nextSimsWithTime = map time nextSimsWithRobots
                 --nextSimsWithRobots = map (addRobotToSim s) newRobots
                 newResources = sumGenResources (rbts s)
 
-addRobotToSim :: Simulation -> Maybe Robot -> Simulation
-addRobotToSim s Nothing = s
-addRobotToSim s (Just newRobot@(Robot _ creationRequirements _)) =
+nextStepSim :: Resources -> Maybe Robot -> Simulation -> Simulation
+nextStepSim newResources potentialRobot sim =
+    let withResources = addResources sim newResources in
+        (time . addRobotToSim potentialRobot) withResources
+
+addRobotToSim :: Maybe Robot -> Simulation -> Simulation
+addRobotToSim Nothing s = s
+addRobotToSim (Just newRobot@(Robot _ creationRequirements _)) s =
     s {
-        --rbts=trace ("made new robot" ++ show newRobot) newRobot:rbts s
         rbts=newRobot:rbts s
         , resources=resourcesAfter
     }
@@ -234,7 +248,6 @@ genActions (BluePrint { robots=checkRobots }) res = Nothing:map Just (filter (ca
 
 canAffordRobot :: Resources -> Robot -> Bool
 canAffordRobot res (Robot _ creationReqs _) =
-    --all (hasResources res) (trace ("creation requirement:" ++ show creationReqs) creationReqs)
     all (hasResources res) creationReqs
 
 hasResources :: Resources -> CreationRequirement -> Bool
@@ -277,12 +290,19 @@ run input = do
                     }
                     ) blueprints
             --print blueprints
-                solvedSimulations = take numBlueprints (map (runSimulation strategies) simulations)
-                answers = map (\s -> (qualityLevel s, bpId (blueprint s))) solvedSimulations
+                solvedSimulations = map (runSimulation strategies) simulations
+                printSolutions = take numBlueprints solvedSimulations
+                bestSolutions = map bestSim printSolutions
+                answers = map (\s -> (qualityLevel s, bpId (blueprint s))) bestSolutions
             mapM_ print answers
+            --mapM_ (print . length) solvedSimulations
         where
-            strategies = [preferNewRobot, alwaysMakeGeode]
-            --strategies = [alwaysMakeGeode]
+            bestSim :: [Simulation] -> Simulation
+            bestSim = maximumBy (compare `on` numGeodes)
+    -- | otherwise = maximumBy (compare `on` numGeodes) (map (runSimulation strategies) (makeNextSimulations s (applyRobotStrategies strategies (map getRobotTypeWrapped (rbts s)) canBeMadeRobots)))
+            --strategies = []
+            strategies = [alwaysMakeGeode]
+            --strategies = [preferNewRobot, alwaysMakeGeode]
 
 qualityLevel :: Simulation -> Int
 qualityLevel s = let bp = blueprint s in bpId bp * getAvailableResource (resources s) Geode

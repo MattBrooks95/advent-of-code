@@ -6,6 +6,8 @@ import Day19
 
 import Test.HUnit
 
+import qualified Data.Set as S
+
 parsingTests :: Test
 parsingTests = TestList [
     parseReqTypes
@@ -13,6 +15,7 @@ parsingTests = TestList [
     , parseRobotTests
     , parseBlueprintTests
     , simulationTests
+    , purgeSimsTests
     ]
 
 parseReqTypes :: Test
@@ -231,3 +234,22 @@ simulationTests = TestList [
 --        , Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes
 --    ]
 --    }
+
+purgeSimsTests :: Test
+purgeSimsTests = TestList [
+    TestCase (
+        assertEqual "new robot type is recorded"
+        (S.fromList [(RobotType Ore, 1)])
+        (potentialFirsts 1 [Just oreRobot])
+    )
+    , TestCase (
+        assertEqual "no new robot, no new first record"
+        S.empty
+        (potentialFirsts 1 [Nothing])
+    )
+    , TestCase (
+        assertEqual "new first is added to the set"
+        (S.fromList [(RobotType Geode)])
+        ()
+    )
+    ]

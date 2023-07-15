@@ -8,6 +8,7 @@ import Debug.Trace
 --import Control.Monad
 --import Data.STRef
 
+import qualified Data.Set as S
 import Data.List (
     intercalate
     , maximumBy
@@ -15,6 +16,7 @@ import Data.List (
     , foldl'
     )
 
+import qualified Data.Map as M
 import Data.Maybe
 
 import Data.Function (
@@ -153,9 +155,12 @@ alwaysMakeGeode _ canMakeRobots = case find ((== Geode) . getRobotType) (catMayb
 --        justRobots = catMaybes canMakeRobots
 --        robotTypeNotExist = flip notElem alreadyHaveRobots
 
+type Firsts = S.Set (RobotType, Int)
+
+type SimulationsByTime = M.Map Int [Simulation]
 
 runSimulation :: [RobotStrategy] -> Simulation -> [Simulation]
-runSimulation strategies s = let (doneSims, _) = go ([], [s]) in doneSims
+runSimulation strategies startS = let (doneSims, _, _) = go ([], M.fromList [(0, [startS])], 0) in doneSims
     -- | remaining == 0 = s
     -- | remaining == 0 = s
     -- | otherwise = maximumBy (compare `on` numGeodes) (map (runSimulation strategies) (makeNextSimulations s (applyRobotStrategies strategies (map getRobotTypeWrapped (rbts s)) canBeMadeRobots)))
@@ -165,19 +170,50 @@ runSimulation strategies s = let (doneSims, _) = go ([], [s]) in doneSims
     --         startResources = resources s
     --         canBeMadeRobots = genActions (blueprint s) startResources
     where
-        go :: ([Simulation], [Simulation]) -> ([Simulation], [Simulation])
-        go final@(_, []) = final
-        go (doneSims, processSim:remainingSims) = case timeRemaining (trace (show processSim) processSim) of
-            0 -> go (processSim:doneSims, remainingSims)
-            _ ->
-                let nextSims = makeNextSimulations processSim canBeMadeRobotsAfterStrategies
-                in
-                    go (doneSims, nextSims `seq` (nextSims ++ remainingSims))
-            where
-                startResources = resources processSim
-                canBeMadeRobots = genActions (blueprint s) startResources
-                currRobotTypes = map getRobotTypeWrapped (rbts s)
-                canBeMadeRobotsAfterStrategies = applyRobotStrategies strategies currRobotTypes canBeMadeRobots
+        go :: ([Simulation], SimulationsByTime, Int) -> ([Simulation], SimulationsByTime, Int)
+        go (doneSims, simsByTime, processTime)
+            | M.null simsByTime = (doneSims, simsByTime, processTime)
+            | processTime == 0 = (doneSims, simsByTime, processTime)
+            | otherwise = case M.lookup processTime simsByTime of
+                Nothing -> go (doneSims, simsByTime, processTime - 1)
+                Just [] -> go (doneSims, simsByTime, processTime - 1)
+                Just (processSim:remainingSims) ->
+                    let rTime = timeRemaining processSim
+                        currRobotTypes = map getRobotTypeWrapped (rbts processSim)
+                        startResources = resources processSim
+                        canBeMadeRobots = genActions (blueprint startS) startResources
+                        canBeMadeRobotsAfterStrategies = applyRobotStrategies strategies currRobotTypes canBeMadeRobots
+                    in
+                    case timeRemaining (trace (show processSim) processSim) of
+                --go (doneSims, processSim:remainingSims) = case timeRemaining processSim of
+                        0 -> go (processSim:doneSims, M.insert processTime remainingSims simsByTime, processTime)
+                        _ -> let nextSims = makeNextSimulations processSim canBeMadeRobotsAfterStrategies in
+                            case M.lookup (processTime - 1) simsByTime of
+                                Nothing -> go (doneSims, M.insert (processTime - 1) nextSims (M.insert processTime remainingSims simsByTime), processTime)
+                                Just alreadyNextSims -> go (doneSims, M.insert (processTime - 1) (nextSims ++ alreadyNextSims) simsByTime, processTime)
+
+detectNewRobotType :: [RobotType] -> S.Set RobotType -> S.Set RobotType
+detectNewRobotType newRobots = S.difference (S.fromList newRobots)
+
+hasRobotType :: RobotType -> [RobotType] -> Bool
+robotType `hasRobotType` listOfRobotTypes = robotType `elem` listOfRobotTypes
+
+hasGeodeRobotSim :: Simulation -> Bool
+hasGeodeRobotSim s = let currRobotTypes = map getRobotTypeWrapped (rbts s) in
+    hasRobotType (RobotType Geode) currRobotTypes
+
+-- idea: when you make a geode robot for the first time, you can remove all simulations
+-- with the same amount of time remaining that do not have/can not make a geode robot
+purgeBadStrategies :: Firsts -> [Simulation] -> [Simulation]
+purgeBadStrategies firsts sims = S.foldl' (\acc first -> filter (not . isBadSim first) acc) sims firsts
+
+getRobotTypesOfSim :: Simulation -> S.Set RobotType
+getRobotTypesOfSim (Simulation { rbts=thisSimRobots }) = S.fromList (map getRobotTypeWrapped thisSimRobots)
+
+isBadSim :: (RobotType, Int) -> Simulation -> Bool
+isBadSim (rType, timeFound) sim
+    | timeRemaining sim >= timeFound = False
+    | otherwise = let simTypes = getRobotTypesOfSim sim in rType `S.member` simTypes
 
 applyRobotStrategies :: [RobotStrategy] -> [RobotType] -> [Maybe Robot] -> [Maybe Robot]
 applyRobotStrategies strategies alreadyRobotTypes canMakeRobots =
@@ -281,7 +317,7 @@ run input = do
             let
                 numBlueprints = 1
                 --numBlueprints = length blueprints
-                numMinutes = 24
+                numMinutes = 10
                 simulations = map (\bp -> Simulation {
                     blueprint=bp
                     , rbts=[Robot (RobotType Ore) [] GiveOre]

@@ -37,9 +37,9 @@ newtype RobotType = RobotType Resource
 
 robotTypeToNumber :: RobotType -> Int
 robotTypeToNumber (RobotType Ore) = 0
-robotTypeToNumber (RobotType Clay) = 0
-robotTypeToNumber (RobotType Obsidian) = 0
-robotTypeToNumber (RobotType Geode) = 0
+robotTypeToNumber (RobotType Clay) = 1
+robotTypeToNumber (RobotType Obsidian) = 2
+robotTypeToNumber (RobotType Geode) = 3
 
 instance Ord RobotType where
     type1 <= type2 = robotTypeToNumber type1 <= robotTypeToNumber type2
@@ -105,9 +105,22 @@ getRobotType (Robot (RobotType rType) _ _) = rType
 makeOreRobot :: CreationRequirement -> Robot
 makeOreRobot req = Robot (RobotType Ore) [req] GiveOre
 
+data RobotCount = RobotCount {
+    rcOre :: Int
+    , rcClay :: Int
+    , rcObs :: Int
+    , rcGeode :: Int
+    } deriving (Show)
+
+addRobot :: RobotType -> RobotCount -> RobotCount
+addRobot (RobotType Ore) rc@(RobotCount { rcOre=ore }) = rc { rcOre=ore + 1 }
+addRobot (RobotType Clay) rc@(RobotCount { rcClay=clay }) = rc { rcClay=clay + 1 }
+addRobot (RobotType Obsidian) rc@(RobotCount { rcObs=obsidian }) = rc { rcObs=obsidian + 1 }
+addRobot (RobotType Geode) rc@(RobotCount { rcGeode=geode }) = rc { rcGeode=geode + 1 }
+
 data Simulation = Simulation {
     blueprint :: Blueprint
-    , rbts :: [Robot]
+    , rbts :: RobotCount
     , resources :: Resources
     , timeRemaining :: Int
     }
@@ -116,7 +129,7 @@ instance Show Simulation where
     show s = intercalate "\n" [
         "=========== Simulation ============="
         , show (blueprint s)
-        , "Robots (" ++ unwords (map (show . getRobotType) (rbts s)) ++ ")"
+        , show (rbts s)
         , show (resources s)
         , "timeRemaining:" ++ show (timeRemaining s)
         , "=========== Simulation ============="
@@ -148,15 +161,14 @@ runSimulation startS = startS
 detectNewRobotType :: [RobotType] -> S.Set RobotType -> S.Set RobotType
 detectNewRobotType newRobots = S.difference (S.fromList newRobots)
 
-hasRobotType :: RobotType -> [RobotType] -> Bool
-robotType `hasRobotType` listOfRobotTypes = robotType `elem` listOfRobotTypes
+hasRobotType :: RobotType -> RobotCount -> Bool
+hasRobotType (RobotType Ore) rc = rcOre rc > 0
+hasRobotType (RobotType Clay) rc = rcClay rc > 0
+hasRobotType (RobotType Obsidian) rc = rcObs rc > 0
+hasRobotType (RobotType Geode) rc = rcGeode rc > 0
 
 hasGeodeRobotSim :: Simulation -> Bool
-hasGeodeRobotSim s = let currRobotTypes = map getRobotTypeWrapped (rbts s) in
-    hasRobotType (RobotType Geode) currRobotTypes
-
-getRobotTypesOfSim :: Simulation -> S.Set RobotType
-getRobotTypesOfSim (Simulation { rbts=thisSimRobots }) = S.fromList (map getRobotTypeWrapped thisSimRobots)
+hasGeodeRobotSim s = hasRobotType (RobotType Geode) (rbts s)
 
 makeNextSimulations :: Simulation -> [Maybe Robot] -> [Simulation]
 -- can't make any robots, just add in the resources from the next minute and decrease the time remaining
@@ -177,7 +189,7 @@ addRobotToSim :: Maybe Robot -> Simulation -> Simulation
 addRobotToSim Nothing s = s
 addRobotToSim (Just newRobot@(Robot _ creationRequirements _)) s =
     s {
-        rbts=newRobot:rbts s
+        rbts=addRobot (getRobotTypeWrapped newRobot) (rbts s)
         , resources=resourcesAfter
     }
     where
@@ -195,16 +207,13 @@ subResource res (CreationRequirement (ReqType Clay) number) = res { clayRes=clay
 subResource res (CreationRequirement (ReqType Obsidian) number) = res { obsRes=obsRes res - number }
 subResource _ (CreationRequirement (ReqType Geode) _) = undefined -- geodes can't be used to make anything
 
---sumGenResources :: [Robot] -> Resources
---sumGenResources makeResRobots = runST $ do
---    newRes <- newSTRef emptyResources
---    forM_ makeResRobots $ \rbt -> do
---        modifySTRef' newRes $ addRes (getRes rbt)
---    readSTRef newRes
-
-sumGenResources :: [Robot] -> Resources
-sumGenResources =
-    foldl' (\resAcc rbt ->  resAcc `addRes` getRes rbt) emptyResources
+sumGenResources :: RobotCount -> Resources
+sumGenResources rc = Resources {
+    oreRes = rcOre rc
+    , clayRes = rcClay rc
+    , obsRes = rcObs rc
+    , geodeRes = rcGeode rc
+    }
 
 genResources :: [Robot] -> [Resources]
 genResources = map getRes
@@ -250,7 +259,7 @@ run input = do
                 numMinutes = 10
                 simulations = map (\bp -> Simulation {
                     blueprint=bp
-                    , rbts=[Robot (RobotType Ore) [] GiveOre]
+                    , rbts=RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }
                     , resources=emptyResources
                     , timeRemaining=numMinutes
                     }

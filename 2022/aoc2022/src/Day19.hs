@@ -17,6 +17,7 @@ import Data.List (
     , maximumBy
     , find
     , foldl'
+    , minimumBy
     )
 
 import qualified Data.Map as M
@@ -57,6 +58,14 @@ data Resources = Resources {
     , obsRes :: Int
     , geodeRes :: Int
 } deriving (Eq)
+
+resourcesScalar :: Int -> Resources -> Resources
+resourcesScalar scalar res = Resources {
+    oreRes=oreRes res * scalar
+    , clayRes=clayRes res * scalar
+    , obsRes=obsRes res * scalar
+    , geodeRes=geodeRes res * scalar
+    }
 
 instance Show Resources where
     show r =
@@ -160,16 +169,41 @@ type RobotStrategy = [RobotType] -> [Maybe Robot] -> [Maybe Robot]
 type SimulationsByTime = M.Map Int [Simulation]
 
 runSimulation :: Simulation -> Simulation
-runSimulation startS = startS
+runSimulation startS = case toNextDecision startS of
+    -- we have no decision to make here, skip ahead to the next decision
+    Left nextSim -> runSimulation nextSim
+    -- we can make a robot this turn, we must decide which robot if any to make
+    -- TODO apply the optimization you read about online where refusing to make a robot
+    -- at a given time T means that you will not make that robot again until you make a robot
+    -- of a different type. The reason is, that if you were going to make that robot anyway
+    -- you should have made it as soon as possible
+    Right canMakeRobots -> undefined -- TODO return maximumBy geodes of simulations that result from each robot making option
 
 toNextDecision :: Simulation -> Either Simulation [Robot]
-toNextDecision (Simulation { blueprint=bp, resources=res }) =
+toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
     let canMakeRobots = genActions bp res
     in
         if null canMakeRobots
-        then Left undefined
+        then
+            let (_, soonestRobotTime) = soonestRobot $ timeToRobots bp res rc in
+                Left $ advance sim soonestRobotTime
         else Right canMakeRobots
 
+advance :: Simulation -> Int -> Simulation
+advance startSim numMinutes =
+    let nextResources = resourcesScalar numMinutes (sumGenResources (rbts startSim))
+        nextTime = timeRemaining startSim - numMinutes
+    in startSim {
+        resources=nextResources
+        , timeRemaining=nextTime
+    }
+
+soonestRobot :: RobotCount -> (RobotType, Int)
+soonestRobot (RobotCount { rcOre=rco, rcClay=rcc, rcObs=rcob, rcGeode=rcg }) =
+    minimumBy (compare `on` snd) [(RobotType Ore, rco), (RobotType Clay, rcc), (RobotType Obsidian, rcob), (RobotType Geode, rcg)]
+
+--this returns a robot count type, but the meaning of the integer
+--is the number of minutes it would take to become able to build that robot
 timeToRobots :: Blueprint -> Resources -> RobotCount -> RobotCount
 timeToRobots bp res rc = RobotCount {
     rcOre = maximum $ map countTurns oreRobotReq

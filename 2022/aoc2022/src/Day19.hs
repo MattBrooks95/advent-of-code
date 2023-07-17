@@ -152,6 +152,24 @@ type SimulationsByTime = M.Map Int [Simulation]
 runSimulation :: Simulation -> Simulation
 runSimulation startS = startS
 
+toNextDecision :: Simulation -> Either Simulation [Robot]
+toNextDecision (Simulation { blueprint=bp, resources=res }) =
+    let canMakeRobots = genActions bp res
+    in
+        if null canMakeRobots
+        then Left undefined
+        else Right canMakeRobots
+
+timeToRobots :: Blueprint -> Resources -> RobotCount -> RobotCount
+timeToRobots bp res rc = RobotCount {
+    rcOre = undefined
+    , rcClay = undefined
+    , rcObs = undefined
+    , rcGeode = undefined
+    }
+    where
+        oreRobotReq = undefined
+
 detectNewRobotType :: [RobotType] -> S.Set RobotType -> S.Set RobotType
 detectNewRobotType newRobots = S.difference (S.fromList newRobots)
 
@@ -209,8 +227,8 @@ sumGenResources rc = Resources {
     , geodeRes = rcGeode rc
     }
 
-genActions :: Blueprint -> Resources -> [Maybe Robot]
-genActions (BluePrint { robots=checkRobots }) res = Nothing:map Just (filter (canAffordRobot res) checkRobots)
+genActions :: Blueprint -> Resources -> [Robot]
+genActions bp res = filter (canAffordRobot res) (getBpRobots bp)
 
 canAffordRobot :: Resources -> Robot -> Bool
 canAffordRobot res (Robot _ creationReqs _) =
@@ -229,13 +247,21 @@ getRes (Robot _ _ GiveGeodes) = Resources { oreRes=0, clayRes=0, obsRes=0, geode
 
 data Blueprint = BluePrint {
     bpId :: Int
-    , robots :: [Robot]
+    , bpOreRobot :: Robot
+    , bpClayRobot :: Robot
+    , bpObsRobot :: Robot
+    , bpGeodeRobot :: Robot
     } deriving (
         Eq
         )
+
+getBpRobots :: Blueprint -> [Robot]
+getBpRobots (BluePrint { bpOreRobot=orr, bpClayRobot=cr, bpObsRobot=obr, bpGeodeRobot=gr }) =
+    [orr, cr, obr, gr]
+
 instance Show Blueprint where
     show bp = "\n(BP " ++ show (bpId bp)
-        ++ "\n\t" ++ intercalate "\n\t" (map show (robots bp))
+        ++ "\n\t" ++ intercalate "\n\t" (map show (getBpRobots bp))
         ++ "\n)"
 
 run :: String -> IO ()
@@ -321,8 +347,11 @@ parseBlueprint = do
     _ <- P.string ":"
     thisRobots <- P.many parseRobot
     return BluePrint {
-        robots=thisRobots
-        , bpId=thisBpId
+        bpId=thisBpId
+        , bpOreRobot = undefined
+        , bpClayRobot = undefined
+        , bpObsRobot = undefined
+        , bpGeodeRobot = undefined
     }
 
 parse :: P.Parsec String () [Blueprint]

@@ -209,9 +209,6 @@ sumGenResources rc = Resources {
     , geodeRes = rcGeode rc
     }
 
-genResources :: [Robot] -> [Resources]
-genResources = map getRes
-
 genActions :: Blueprint -> Resources -> [Maybe Robot]
 genActions (BluePrint { robots=checkRobots }) res = Nothing:map Just (filter (canAffordRobot res) checkRobots)
 

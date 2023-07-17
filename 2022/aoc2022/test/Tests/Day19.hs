@@ -6,8 +6,6 @@ import Day19
 
 import Test.HUnit
 
-import qualified Data.Set as S
-
 parsingTests :: Test
 parsingTests = TestList [
     parseReqTypes
@@ -15,7 +13,6 @@ parsingTests = TestList [
     , parseRobotTests
     , parseBlueprintTests
     , simulationTests
-    , purgeSimsTests
     ]
 
 parseReqTypes :: Test
@@ -144,11 +141,14 @@ resourcesTest =
     , TestCase (
         assertEqual "robots give resources"
         (Resources 1 0 1 0)
-        (sumGenResources [
-            Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 0] GiveOre
-            , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 0] GiveObs
-            ])
+        (sumGenResources (RobotCount {
+            rcOre = 1
+            , rcClay = 0
+            , rcObs = 1
+            , rcGeode = 0
+            })
         )
+    )
     , TestCase (
         assertEqual "can look up resource amount by resource type: clay"
         16
@@ -174,7 +174,7 @@ resourcesTest =
             (Simulation {
                 resources=Resources { oreRes=1, clayRes=1, obsRes=1, geodeRes=1 }
                 , blueprint=lineOneBlueprint
-                , rbts=[]
+                , rbts=(RobotCount { rcOre=0, rcClay=0, rcObs=0, rcGeode=0 })
                 , timeRemaining=0
                 })
             (Resources {oreRes=1, clayRes=1, obsRes=1, geodeRes=1 })
@@ -193,12 +193,12 @@ simulationTests = TestList [
     TestCase (
         assertEqual "1 clay robot makes resources"
         (Resources 1 0 0 0)
-        (sumGenResources [oreRobot])
+        (sumGenResources (RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }))
     )
     , TestCase (
         assertEqual "one clay and one ore robot makes one clay and one ore per tick"
         (Resources 1 1 0 0)
-        (sumGenResources [oreRobot, clayRobot])
+        (sumGenResources (RobotCount { rcOre=1, rcClay=1, rcObs=0, rcGeode=0 }))
     )
     , TestCase (
         assertBool "can make robot"
@@ -218,11 +218,6 @@ simulationTests = TestList [
         [Nothing]
         (genActions lineOneBlueprint (Resources { oreRes=0, clayRes=0, obsRes=0, geodeRes=0 }))
     )
-    , TestCase (
-        assertEqual "can make geode robot, always makes geode robot"
-        [Just $ Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes]
-        (alwaysMakeGeode [] $ genActions lineOneBlueprint (Resources { oreRes=3, clayRes=0, obsRes=9, geodeRes=0 }))
-    )
     ]
 --lineOneBlueprint :: Blueprint
 --lineOneBlueprint = BluePrint {
@@ -234,22 +229,3 @@ simulationTests = TestList [
 --        , Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes
 --    ]
 --    }
-
-purgeSimsTests :: Test
-purgeSimsTests = TestList [
-    TestCase (
-        assertEqual "new robot type is recorded"
-        (S.fromList [(RobotType Ore, 1)])
-        (potentialFirsts 1 [Just oreRobot])
-    )
-    , TestCase (
-        assertEqual "no new robot, no new first record"
-        S.empty
-        (potentialFirsts 1 [Nothing])
-    )
-    , TestCase (
-        assertEqual "new first is added to the set"
-        (S.fromList [(RobotType Geode)])
-        ()
-    )
-    ]

@@ -109,6 +109,9 @@ getRobotTypeWrapped (Robot robotType _ _) = robotType
 getRobotType :: Robot -> Resource
 getRobotType (Robot (RobotType rType) _ _) = rType
 
+getRobotRequirements :: Robot -> [CreationRequirement]
+getRobotRequirements (Robot _ reqs _) = reqs
+
 makeOreRobot :: CreationRequirement -> Robot
 makeOreRobot req = Robot (RobotType Ore) [req] GiveOre
 
@@ -169,13 +172,23 @@ toNextDecision (Simulation { blueprint=bp, resources=res }) =
 
 timeToRobots :: Blueprint -> Resources -> RobotCount -> RobotCount
 timeToRobots bp res rc = RobotCount {
-    rcOre = undefined
-    , rcClay = undefined
-    , rcObs = undefined
-    , rcGeode = undefined
+    rcOre = maximum $ map countTurns oreRobotReq
+    , rcClay = maximum $ map countTurns clayRobotReq
+    , rcObs = maximum $ map countTurns obsRobotReq
+    , rcGeode = maximum $ map countTurns geodeRobotReq
     }
     where
-        oreRobotReq = undefined
+        oreRobotReq = getRobotRequirements (bpOreRobot bp)
+        clayRobotReq = getRobotRequirements (bpClayRobot bp)
+        obsRobotReq = getRobotRequirements (bpObsRobot bp)
+        geodeRobotReq = getRobotRequirements (bpGeodeRobot bp)
+        countTurns = countTurnsToSatisfyReq res rc
+
+countTurnsToSatisfyReq :: Resources -> RobotCount -> CreationRequirement -> Int
+countTurnsToSatisfyReq res rc (CreationRequirement (ReqType Ore) resNum) = ceiling $ (fromIntegral (resNum - getAvailableResource res Ore) :: Double) / fromIntegral (rcOre rc)
+countTurnsToSatisfyReq res rc (CreationRequirement (ReqType Clay) resNum) = ceiling $ (fromIntegral (resNum - getAvailableResource res Clay) :: Double) / fromIntegral (rcClay rc)
+countTurnsToSatisfyReq res rc (CreationRequirement (ReqType Obsidian) resNum) = ceiling $ (fromIntegral (resNum - getAvailableResource res Obsidian) :: Double) / fromIntegral (rcObs rc)
+countTurnsToSatisfyReq res rc (CreationRequirement (ReqType Geode) resNum) = ceiling $ (fromIntegral (resNum - getAvailableResource res Geode) :: Double) / fromIntegral (rcGeode rc)
 
 detectNewRobotType :: [RobotType] -> S.Set RobotType -> S.Set RobotType
 detectNewRobotType newRobots = S.difference (S.fromList newRobots)

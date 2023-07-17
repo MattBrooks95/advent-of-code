@@ -144,14 +144,8 @@ addResources s@(Simulation { resources=prevResources }) newResources
 
 numGeodes :: Simulation -> Int
 numGeodes = flip getAvailableResource Geode . resources
---let res = resources s in getAvailableResource res Geode
 
 type RobotStrategy = [RobotType] -> [Maybe Robot] -> [Maybe Robot]
-
-alwaysMakeGeode :: RobotStrategy
-alwaysMakeGeode _ canMakeRobots = case find ((== Geode) . getRobotType) (catMaybes canMakeRobots) of
-    Just rbt@(Robot (RobotType Geode) _ _) -> [Just rbt]
-    _ -> canMakeRobots
 
 type SimulationsByTime = M.Map Int [Simulation]
 

@@ -85,34 +85,30 @@ parseRobotTests = TestList [
 lineOneBlueprint :: Blueprint
 lineOneBlueprint = BluePrint {
     bpId=1
-    , robots = [
-        Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre
-        , Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay
-        , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 2, CreationRequirement (ReqType Clay) 15] GiveObs
-        , Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes
-    ]
+    , bpOreRobot=Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre
+    , bpClayRobot=Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay
+    , bpObsRobot=Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 2, CreationRequirement (ReqType Clay) 15] GiveObs
+    , bpGeodeRobot=Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes
     }
 
 parseBlueprintTests :: Test
 parseBlueprintTests = TestList [
     TestCase (
         assertEqual "parse first line of input"
-        (Right lineOneBlueprint)
+        (Right (Just lineOneBlueprint))
         (runParser parseBlueprint () "" "Blueprint 1: Each ore robot costs 3 ore. Each clay robot costs 3 ore. Each obsidian robot costs 2 ore and 15 clay. Each geode robot costs 3 ore and 9 obsidian.")
     )
     , TestCase (
         assertEqual "parse two line file"
         (Right [
-            lineOneBlueprint
-            , BluePrint {
+            Just lineOneBlueprint
+            , Just $ BluePrint {
                 bpId=2
                 --Blueprint 2: Each ore robot costs 4 ore. Each clay robot costs 4 ore. Each obsidian robot costs 4 ore and 5 clay. Each geode robot costs 3 ore and 7 obsidian."
-                , robots = [
-                    Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 4] GiveOre
-                    , Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 4] GiveClay
-                    , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 4, CreationRequirement (ReqType Clay) 5] GiveObs
-                    , Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 7] GiveGeodes
-                ]
+                , bpOreRobot=Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 4] GiveOre
+                , bpClayRobot=Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 4] GiveClay
+                , bpObsRobot=Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 4, CreationRequirement (ReqType Clay) 5] GiveObs
+                , bpGeodeRobot=Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 7] GiveGeodes
             }
             ]
         )
@@ -210,12 +206,12 @@ simulationTests = TestList [
     )
     , TestCase (
         assertEqual "can make robots with resources"
-        [Nothing, Just $ Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre, Just $ Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay]
+        [Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre, Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay]
         (genActions lineOneBlueprint (Resources { oreRes=3, clayRes=0, obsRes=0, geodeRes=0 }))
     )
     , TestCase (
         assertEqual "can not make robots with resources"
-        [Nothing]
+        []
         (genActions lineOneBlueprint (Resources { oreRes=0, clayRes=0, obsRes=0, geodeRes=0 }))
     )
     ]

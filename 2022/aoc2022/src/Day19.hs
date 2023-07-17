@@ -3,6 +3,13 @@ module Day19 where
 import qualified Text.Parsec as P
 import qualified Parsing as PS
 
+import System.Exit (
+    die
+    )
+
+import Control.Monad (
+    when
+    )
 
 import qualified Data.Set as S
 import Data.List (
@@ -270,6 +277,7 @@ run input = do
     case P.runParser parse () "" input of
         Left e -> print e
         Right blueprints -> do
+            when (length (catMaybes blueprints) /= length blueprints) (die "failed to parse at least one blueprint")
             let
                 numBlueprints = 1 :: Int
                 --numBlueprints = length blueprints
@@ -280,7 +288,7 @@ run input = do
                     , resources=emptyResources
                     , timeRemaining=numMinutes
                     }
-                    ) blueprints
+                    ) (catMaybes blueprints)
                 solved = take numBlueprints (map runSimulation simulations)
             mapM_ print solved
             print $ "best sim:" ++ show (bestSim solved)
@@ -340,21 +348,31 @@ parseRobot = do
     _ <- P.char '.'
     return $ Robot robotType (firstCost:additionalCosts) giveable
 
-parseBlueprint :: P.Parsec String () Blueprint
+parseBlueprint :: P.Parsec String () (Maybe Blueprint)
 parseBlueprint = do
     _ <- P.string "Blueprint "
     thisBpId <- PS.digits
     _ <- P.string ":"
     thisRobots <- P.many parseRobot
-    return BluePrint {
-        bpId=thisBpId
-        , bpOreRobot = undefined
-        , bpClayRobot = undefined
-        , bpObsRobot = undefined
-        , bpGeodeRobot = undefined
-    }
+    case robotListToBp thisBpId thisRobots of
+        Nothing -> return Nothing
+        Just bp -> return $ Just bp
 
-parse :: P.Parsec String () [Blueprint]
+robotListToBp :: Int -> [Robot] -> Maybe Blueprint
+robotListToBp blueprintId robots = do
+    oreRbt <- find (\r -> getRobotType r == Ore) robots
+    clayRbt <- find (\r -> getRobotType r == Clay) robots
+    obsRbt <- find (\r -> getRobotType r == Obsidian) robots
+    geodeRbt <- find (\r -> getRobotType r == Geode) robots
+    Just $ BluePrint {
+        bpId=blueprintId
+        , bpOreRobot=oreRbt
+        , bpClayRobot=clayRbt
+        , bpObsRobot=obsRbt
+        , bpGeodeRobot=geodeRbt
+        }
+
+parse :: P.Parsec String () [Maybe Blueprint]
 --still need to figure out why just P.sepBy doesn't work
 --parse = (parseBlueprint `P.sepBy` P.endOfLine) <* P.eof
 parse = P.many (parseBlueprint <* P.endOfLine) <* P.eof

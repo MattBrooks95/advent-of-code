@@ -216,7 +216,8 @@ runSimulation (startS@(Simulation { timeRemaining=rTime }), cantMakeRobots) = my
             -- this method saves the skipped states for debugging
             Left nextSims -> init nextSims ++ runSimulation (last nextSims, cantMakeRobots)
             -- we can make a robot this turn, we must decide which robot if any to make
-            -- TODO apply the optimization you read about online where refusing to make a robot
+            --
+            -- apply the optimization you read about online where refusing to make a robot
             -- at a given time T means that you will not make that robot again until you make a robot
             -- of a different type. The reason is, that if you were going to make that robot anyway
             -- you should have made it as soon as possible

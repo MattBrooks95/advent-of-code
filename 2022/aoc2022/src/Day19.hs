@@ -11,6 +11,8 @@ import Control.Monad (
     when
     )
 
+import Debug.Trace
+
 import qualified Data.Set as S
 import Data.List (
     intercalate
@@ -144,6 +146,9 @@ data Simulation = Simulation {
     , timeRemaining :: Int
     }
 
+getSimulationResource :: Simulation -> Resource -> Int
+getSimulationResource sim = getAvailableResource (resources sim)
+
 instance Show Simulation where
     show s = intercalate "\n" [
         "=========== Simulation ============="
@@ -177,7 +182,10 @@ runSimulation startS = case toNextDecision startS of
     -- at a given time T means that you will not make that robot again until you make a robot
     -- of a different type. The reason is, that if you were going to make that robot anyway
     -- you should have made it as soon as possible
-    Right canMakeRobots -> undefined -- TODO return maximumBy geodes of simulations that result from each robot making option
+    Right canMakeRobots -> maximumBy (compare `on` flip getSimulationResource Geode) (trace (show (length nextSims) ++ "# possible futures") (map runSimulation nextSims))
+        where
+            nextSims = makeNextSimulations startS canMakeRobots
+    --undefined -- TODO return maximumBy geodes of simulations that result from each robot making option
 
 toNextDecision :: Simulation -> Either Simulation [Robot]
 toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
@@ -186,8 +194,8 @@ toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
         if null canMakeRobots
         then
             let (_, soonestRobotTime) = soonestRobot $ timeToRobots bp res rc in
-                Left $ advance sim soonestRobotTime
-        else Right canMakeRobots
+                trace "advanced to next decision" (Left $ advance sim soonestRobotTime)
+        else trace "can make robots this turn" (Right canMakeRobots)
 
 advance :: Simulation -> Int -> Simulation
 advance startSim numMinutes =
@@ -236,14 +244,11 @@ hasRobotType (RobotType Geode) rc = rcGeode rc > 0
 hasGeodeRobotSim :: Simulation -> Bool
 hasGeodeRobotSim s = hasRobotType (RobotType Geode) (rbts s)
 
-makeNextSimulations :: Simulation -> [Maybe Robot] -> [Simulation]
+makeNextSimulations :: Simulation -> [Robot] -> [Simulation]
 -- can't make any robots, just add in the resources from the next minute and decrease the time remaining
-makeNextSimulations s newRobots
-    | null (catMaybes newRobots) = let newSim = time $ addResources s newResources in
-        [newSim]
-    | otherwise = nextSims
+makeNextSimulations s newRobots = nextSims
             where
-                nextSims = map (\r -> nextStepSim newResources r s) newRobots
+                nextSims = map (\r -> nextStepSim newResources (Just r) s) newRobots ++ [nextStepSim newResources Nothing s]
                 newResources = sumGenResources (rbts s)
 
 nextStepSim :: Resources -> Maybe Robot -> Simulation -> Simulation

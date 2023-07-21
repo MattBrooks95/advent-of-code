@@ -173,13 +173,13 @@ type RobotStrategy = [RobotType] -> [Maybe Robot] -> [Maybe Robot]
 
 type SimulationsByTime = M.Map Int [Simulation]
 
-runSimulation :: Simulation -> Simulation
-runSimulation startS@(Simulation { timeRemaining=rTime }) = trace (show (timeRemaining startS) ++ ": minutes remaining") $
+runSimulation :: (Simulation, S.Set RobotType) -> Simulation
+runSimulation (startS@(Simulation { timeRemaining=rTime }), cantMakeRobots) = trace (show (timeRemaining startS) ++ ": minutes remaining, prohibited robots:" ++ show cantMakeRobots) $
     if rTime > 0
     then
         case toNextDecision startS of
             -- we have no decision to make here, skip ahead to the next decision
-            Left nextSim -> runSimulation nextSim
+            Left nextSim -> runSimulation (nextSim, cantMakeRobots)
             -- we can make a robot this turn, we must decide which robot if any to make
             -- TODO apply the optimization you read about online where refusing to make a robot
             -- at a given time T means that you will not make that robot again until you make a robot
@@ -187,7 +187,8 @@ runSimulation startS@(Simulation { timeRemaining=rTime }) = trace (show (timeRem
             -- you should have made it as soon as possible
             Right canMakeRobots -> maximumBy (compare `on` flip getSimulationResource Geode) (trace (show (length nextSims) ++ "# possible futures") (map runSimulation nextSims))
                 where
-                    nextSims = makeNextSimulations startS canMakeRobots
+                    nextSims = makeNextSimulations (startS, cantMakeRobots) notProhibitedRobots
+                    notProhibitedRobots = filter (\r -> getRobotTypeWrapped r `notElem` cantMakeRobots) canMakeRobots
     else startS
     --undefined -- TODO return maximumBy geodes of simulations that result from each robot making option
 
@@ -248,11 +249,17 @@ hasRobotType (RobotType Geode) rc = rcGeode rc > 0
 hasGeodeRobotSim :: Simulation -> Bool
 hasGeodeRobotSim s = hasRobotType (RobotType Geode) (rbts s)
 
-makeNextSimulations :: Simulation -> [Robot] -> [Simulation]
+makeNextSimulations :: (Simulation, S.Set RobotType) -> [Robot] -> [(Simulation, S.Set RobotType)]
 -- can't make any robots, just add in the resources from the next minute and decrease the time remaining
-makeNextSimulations s newRobots = nextSims
+makeNextSimulations (s, cantMakeRobots) newRobots = nextSims
             where
-                nextSims = map (\r -> nextStepSim newResources (Just r) s) newRobots ++ [nextStepSim newResources Nothing s]
+                -- when you make a robot, reset the list of robots that can't be made
+                -- if you intentionally don't make a set of robots, those robots cannot be made until you've made
+                -- a robot of another type. This is a hint that I read online where it's true that because you
+                -- can only make one robot a minute, it never makes sense to delay making a type of robot that you
+                -- could have made earlier
+                nextSims = map (\makeRobot -> (nextStepSim newResources (Just makeRobot) s, S.empty)) newRobots ++ [(nextStepSim newResources Nothing s, newCantMakeRobotsList)]
+                newCantMakeRobotsList = S.union cantMakeRobots (S.fromList $ map getRobotTypeWrapped newRobots)
                 newResources = sumGenResources (rbts s)
 
 nextStepSim :: Resources -> Maybe Robot -> Simulation -> Simulation
@@ -338,12 +345,14 @@ run input = do
                 numBlueprints = 1 :: Int
                 --numBlueprints = length blueprints
                 numMinutes = 24
-                simulations = map (\bp -> Simulation {
-                    blueprint=bp
-                    , rbts=RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }
-                    , resources=emptyResources
-                    , timeRemaining=numMinutes
-                    }
+                simulations = map (\bp -> (Simulation {
+                        blueprint=bp
+                        , rbts=RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }
+                        , resources=emptyResources
+                        , timeRemaining=numMinutes
+                        }
+                        , S.empty
+                        )
                     ) (catMaybes blueprints)
                 solved = take numBlueprints (map runSimulation simulations)
             mapM_ print solved

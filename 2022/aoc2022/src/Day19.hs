@@ -252,8 +252,8 @@ toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
             let (_, soonestRobotTime) = soonestRobot $ timeToRobots bp res rc in
                 myTrace
                     ("advanced to next decision, skipping:" ++ show soonestRobotTime ++ "minutes")
-                    --(Left $ advance sim soonestRobotTime)
-                    (Left $ advanceWithIntermediates sim soonestRobotTime)
+                    (Left [sim, advance sim soonestRobotTime])
+                    --(Left $ advanceWithIntermediates sim soonestRobotTime)
         else myTrace ("can make robots this turn:" ++ show (map getRobotType canMakeRobots)) (Right canMakeRobots)
 
 advance :: Simulation -> Int -> Simulation

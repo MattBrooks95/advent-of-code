@@ -215,7 +215,9 @@ toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
         if null canMakeRobots
         then
             let (_, soonestRobotTime) = soonestRobot $ timeToRobots bp res rc in
-                trace "advanced to next decision" (Left $ advance sim soonestRobotTime)
+                trace
+                    ("advanced to next decision, skipping:" ++ show soonestRobotTime ++ "minutes")
+                    (Left $ advance sim soonestRobotTime)
         else trace "can make robots this turn" (Right canMakeRobots)
 
 advance :: Simulation -> Int -> Simulation
@@ -362,7 +364,7 @@ run input = do
             let
                 numBlueprints = 1 :: Int
                 --numBlueprints = length blueprints
-                numMinutes = 24
+                numMinutes = 5
                 simulations = map (\bp -> (Simulation {
                         blueprint=bp
                         , rbts=RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }
@@ -377,7 +379,7 @@ run input = do
             print $ "best sim:" ++ show (bestSim solved)
         where
             bestSim :: [Simulation] -> Simulation
-            bestSim = maximumBy (compare `on` numGeodes)
+            bestSim = maximumBy (compare `on` qualityLevel)
 
 qualityLevel :: Simulation -> Int
 qualityLevel s = let bp = blueprint s in bpId bp * getAvailableResource (resources s) Geode

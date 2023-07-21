@@ -174,17 +174,21 @@ type RobotStrategy = [RobotType] -> [Maybe Robot] -> [Maybe Robot]
 type SimulationsByTime = M.Map Int [Simulation]
 
 runSimulation :: Simulation -> Simulation
-runSimulation startS = case toNextDecision startS of
-    -- we have no decision to make here, skip ahead to the next decision
-    Left nextSim -> runSimulation nextSim
-    -- we can make a robot this turn, we must decide which robot if any to make
-    -- TODO apply the optimization you read about online where refusing to make a robot
-    -- at a given time T means that you will not make that robot again until you make a robot
-    -- of a different type. The reason is, that if you were going to make that robot anyway
-    -- you should have made it as soon as possible
-    Right canMakeRobots -> maximumBy (compare `on` flip getSimulationResource Geode) (trace (show (length nextSims) ++ "# possible futures") (map runSimulation nextSims))
-        where
-            nextSims = makeNextSimulations startS canMakeRobots
+runSimulation startS@(Simulation { timeRemaining=rTime }) = trace (show (timeRemaining startS) ++ ": minutes remaining") $
+    if rTime > 0
+    then
+        case toNextDecision startS of
+            -- we have no decision to make here, skip ahead to the next decision
+            Left nextSim -> runSimulation nextSim
+            -- we can make a robot this turn, we must decide which robot if any to make
+            -- TODO apply the optimization you read about online where refusing to make a robot
+            -- at a given time T means that you will not make that robot again until you make a robot
+            -- of a different type. The reason is, that if you were going to make that robot anyway
+            -- you should have made it as soon as possible
+            Right canMakeRobots -> maximumBy (compare `on` flip getSimulationResource Geode) (trace (show (length nextSims) ++ "# possible futures") (map runSimulation nextSims))
+                where
+                    nextSims = makeNextSimulations startS canMakeRobots
+    else startS
     --undefined -- TODO return maximumBy geodes of simulations that result from each robot making option
 
 toNextDecision :: Simulation -> Either Simulation [Robot]
@@ -333,7 +337,7 @@ run input = do
             let
                 numBlueprints = 1 :: Int
                 --numBlueprints = length blueprints
-                numMinutes = 10
+                numMinutes = 24
                 simulations = map (\bp -> Simulation {
                     blueprint=bp
                     , rbts=RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }

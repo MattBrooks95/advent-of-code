@@ -13,6 +13,7 @@ parsingTests = TestList [
     , parseRobotTests
     , parseBlueprintTests
     , simulationTests
+    , skipTests
     ]
 
 parseReqTypes :: Test
@@ -215,13 +216,50 @@ simulationTests = TestList [
         (genActions lineOneBlueprint (Resources { oreRes=0, clayRes=0, obsRes=0, geodeRes=0 }))
     )
     ]
---lineOneBlueprint :: Blueprint
---lineOneBlueprint = BluePrint {
---    bpId=1
---    , robots = [
---        Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 3] GiveOre
---        , Robot (RobotType Clay) [CreationRequirement (ReqType Ore) 3] GiveClay
---        , Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 2, CreationRequirement (ReqType Clay) 15] GiveObs
---        , Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Obsidian) 9] GiveGeodes
---    ]
---    }
+
+skipTests :: Test
+skipTests = TestList [
+    TestCase (
+        assertEqual "2 turns to ore req"
+        (2 :: Int)
+        (countTurnsToSatisfyReq
+            emptyRes
+            (emptyRobotCount { rcOre=1 })
+            (CreationRequirement (ReqType Ore) 2)
+        )
+    )
+    , TestCase (
+        assertEqual "0 turns to ore req"
+        (2 :: Int)
+        (countTurnsToSatisfyReq
+            (emptyRes { clayRes=2 })
+            (emptyRobotCount { rcOre=1 })
+            (CreationRequirement (ReqType Ore) 2)
+        )
+    )
+    , TestCase (
+        assertEqual "1 turn to clay req"
+        1
+        (countTurnsToSatisfyReq
+            (emptyRes { oreRes=100, clayRes=9 } )
+            (emptyRobotCount { rcOre=1, rcClay=1 })
+            (CreationRequirement (ReqType Clay) 10)
+        )
+    )
+    , TestCase (
+        assertEqual "skip simulation forward 1 minute"
+        9
+        (timeRemaining $ advance
+            (Simulation { timeRemaining = 10, resources=emptyRes, blueprint=lineOneBlueprint, rbts=emptyRobotCount })
+            1
+        )
+    )
+    , TestCase (
+        assertEqual "skip simulation forward 0 minutes"
+        10
+        (timeRemaining $ advance
+            (Simulation { timeRemaining = 10, resources=emptyRes, blueprint=lineOneBlueprint, rbts=emptyRobotCount })
+            0
+        )
+    )
+    ]

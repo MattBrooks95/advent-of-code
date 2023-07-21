@@ -61,6 +61,14 @@ data Resources = Resources {
     , geodeRes :: Int
 } deriving (Eq)
 
+emptyRes :: Resources
+emptyRes = Resources {
+    oreRes=0
+    , clayRes=0
+    , obsRes=0
+    , geodeRes=0
+    }
+
 resourcesScalar :: Int -> Resources -> Resources
 resourcesScalar scalar res = Resources {
     oreRes=oreRes res * scalar
@@ -132,6 +140,14 @@ data RobotCount = RobotCount {
     , rcObs :: Int
     , rcGeode :: Int
     } deriving (Show)
+
+emptyRobotCount :: RobotCount
+emptyRobotCount = RobotCount {
+    rcOre=0
+    , rcClay=0
+    , rcObs=0
+    , rcGeode=0
+    }
 
 addRobot :: RobotType -> RobotCount -> RobotCount
 addRobot (RobotType Ore) rc@(RobotCount { rcOre=ore }) = rc { rcOre=ore + 1 }
@@ -211,6 +227,8 @@ advance startSim numMinutes =
         , timeRemaining=nextTime
     }
 
+-- this RobotCount parameter needs to be a map of robot type to the number of turns
+-- it will take to make that robot
 soonestRobot :: RobotCount -> (RobotType, Int)
 soonestRobot (RobotCount { rcOre=rco, rcClay=rcc, rcObs=rcob, rcGeode=rcg }) =
     minimumBy (compare `on` snd) [(RobotType Ore, rco), (RobotType Clay, rcc), (RobotType Obsidian, rcob), (RobotType Geode, rcg)]

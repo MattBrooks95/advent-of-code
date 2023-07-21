@@ -214,7 +214,7 @@ runSimulation (startS@(Simulation { timeRemaining=rTime }), cantMakeRobots) = my
             -- we have no decision to make here, skip ahead to the next decision
             --Left nextSim -> startS:runSimulation (nextSim, cantMakeRobots)
             -- this method saves the skipped states for debugging
-            Left nextSim -> startS:init nextSim ++ runSimulation (last nextSim, cantMakeRobots)
+            Left nextSims -> init nextSims ++ runSimulation (last nextSims, cantMakeRobots)
             -- we can make a robot this turn, we must decide which robot if any to make
             -- TODO apply the optimization you read about online where refusing to make a robot
             -- at a given time T means that you will not make that robot again until you make a robot
@@ -264,7 +264,8 @@ advance startSim numMinutes =
     }
     where
         nextTime=rTime - actualSkippedMinutes
-        nextResources = resourcesScalar actualSkippedMinutes (sumGenResources (rbts startSim))
+        nextResources = addRes (resources startSim) (resourcesScalar actualSkippedMinutes resourcesPerMinute)
+        resourcesPerMinute = sumGenResources (rbts startSim)
         actualSkippedMinutes=let timeDiff = rTime - numMinutes in numMinutes - (if timeDiff < 0 then abs timeDiff else 0)
         rTime=timeRemaining startSim
 
@@ -417,8 +418,8 @@ run input = do
         Right blueprints -> do
             when (length (catMaybes blueprints) /= length blueprints) (die "failed to parse at least one blueprint")
             let
-                numBlueprints = 1 :: Int
-                --numBlueprints = length blueprints
+                --numBlueprints = 1 :: Int
+                numBlueprints = length blueprints
                 numMinutes = 24
                 simulations = map (\bp -> (Simulation {
                         blueprint=bp
@@ -432,7 +433,7 @@ run input = do
                 solved = take numBlueprints (map runSimulation simulations)
             --mapM_ print solved
             print "bestSim:"
-            mapM_ print (reverse $ bestSim solved)
+            mapM_ print (bestSim solved)
         where
             bestSim :: [[Simulation]] -> [Simulation]
             bestSim = maximumBy (compare `on` qualityLevel . last)

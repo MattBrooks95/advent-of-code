@@ -217,6 +217,14 @@ simulationTests = TestList [
     )
     ]
 
+nOfEachRobot :: Int -> RobotCount
+nOfEachRobot n = RobotCount {
+    rcOre=n
+    , rcClay=n
+    , rcObs=n
+    , rcGeode=n
+    }
+
 skipTests :: Test
 skipTests = TestList [
     TestCase (
@@ -247,7 +255,7 @@ skipTests = TestList [
         )
     )
     , TestCase (
-        assertEqual "skip simulation forward 1 minute"
+        assertEqual "skip simulation forward 1 minute, check time progression"
         9
         (timeRemaining $ advance
             (Simulation { timeRemaining = 10, resources=emptyRes, blueprint=lineOneBlueprint, rbts=emptyRobotCount })
@@ -255,11 +263,52 @@ skipTests = TestList [
         )
     )
     , TestCase (
-        assertEqual "skip simulation forward 0 minutes"
+        assertEqual "skip simulation forward 0 minutes, check time progression"
         10
         (timeRemaining $ advance
             (Simulation { timeRemaining = 10, resources=emptyRes, blueprint=lineOneBlueprint, rbts=emptyRobotCount })
             0
         )
+    )
+    , TestCase (
+        assertEqual "cannot skip past 0 time remaining"
+        (getBlankSim {
+            rbts=nOfEachRobot 1
+            , timeRemaining=0
+            , resources=emptyRes { oreRes=10, clayRes=10, obsRes=10, geodeRes=10 }
+            }
+        )
+        (advance (getBlankSim { rbts=nOfEachRobot 1, timeRemaining=10 }) 15)
+    )
+    , TestCase (
+        assertEqual "skipped simulation has updated resources"
+        (Resources { oreRes=5, clayRes=5, obsRes=5, geodeRes=5 })
+        (resources $ advance
+            (Simulation {
+                resources=emptyRes
+                , blueprint=lineOneBlueprint
+                , rbts=RobotCount { rcOre=1, rcClay=1, rcObs=1, rcGeode=1 }
+                , timeRemaining = 5
+            })
+            5
+        )
+    )
+    , TestCase (
+        assertEqual "skipped simulation has updated resources, some 0 robots cases"
+        (Resources { oreRes=5, clayRes=10, obsRes=0, geodeRes=0 })
+        (resources $ advance
+            (Simulation {
+                resources=emptyRes
+                , blueprint=lineOneBlueprint
+                , rbts=RobotCount { rcOre=1, rcClay=2, rcObs=0, rcGeode=0 }
+                , timeRemaining = 5
+            })
+            5
+        )
+    )
+    , let startSim = (getBlankSim { rbts=nOfEachRobot 1 }) in TestCase (
+        assertEqual "last (advanceWithIntermediates sim) == advance sim"
+        (advance startSim 5)
+        (last $ advanceWithIntermediates startSim 5)
     )
     ]

@@ -171,6 +171,14 @@ data Simulation = Simulation {
     , timeRemaining :: Int
     } deriving (Eq)
 
+getBlankSim :: Simulation
+getBlankSim = Simulation {
+    blueprint=emptyBp
+    , resources=emptyRes
+    , rbts=emptyRobotCount
+    , timeRemaining=0
+    }
+
 getSimulationResource :: Simulation -> Resource -> Int
 getSimulationResource sim = getAvailableResource (resources sim)
 
@@ -204,7 +212,9 @@ runSimulation (startS@(Simulation { timeRemaining=rTime }), cantMakeRobots) = my
     then
         case toNextDecision startS of
             -- we have no decision to make here, skip ahead to the next decision
-            Left nextSim -> runSimulation (nextSim, cantMakeRobots)
+            --Left nextSim -> startS:runSimulation (nextSim, cantMakeRobots)
+            -- this method saves the skipped states for debugging
+            Left nextSim -> startS:init nextSim ++ runSimulation (last nextSim, cantMakeRobots)
             -- we can make a robot this turn, we must decide which robot if any to make
             -- TODO apply the optimization you read about online where refusing to make a robot
             -- at a given time T means that you will not make that robot again until you make a robot
@@ -233,7 +243,7 @@ runSimulation (startS@(Simulation { timeRemaining=rTime }), cantMakeRobots) = my
 --            getGeodeResourceCount = flip getSimulationResource Geode
 --            getRobotTypeCount = getUniqueRobotTypes . rbts
 
-toNextDecision :: Simulation -> Either Simulation [Robot]
+toNextDecision :: Simulation -> Either [Simulation] [Robot]
 toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
     let canMakeRobots = genActions bp res
     in
@@ -242,17 +252,24 @@ toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
             let (_, soonestRobotTime) = soonestRobot $ timeToRobots bp res rc in
                 myTrace
                     ("advanced to next decision, skipping:" ++ show soonestRobotTime ++ "minutes")
-                    (Left $ advance sim soonestRobotTime)
+                    --(Left $ advance sim soonestRobotTime)
+                    (Left $ advanceWithIntermediates sim soonestRobotTime)
         else myTrace ("can make robots this turn:" ++ show (map getRobotType canMakeRobots)) (Right canMakeRobots)
 
 advance :: Simulation -> Int -> Simulation
 advance startSim numMinutes =
-    let nextResources = resourcesScalar numMinutes (sumGenResources (rbts startSim))
-        nextTime = timeRemaining startSim - numMinutes
-    in startSim {
+    startSim {
         resources=nextResources
         , timeRemaining=nextTime
     }
+    where
+        nextTime=rTime - actualSkippedMinutes
+        nextResources = resourcesScalar actualSkippedMinutes (sumGenResources (rbts startSim))
+        actualSkippedMinutes=let timeDiff = rTime - numMinutes in numMinutes - (if timeDiff < 0 then abs timeDiff else 0)
+        rTime=timeRemaining startSim
+
+advanceWithIntermediates :: Simulation -> Int -> [Simulation]
+advanceWithIntermediates startSim numMinutes = scanl (\prev _ -> advance prev 1) startSim [1..numMinutes]
 
 -- this RobotCount parameter needs to be a map of robot type to the number of turns
 -- it will take to make that robot
@@ -374,6 +391,14 @@ data Blueprint = BluePrint {
     } deriving (
         Eq
         )
+emptyBp :: Blueprint
+emptyBp = BluePrint {
+    bpId=0
+    , bpOreRobot=Robot (RobotType Ore) [] GiveOre
+    , bpClayRobot=Robot (RobotType Clay) [] GiveClay
+    , bpObsRobot=Robot (RobotType Obsidian) [] GiveObs
+    , bpGeodeRobot=Robot (RobotType Geode) [] GiveGeodes
+    }
 
 getBpRobots :: Blueprint -> [Robot]
 getBpRobots (BluePrint { bpOreRobot=orr, bpClayRobot=cr, bpObsRobot=obr, bpGeodeRobot=gr }) =

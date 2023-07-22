@@ -433,11 +433,19 @@ run input = do
                     ) (catMaybes blueprints)
                 solved = take numBlueprints (map runSimulation simulations)
             --mapM_ print solved
-            print "bestSim:"
-            mapM_ print (bestSim solved)
-        where
-            bestSim :: [[Simulation]] -> [Simulation]
-            bestSim = maximumBy (compare `on` qualityLevel . last)
+            --
+            let withQualityLevels = map (\simSteps -> (simSteps, (qualityLevel . last) simSteps)) solved
+                sumQualityLevel = sum (map snd withQualityLevels)
+            print $ "sum quality level:" ++ show sumQualityLevel
+            --print "quality levels:"
+            --print withQualityLevels
+            --let printLines = map (\(simList, ql) -> "(bpId:" ++ show (bpId (last simList)) ++ ", qualityLevel:" ++ show ql ++ ")") withQualityLevels
+            --mapM_ putStrLn printLines
+        --where
+        --    bestSim :: [[Simulation]] -> [([Simulation], Int)]
+        --    bestSim simSolutions =
+        --        let withQualityLevels = map (\simSteps -> (simSteps, (qualityLevel . last) simSteps)) simSolutions
+        --        in maximumBy (compare `on` snd) withQualityLevels
 
 qualityLevel :: Simulation -> Int
 qualityLevel s = let bp = blueprint s in bpId bp * getAvailableResource (resources s) Geode

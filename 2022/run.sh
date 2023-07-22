@@ -1,6 +1,6 @@
 #FILENAME="day9-short.txt"
 #FILENAME="day9-short-2.txt"
-FILENAME="day19-short.txt"
+FILENAME="day19-input.txt"
 
 #https://stackoverflow.com/questions/59895/how-do-i-get-the-directory-where-a-bash-script-is-located-from-within-the-script
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )

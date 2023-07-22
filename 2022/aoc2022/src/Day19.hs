@@ -105,8 +105,8 @@ emptyResources = Resources {
 }
 
 addRes :: Resources -> Resources -> Resources
-addRes (Resources { oreRes=ore1, clayRes=clay1, obsRes=obs1, geodeRes=geode1 }) (Resources { oreRes=ore2, clayRes=clay2, obsRes=obs2, geodeRes=geode2}) =
-    Resources {
+addRes res1@(Resources { oreRes=ore1, clayRes=clay1, obsRes=obs1, geodeRes=geode1 }) res2@(Resources { oreRes=ore2, clayRes=clay2, obsRes=obs2, geodeRes=geode2}) =
+    res1 `seq` res2 `seq` Resources {
         oreRes = ore1 + ore2
         , clayRes = clay1 + clay2
         , obsRes = obs1 + obs2
@@ -265,7 +265,7 @@ advance startSim numMinutes =
     }
     where
         nextTime=rTime - actualSkippedMinutes
-        nextResources = addRes (resources startSim) (resourcesScalar actualSkippedMinutes resourcesPerMinute)
+        nextResources = let newRes = resourcesScalar actualSkippedMinutes resourcesPerMinute in addRes (resources startSim) newRes
         resourcesPerMinute = sumGenResources (rbts startSim)
         actualSkippedMinutes=let timeDiff = rTime - numMinutes in numMinutes - (if timeDiff < 0 then abs timeDiff else 0)
         rTime=timeRemaining startSim
@@ -283,12 +283,16 @@ soonestRobot (RobotCount { rcOre=rco, rcClay=rcc, rcObs=rcob, rcGeode=rcg }) =
 --is the number of minutes it would take to become able to build that robot
 timeToRobots :: Blueprint -> Resources -> RobotCount -> RobotCount
 timeToRobots bp res rc = RobotCount {
-    rcOre = maximum $ map countTurns oreRobotReq
-    , rcClay = maximum $ map countTurns clayRobotReq
-    , rcObs = maximum $ map countTurns obsRobotReq
-    , rcGeode = maximum $ map countTurns geodeRobotReq
+    --rcOre = maximum $ map countTurns oreRobotReq
+    --rcOre = foldl' (\prev req -> max prev (countTurns req)) 0 oreRobotReq
+    rcOre = findLongestRec oreRobotReq
+    , rcClay = findLongestRec clayRobotReq
+    , rcObs = findLongestRec obsRobotReq
+    , rcGeode = findLongestRec geodeRobotReq
     }
     where
+        findLongestRec = foldl' (\prev req -> let turns = countTurns req in max prev turns) 0
+        --findLongestRec req = maximum $ map countTurns req
         oreRobotReq = getRobotRequirements (bpOreRobot bp)
         clayRobotReq = getRobotRequirements (bpClayRobot bp)
         obsRobotReq = getRobotRequirements (bpObsRobot bp)
@@ -419,7 +423,7 @@ run input = do
         Right blueprints -> do
             when (length (catMaybes blueprints) /= length blueprints) (die "failed to parse at least one blueprint")
             let
-                numBlueprints = 5 :: Int
+                numBlueprints = 2 :: Int
                 --numBlueprints = length blueprints
                 numMinutes = 24
                 simulations = map (\bp -> (Simulation {
@@ -431,7 +435,7 @@ run input = do
                         , S.empty
                         )
                     ) (catMaybes blueprints)
-                solved = take numBlueprints (map runSimulation simulations)
+                solved = take numBlueprints (foldl' (\acc sim -> runSimulation sim:acc) [] simulations)
             --mapM_ print solved
             --
             let withQualityLevels = map (\simSteps -> (simSteps, (qualityLevel . last) simSteps)) solved

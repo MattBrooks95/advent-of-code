@@ -237,10 +237,19 @@ skipTests = TestList [
         )
     )
     , TestCase (
-        assertEqual "0 turns to ore req"
+        assertEqual "2 turns to clay req"
         (2 :: Int)
         (countTurnsToSatisfyReq
             (emptyRes { clayRes=2 })
+            (emptyRobotCount { rcOre=1 })
+            (CreationRequirement (ReqType Ore) 2)
+        )
+    )
+    , TestCase (
+        assertEqual "0 turns to ore req"
+        (0 :: Int)
+        (countTurnsToSatisfyReq
+            (emptyRes { oreRes=2 })
             (emptyRobotCount { rcOre=1 })
             (CreationRequirement (ReqType Ore) 2)
         )

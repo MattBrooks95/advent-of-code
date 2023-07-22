@@ -419,8 +419,8 @@ run input = do
         Right blueprints -> do
             when (length (catMaybes blueprints) /= length blueprints) (die "failed to parse at least one blueprint")
             let
-                --numBlueprints = 1 :: Int
-                numBlueprints = length blueprints
+                numBlueprints = 5 :: Int
+                --numBlueprints = length blueprints
                 numMinutes = 24
                 simulations = map (\bp -> (Simulation {
                         blueprint=bp

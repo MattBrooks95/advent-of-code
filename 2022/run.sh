@@ -8,8 +8,8 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 INPUTS_PATH="../inputs/$FILENAME"
 
 pushd "$SCRIPT_DIR/aoc2022"
-#stack run -- "$INPUTS_PATH"
-stack run --profile -- "$INPUTS_PATH" +RTS -p
+stack run -- "$INPUTS_PATH"
+#stack run --profile -- "$INPUTS_PATH" +RTS -p
 popd
 
 #stack exec --profile --  aoc2022-exe $SCRIPT_DIR/advent-of-code/2022/2022/inputs/$FILENAME

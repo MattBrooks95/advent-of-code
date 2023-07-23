@@ -458,29 +458,21 @@ run input = do
     case P.runParser parse () "" input of
         Left e -> print e
         Right blueprints -> do
-            when (length (catMaybes blueprints) /= length blueprints) (die "failed to parse at least one blueprint")
+            let successBlueprints = catMaybes blueprints
+            when (length successBlueprints /= length blueprints) (die "failed to parse at least one blueprint")
             let
                 --numBlueprints = 1 :: Int
-                numBlueprints = length blueprints
-                numMinutes = 24
-                simulations = map (\bp -> (Simulation {
-                        blueprint=bp
-                        , rbts=RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }
-                        , resources=emptyResources
-                        , timeRemaining=numMinutes
-                        }
-                        , S.empty
-                        )
-                    ) (catMaybes blueprints)
-                solved = take numBlueprints (foldl' (\acc sim -> runSimulation sim:acc) [] (reverse simulations))
+                --solved = take numBlueprints (foldl' (\acc sim -> runSimulation sim:acc) [] (reverse simulations))
+            --part1 successBlueprints
+            part2 successBlueprints
             --mapM_ print solved
             --
             --let withQualityLevels = map (\simSteps -> (simSteps, (qualityLevel . last) simSteps)) solved
-            let withQualityLevels = map (\simSteps -> (simSteps, qualityLevel simSteps)) solved :: [(Simulation, Int)]
-                sumQualityLevel = sum (map snd withQualityLevels)
-            print "withQualityLevels:"
-            mapM_ (print . SimulationResult) withQualityLevels
-            print $ "sum quality level:" ++ show sumQualityLevel
+            --let withQualityLevels = map (\simSteps -> (simSteps, qualityLevel simSteps)) solved :: [(Simulation, Int)]
+            --    sumQualityLevel = sum (map snd withQualityLevels)
+            --print "withQualityLevels:"
+            --mapM_ (print . SimulationResult) withQualityLevels
+            --print $ "sum quality level:" ++ show sumQualityLevel
             --print "quality levels:"
             --print withQualityLevels
             --let printLines = map (\(simList, ql) -> "(bpId:" ++ show (bpId (last simList)) ++ ", qualityLevel:" ++ show ql ++ ")") withQualityLevels
@@ -490,6 +482,45 @@ run input = do
         --    bestSim simSolutions =
         --        let withQualityLevels = map (\simSteps -> (simSteps, (qualityLevel . last) simSteps)) simSolutions
         --        in maximumBy (compare `on` snd) withQualityLevels
+part1 :: [Blueprint] -> IO ()
+part1 blueprints = do
+    let numBlueprints = length blueprints
+        numMinutes = 24
+        simulations = map (\bp -> (Simulation {
+                blueprint=bp
+                , rbts=RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }
+                , resources=emptyResources
+                , timeRemaining=numMinutes
+                }
+                , S.empty
+                )
+            ) blueprints
+        solved = take numBlueprints (foldl' (\acc sim -> runSimulation sim:acc) [] (reverse simulations))
+        withQualityLevels = map (\simSteps -> (simSteps, qualityLevel simSteps)) solved :: [(Simulation, Int)]
+        sumQualityLevel = sum (map snd withQualityLevels)
+    print "withQualityLevels:"
+    mapM_ (print . SimulationResult) withQualityLevels
+    print $ "sum quality level:" ++ show sumQualityLevel
+
+-- TODO de-dupe part1 and part2, you could parameterize this if you weren't lazy
+part2 :: [Blueprint] -> IO ()
+part2 blueprints = do
+    let numMinutes = 32
+        numBlueprints = 3
+        simulations = map (\bp -> (Simulation {
+                blueprint=bp
+                , rbts=RobotCount { rcOre=1, rcClay=0, rcObs=0, rcGeode=0 }
+                , resources=emptyResources
+                , timeRemaining=numMinutes
+                }
+                , S.empty
+                )
+            ) (take numBlueprints blueprints)
+        solved = foldl' (\acc sim -> runSimulation sim:acc) [] (reverse simulations)
+    print "part2"
+    let withNumGeodes = map (\slvd -> ((bpId . blueprint) slvd, getSimulationResource slvd Geode)) solved
+    mapM_ (\(blueprintId, geodeCount) -> putStrLn $ "solved sim with bpId:" ++ show blueprintId ++ " had: " ++ show geodeCount ++ " geodes") withNumGeodes
+    print $ "geode total:" ++ show (product (map snd withNumGeodes))
 
 newtype SimulationResult = SimulationResult (Simulation, Int)
 instance Show SimulationResult where

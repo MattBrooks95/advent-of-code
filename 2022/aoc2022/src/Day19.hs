@@ -236,21 +236,6 @@ runSimulation (startS@(Simulation { timeRemaining=rTime }), cantMakeRobots) = my
                     notProhibitedRobots = filter (\r -> getRobotTypeWrapped r `notElem` cantMakeRobots) canMakeRobots
     else startS
 
---newtype CompareSimulation = CompareSimulation Simulation
---instance Eq CompareSimulation where
---    (CompareSimulation sim1) == (CompareSimulation sim2) = sim1 == sim2
---instance Ord CompareSimulation where
---    (CompareSimulation sim1) <= (CompareSimulation sim2) =
---        let robotTypesCountSim1 = getRobotTypeCount sim1
---            robotTypesCountSim2 = getRobotTypeCount sim2
---        in
---            if robotTypesCountSim1 == robotTypesCountSim2
---            then getGeodeResourceCount sim1 <= getGeodeResourceCount sim2
---            else robotTypesCountSim1 <= robotTypesCountSim2
---        where
---            getGeodeResourceCount = flip getSimulationResource Geode
---            getRobotTypeCount = getUniqueRobotTypes . rbts
-
 toNextDecision :: Simulation -> Either [Simulation] [Robot]
 toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
     let canMakeRobots = genActions bp res
@@ -468,8 +453,8 @@ run input = do
         Right blueprints -> do
             when (length (catMaybes blueprints) /= length blueprints) (die "failed to parse at least one blueprint")
             let
-                numBlueprints = 2 :: Int
-                --numBlueprints = length blueprints
+                --numBlueprints = 1 :: Int
+                numBlueprints = length blueprints
                 numMinutes = 24
                 simulations = map (\bp -> (Simulation {
                         blueprint=bp
@@ -484,8 +469,10 @@ run input = do
             --mapM_ print solved
             --
             --let withQualityLevels = map (\simSteps -> (simSteps, (qualityLevel . last) simSteps)) solved
-            let withQualityLevels = map (\simSteps -> (simSteps, qualityLevel simSteps)) solved
+            let withQualityLevels = map (\simSteps -> (simSteps, qualityLevel simSteps)) solved :: [(Simulation, Int)]
                 sumQualityLevel = sum (map snd withQualityLevels)
+            print "withQualityLevels:"
+            mapM_ (print . SimulationResult) withQualityLevels
             print $ "sum quality level:" ++ show sumQualityLevel
             --print "quality levels:"
             --print withQualityLevels
@@ -496,6 +483,10 @@ run input = do
         --    bestSim simSolutions =
         --        let withQualityLevels = map (\simSteps -> (simSteps, (qualityLevel . last) simSteps)) simSolutions
         --        in maximumBy (compare `on` snd) withQualityLevels
+
+newtype SimulationResult = SimulationResult (Simulation, Int)
+instance Show SimulationResult where
+    show (SimulationResult (sim, ql)) = "(bpId:" ++ show ((bpId . blueprint) sim) ++ ", qualityLevel:" ++ show ql ++ ")"
 
 qualityLevel :: Simulation -> Int
 qualityLevel s = let bp = blueprint s in bpId bp * getAvailableResource (resources s) Geode

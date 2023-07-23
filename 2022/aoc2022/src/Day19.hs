@@ -451,6 +451,7 @@ instance Show Blueprint where
         ++ "\n\t" ++ intercalate "\n\t" (map show (getBpRobots bp))
         ++ "\n)"
 
+-- part one: 1962
 run :: String -> IO ()
 run input = do
     print "day19"

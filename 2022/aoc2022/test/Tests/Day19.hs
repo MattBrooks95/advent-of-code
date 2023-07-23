@@ -243,7 +243,10 @@ skipTests = TestList [
         (rcOre $ countTurnsToSatisfyReq
             emptyRes
             (emptyRobotCount { rcOre=1 })
-            (emptyRobotReqCount { rcOre=[CreationRequirement (ReqType Ore) 2] })
+            (emptyRobotReqCount {
+                rcOre=[CreationRequirement (ReqType Ore) 2]
+                , rcClay=[CreationRequirement (ReqType Ore) 4]
+                })
         )
     )
     , TestCase (
@@ -251,8 +254,11 @@ skipTests = TestList [
         (Just 2)
         (rcClay $ countTurnsToSatisfyReq
             (emptyRes { clayRes=0 })
-            (emptyRobotCount { rcClay=1 })
-            (emptyRobotReqCount { rcClay=[CreationRequirement (ReqType Clay) 2] })
+            (emptyRobotCount { rcClay=1, rcOre=1 })
+            (emptyRobotReqCount {
+                rcClay=[CreationRequirement (ReqType Clay) 2, CreationRequirement (ReqType Ore) 1]
+                , rcOre=[CreationRequirement (ReqType Ore) 4]
+                })
         )
     )
     , TestCase (

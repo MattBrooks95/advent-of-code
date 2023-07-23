@@ -146,6 +146,11 @@ data RobotCount a = RobotCount {
     , rcObs :: !a
     , rcGeode :: !a
     } deriving (Show, Eq)
+getRc :: RobotCount a -> Resource -> a
+getRc rc Ore = rcOre rc
+getRc rc Clay = rcClay rc
+getRc rc Obsidian = rcObs rc
+getRc rc Geode = rcGeode rc
 
 emptyRobotReqCount :: RobotCount [CreationRequirement]
 emptyRobotReqCount = RobotCount {
@@ -223,7 +228,7 @@ runSimulation (startS@(Simulation { timeRemaining=rTime }), cantMakeRobots) = my
             -- we have no decision to make here, skip ahead to the next decision
             --Left nextSim -> startS:runSimulation (nextSim, cantMakeRobots)
             -- this method saves the skipped states for debugging
-            Left nextSims -> trace ("timeRemaining:" ++ show rTime ++ "skip from " ++ show startS ++ " to " ++ show (last nextSims)) (runSimulation (last nextSims, cantMakeRobots))
+            Left nextSims -> myTrace ("timeRemaining:" ++ show rTime ++ "skip from " ++ show startS ++ " to " ++ show (last nextSims)) (runSimulation (last nextSims, cantMakeRobots))
             -- we can make a robot this turn, we must decide which robot if any to make
             --
             -- apply the optimization you read about online where refusing to make a robot
@@ -242,9 +247,11 @@ toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
     in
         if null canMakeRobots
         then
-            let (_, soonestRobotTime) = soonestRobot $ timeToRobots bp res rc in
+            let timeToRobotType = timeToRobots bp res rc
+                (_, soonestRobotTime) = soonestRobot timeToRobotType
+            in
                 myTrace
-                    ("advanced to next decision, skipping:" ++ show soonestRobotTime ++ "minutes")
+                    ("advanced to next decision, skipping:" ++ show soonestRobotTime ++ "minutes. Time to robots:" ++ show timeToRobotType)
                     (Left [sim, advance sim soonestRobotTime])
                     --(Left $ advanceWithIntermediates sim soonestRobotTime)
         else myTrace ("can make robots this turn:" ++ show (map getRobotType canMakeRobots)) (Right canMakeRobots)
@@ -310,10 +317,10 @@ timeToRobots bp res rc = countTurnsToSatisfyReq res rc reqMap
 countTurnsToSatisfyReq :: Resources -> RobotCount Int -> RobotCount [CreationRequirement] -> RobotCount (Maybe Int)
 countTurnsToSatisfyReq res rc (RobotCount {rcOre=oreReqs, rcClay=clayReqs, rcObs=obsReqs, rcGeode=geodeReqs }) =
     RobotCount {
-        rcOre=handleNoReq oreReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (rcOre rc)) oreReqs)
-        , rcClay=handleNoReq clayReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (rcClay rc)) clayReqs)
-        , rcObs=handleNoReq obsReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (rcObs rc)) obsReqs)
-        , rcGeode=handleNoReq geodeReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (rcGeode rc)) geodeReqs)
+        rcOre=handleNoReq oreReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (getRc rc resT)) oreReqs)
+        , rcClay=handleNoReq clayReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (getRc rc resT)) clayReqs)
+        , rcObs=handleNoReq obsReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (getRc rc resT)) obsReqs)
+        , rcGeode=handleNoReq geodeReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (getRc rc resT)) geodeReqs)
         }
         where
             handleNoReq :: [CreationRequirement] -> Int -> Maybe Int
@@ -348,7 +355,8 @@ hasGeodeRobotSim s = hasRobotType (RobotType Geode) (rbts s)
 
 makeNextSimulations :: (Simulation, S.Set RobotType) -> [Robot] -> [(Simulation, S.Set RobotType)]
 -- can't make any robots, just add in the resources from the next minute and decrease the time remaining
-makeNextSimulations (s, cantMakeRobots) newRobots = nextSims
+makeNextSimulations (s, cantMakeRobots) newRobots =
+            nextSimsMadeRobot ++ (if S.size newCantMakeRobotsList /= 4 then [nextSimsNoNewRobot] else [])
             where
                 -- when you make a robot, reset the list of robots that can't be made
                 -- if you intentionally don't make a set of robots, those robots cannot be made until you've made
@@ -358,7 +366,6 @@ makeNextSimulations (s, cantMakeRobots) newRobots = nextSims
                 -- do not consider a route where all robots are forbidden, you should atleast make a geode robot
                 -- note that this is bad design because I hard coded 4 to mean the # of robots to choose from,
                 -- when that value should actually depend on the parsed blueprint
-                nextSims = nextSimsMadeRobot ++ (if S.size newCantMakeRobotsList /= 4 then [nextSimsNoNewRobot] else [])
                 nextSimsNoNewRobot = (nextStepSim newResources Nothing s, newCantMakeRobotsList)
                 nextSimsMadeRobot = map (\makeRobot -> (nextStepSim newResources (Just makeRobot) s, S.empty)) newRobots
                 newCantMakeRobotsList = S.union cantMakeRobots (S.fromList $ map getRobotTypeWrapped newRobots)
@@ -452,8 +459,8 @@ run input = do
         Right blueprints -> do
             when (length (catMaybes blueprints) /= length blueprints) (die "failed to parse at least one blueprint")
             let
-                numBlueprints = 1 :: Int
-                --numBlueprints = length blueprints
+                --numBlueprints = 1 :: Int
+                numBlueprints = length blueprints
                 numMinutes = 24
                 simulations = map (\bp -> (Simulation {
                         blueprint=bp

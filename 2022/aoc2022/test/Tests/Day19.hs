@@ -217,7 +217,7 @@ simulationTests = TestList [
     )
     ]
 
-nOfEachRobot :: Int -> RobotCount
+nOfEachRobot :: Int -> RobotCount Int
 nOfEachRobot n = RobotCount {
     rcOre=n
     , rcClay=n
@@ -229,38 +229,58 @@ skipTests :: Test
 skipTests = TestList [
     TestCase (
         assertEqual "2 turns to ore req"
-        (2 :: Int)
-        (countTurnsToSatisfyReq
+        (Just 2)
+        (rcOre $ countTurnsToSatisfyReq
             emptyRes
             (emptyRobotCount { rcOre=1 })
-            (CreationRequirement (ReqType Ore) 2)
+            (emptyRobotReqCount { rcOre=[CreationRequirement (ReqType Ore) 2] })
         )
     )
     , TestCase (
         assertEqual "2 turns to clay req"
-        (2 :: Int)
-        (countTurnsToSatisfyReq
-            (emptyRes { clayRes=2 })
-            (emptyRobotCount { rcOre=1 })
-            (CreationRequirement (ReqType Ore) 2)
+        (Just 2)
+        (rcClay $ countTurnsToSatisfyReq
+            (emptyRes { clayRes=0 })
+            (emptyRobotCount { rcClay=1 })
+            (emptyRobotReqCount { rcClay=[CreationRequirement (ReqType Clay) 2] })
         )
     )
     , TestCase (
         assertEqual "0 turns to ore req"
-        (0 :: Int)
-        (countTurnsToSatisfyReq
+        Nothing
+        (rcOre $ countTurnsToSatisfyReq
             (emptyRes { oreRes=2 })
             (emptyRobotCount { rcOre=1 })
-            (CreationRequirement (ReqType Ore) 2)
+            (emptyRobotReqCount { rcOre=[CreationRequirement (ReqType Ore) 2] })
         )
     )
     , TestCase (
-        assertEqual "1 turn to clay req"
+        assertEqual "getTurnsTo has:9 needs:10"
         1
-        (countTurnsToSatisfyReq
+        (getTurnsTo 9 10 1)
+    )
+    , TestCase (
+        assertEqual "getTurnsTo has:10 needs:9"
+        0
+        (getTurnsTo 10 9 1)
+    )
+    , TestCase (
+        assertEqual "getTurnsTo has:10 needs:10"
+        0
+        (getTurnsTo 10 10 1)
+    )
+    , TestCase (
+        assertEqual "getTurnsTo has:10 needs:5"
+        0
+        (getTurnsTo 10 5 0)
+    )
+    , TestCase (
+        assertEqual "1 turn to clay req"
+        (Just 1)
+        (rcClay $ countTurnsToSatisfyReq
             (emptyRes { oreRes=100, clayRes=9 } )
             (emptyRobotCount { rcOre=1, rcClay=1 })
-            (CreationRequirement (ReqType Clay) 10)
+            (emptyRobotReqCount { rcClay=[CreationRequirement (ReqType Clay) 10] })
         )
     )
     , TestCase (

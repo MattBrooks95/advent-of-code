@@ -223,7 +223,7 @@ runSimulation (startS@(Simulation { timeRemaining=rTime }), cantMakeRobots) = my
             -- we have no decision to make here, skip ahead to the next decision
             --Left nextSim -> startS:runSimulation (nextSim, cantMakeRobots)
             -- this method saves the skipped states for debugging
-            Left nextSims -> runSimulation (last nextSims, cantMakeRobots)
+            Left nextSims -> trace ("timeRemaining:" ++ show rTime ++ "skip from " ++ show startS ++ " to " ++ show (last nextSims)) (runSimulation (last nextSims, cantMakeRobots))
             -- we can make a robot this turn, we must decide which robot if any to make
             --
             -- apply the optimization you read about online where refusing to make a robot
@@ -242,7 +242,6 @@ toNextDecision sim@(Simulation { blueprint=bp, resources=res, rbts=rc }) =
     in
         if null canMakeRobots
         then
-
             let (_, soonestRobotTime) = soonestRobot $ timeToRobots bp res rc in
                 myTrace
                     ("advanced to next decision, skipping:" ++ show soonestRobotTime ++ "minutes")
@@ -311,10 +310,10 @@ timeToRobots bp res rc = countTurnsToSatisfyReq res rc reqMap
 countTurnsToSatisfyReq :: Resources -> RobotCount Int -> RobotCount [CreationRequirement] -> RobotCount (Maybe Int)
 countTurnsToSatisfyReq res rc (RobotCount {rcOre=oreReqs, rcClay=clayReqs, rcObs=obsReqs, rcGeode=geodeReqs }) =
     RobotCount {
-        rcOre=handleNoReq oreReqs (maximum $ map (\(CreationRequirement _ resNum) -> getTurnsTo (getAvailableResource res Ore) resNum (rcOre rc)) oreReqs)
-        , rcClay=handleNoReq clayReqs (maximum $ map (\(CreationRequirement _ resNum) -> getTurnsTo (getAvailableResource res Clay) resNum (rcClay rc)) clayReqs)
-        , rcObs=handleNoReq obsReqs (maximum $ map (\(CreationRequirement _ resNum) -> getTurnsTo (getAvailableResource res Obsidian) resNum (rcObs rc)) obsReqs)
-        , rcGeode=handleNoReq geodeReqs (maximum $ map (\(CreationRequirement _ resNum) -> getTurnsTo (getAvailableResource res Geode) resNum (rcGeode rc)) geodeReqs)
+        rcOre=handleNoReq oreReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (rcOre rc)) oreReqs)
+        , rcClay=handleNoReq clayReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (rcClay rc)) clayReqs)
+        , rcObs=handleNoReq obsReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (rcObs rc)) obsReqs)
+        , rcGeode=handleNoReq geodeReqs (maximum $ map (\(CreationRequirement (ReqType resT) resNum) -> getTurnsTo (getAvailableResource res resT) resNum (rcGeode rc)) geodeReqs)
         }
         where
             handleNoReq :: [CreationRequirement] -> Int -> Maybe Int
@@ -453,8 +452,8 @@ run input = do
         Right blueprints -> do
             when (length (catMaybes blueprints) /= length blueprints) (die "failed to parse at least one blueprint")
             let
-                --numBlueprints = 1 :: Int
-                numBlueprints = length blueprints
+                numBlueprints = 1 :: Int
+                --numBlueprints = length blueprints
                 numMinutes = 24
                 simulations = map (\bp -> (Simulation {
                         blueprint=bp
@@ -465,7 +464,7 @@ run input = do
                         , S.empty
                         )
                     ) (catMaybes blueprints)
-                solved = take numBlueprints (foldl' (\acc sim -> runSimulation sim:acc) [] simulations)
+                solved = take numBlueprints (foldl' (\acc sim -> runSimulation sim:acc) [] (reverse simulations))
             --mapM_ print solved
             --
             --let withQualityLevels = map (\simSteps -> (simSteps, (qualityLevel . last) simSteps)) solved

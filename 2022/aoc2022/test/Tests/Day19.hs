@@ -225,6 +225,16 @@ nOfEachRobot n = RobotCount {
     , rcGeode=n
     }
 
+sampleLineOneBlueprint :: Blueprint
+sampleLineOneBlueprint =
+    BluePrint {
+        bpId=1
+        , bpOreRobot=Robot (RobotType Ore) [CreationRequirement (ReqType Ore) 2] GiveOre
+        , bpClayRobot=Robot (RobotType Clay) [CreationRequirement(ReqType Ore) 2] GiveClay
+        , bpObsRobot=Robot (RobotType Obsidian) [CreationRequirement (ReqType Ore) 3, CreationRequirement (ReqType Clay) 14] GiveObs
+        , bpGeodeRobot=Robot (RobotType Geode) [CreationRequirement (ReqType Ore) 2, CreationRequirement (ReqType Obsidian) 7] GiveGeodes
+        }
+
 skipTests :: Test
 skipTests = TestList [
     TestCase (
@@ -339,5 +349,25 @@ skipTests = TestList [
         assertEqual "last (advanceWithIntermediates sim) == advance sim"
         (advance startSim 5)
         (last $ advanceWithIntermediates startSim 5)
+    )
+    , TestCase (
+            assertEqual "to next decision"
+            (Just $ Simulation {
+                resources=emptyRes { oreRes=2 }
+                , timeRemaining=22
+                , blueprint=sampleLineOneBlueprint
+                , rbts=emptyRobotCount { rcOre=1 }
+                }
+            )
+            (let result = toNextDecision
+                    (Simulation {
+                        rbts=emptyRobotCount { rcOre=1 }
+                        , resources=emptyResources
+                        , timeRemaining=24
+                        , blueprint=sampleLineOneBlueprint
+                    }) in case result of
+                        Left nextSims -> Just $ last nextSims
+                        Right _ -> Nothing
+            )
     )
     ]

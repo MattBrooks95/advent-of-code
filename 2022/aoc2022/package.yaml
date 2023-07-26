@@ -21,14 +21,14 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
-- containers == 0.6.4.1
+- containers
 - text == 1.2.5.0
 - regex-tdfa
 - vector
 - mtl 
 - parsec >= 3.1.14.0
 - strict
-- HUnit == 1.6.2.0
+- HUnit
 
 ghc-options:
 - -Wall

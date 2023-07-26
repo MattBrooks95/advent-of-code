@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.0.
+-- This file has been generated from package.yaml by hpack version 0.35.2.
 --
 -- see: https://github.com/sol/hpack
 
@@ -52,9 +52,9 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2
   build-depends:
-      HUnit ==1.6.2.0
+      HUnit
     , base >=4.7 && <5
-    , containers ==0.6.4.1
+    , containers
     , mtl
     , parsec >=3.1.14.0
     , regex-tdfa
@@ -71,7 +71,7 @@ executable aoc2022-exe
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      HUnit ==1.6.2.0
+      HUnit
     , aoc2022
     , base >=4.7 && <5
     , containers
@@ -99,7 +99,7 @@ test-suite aoc2022-test
       HUnit
     , aoc2022
     , base >=4.7 && <5
-    , containers ==0.6.4.1
+    , containers
     , mtl
     , parsec >=3.1.14.0
     , regex-tdfa

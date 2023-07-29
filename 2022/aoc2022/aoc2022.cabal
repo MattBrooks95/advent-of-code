@@ -37,6 +37,7 @@ library
       Day18
       Day19
       Day2
+      Day20
       Day3
       Day4
       Day5
@@ -57,6 +58,7 @@ library
     , containers
     , mtl
     , parsec >=3.1.14.0
+    , raw-strings-qq
     , regex-tdfa
     , strict
     , text ==1.2.5.0
@@ -78,6 +80,7 @@ executable aoc2022-exe
     , directory
     , mtl
     , parsec >=3.1.14.0
+    , raw-strings-qq
     , regex-tdfa
     , strict
     , text ==1.2.5.0
@@ -91,6 +94,7 @@ test-suite aoc2022-test
       Tests.Day17
       Tests.Day18
       Tests.Day19
+      Tests.Day20
       Paths_aoc2022
   hs-source-dirs:
       test
@@ -102,6 +106,7 @@ test-suite aoc2022-test
     , containers
     , mtl
     , parsec >=3.1.14.0
+    , raw-strings-qq
     , regex-tdfa
     , strict
     , text ==1.2.5.0

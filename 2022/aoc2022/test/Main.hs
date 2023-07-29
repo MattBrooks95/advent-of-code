@@ -5,6 +5,7 @@ import System.Exit
 import Tests.Day17
 import Tests.Day18
 import Tests.Day19
+import Tests.Day20
 
 testsDay17 = [
     testVertBar
@@ -45,6 +46,7 @@ main = do
         testsDay17
         ++ testsDay18
         ++ testsDay19
+        ++ [Tests.Day20.tests]
         ))
     print countResults
     let err = errors countResults

@@ -29,6 +29,7 @@ dependencies:
 - parsec >= 3.1.14.0
 - strict
 - HUnit
+- raw-strings-qq
 
 ghc-options:
 - -Wall

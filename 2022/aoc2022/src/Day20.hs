@@ -1,6 +1,12 @@
 module Day20 (
     run
     , parseInput
+    , Item(..)
+    , Increment(..)
+    , StartIndex(..)
+    , CurrentIndex(..)
+    , mkItem
+    , wrapItems
     ) where
 
 import System.Exit (
@@ -12,6 +18,19 @@ import Parsing (
     )
 
 import Text.Parsec as P
+
+newtype Increment = Increment Int deriving (Eq, Show)
+newtype StartIndex = StartIndex Int deriving (Eq, Show)
+newtype CurrentIndex = CurrentIndex Int deriving (Eq, Show)
+
+data Item = Item Increment StartIndex CurrentIndex
+    deriving (Eq, Show)
+
+mkItem :: Increment -> StartIndex -> Item
+mkItem inc sIdx@(StartIndex idx) = Item inc sIdx (CurrentIndex idx)
+
+wrapItems :: [Int] -> [Item]
+wrapItems numbers = [mkItem (Increment num) (StartIndex idx) | (num, idx) <- zip numbers [0..]]
 
 run :: String -> IO ()
 run input = do

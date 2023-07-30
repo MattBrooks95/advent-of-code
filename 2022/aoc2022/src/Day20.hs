@@ -2,17 +2,22 @@ module Day20 (
     run
     , parseInput
     , Item(..)
-    , Increment(..)
-    , StartIndex(..)
-    , CurrentIndex(..)
+    --, Increment(..)
+    --, StartIndex(..)
+    --, CurrentIndex(..)
     , mkItem
     , wrapItems
     , nextIndex
+    , mix
+    , itemListToSeq
+    , MixableList
     ) where
 
 import System.Exit (
     die
     )
+
+import Debug.Trace
 
 import Text.Parsec as P
 
@@ -27,18 +32,22 @@ import Parsing (
     )
 
 
-newtype Increment = Increment Int deriving (Eq, Show)
-newtype StartIndex = StartIndex Int deriving (Eq, Show)
-newtype CurrentIndex = CurrentIndex Int deriving (Eq, Show)
+--newtype Increment = Increment Int deriving (Eq, Show)
+--newtype StartIndex = StartIndex Int deriving (Eq, Show)
+--newtype CurrentIndex = CurrentIndex Int deriving (Eq, Show)
 
-data Item = Item Increment StartIndex CurrentIndex
+--data Item = Item Increment StartIndex CurrentIndex
+--    deriving (Eq, Show)
+
+newtype Item = Item Int
     deriving (Eq, Show)
 
-mkItem :: Increment -> StartIndex -> Item
-mkItem inc sIdx@(StartIndex idx) = Item inc sIdx (CurrentIndex idx)
+mkItem :: Int -> Item
+mkItem = Item
 
 wrapItems :: [Int] -> [Item]
-wrapItems numbers = [mkItem (Increment num) (StartIndex idx) | (num, idx) <- zip numbers [0..]]
+--wrapItems numbers = [mkItem (Increment num) (StartIndex idx) | (num, idx) <- zip numbers [0..]]
+wrapItems = map Item
 
 run :: String -> IO ()
 run input = do
@@ -54,22 +63,27 @@ run input = do
             let asSeq = itemListToSeq items
             -- print asSeq
             let (mixed, _) = mix (asSeq, items)
-            print (map (\(Item (Increment num) _ _) -> num) (F.toList mixed))
+            print $ showItems mixed
 
 type MixableList = DS.Seq Item
 
 itemListToSeq :: [Item] -> MixableList
 itemListToSeq =  DS.fromList
 
+showItems :: DS.Seq Item -> String
+showItems itemSeq = show $ map (\(Item num) -> num) (F.toList itemSeq)
+
 mix :: (MixableList, [Item]) -> (MixableList, [Item])
 mix (items, []) = (items, [])
-mix (items, x:xs) = mix (DS.insertAt itemNextIndex x (DS.deleteAt doItemStartIndex items), xs)
+mix (items, x:xs) =
+    let nextIter@(nextItems, _) = (DS.insertAt itemNextIndex x (DS.deleteAt doItemStartIndex items), xs)
+    in trace (showItems nextItems) (mix nextIter)
     where
         itemNextIndex = nextIndex (DS.length items) x doItemStartIndex
         doItemStartIndex = fromJust $ DS.elemIndexL x items
 
 nextIndex :: Int -> Item -> Int -> Int
-nextIndex numItems (Item (Increment move) _ _) currIdx
+nextIndex numItems (Item move) currIdx
     | move == 0 = currIdx
     | move > 0 =
         ((currIdx + (move `mod` numItems)) `mod` numItems) + (if didWrap then 1 else 0)

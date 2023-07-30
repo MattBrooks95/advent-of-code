@@ -133,4 +133,14 @@ mixTests = TestList [
             ], [])
         (mix (makeSeq smallCaseItems, take 1 smallCaseItems))
     )
+    , TestCase (
+        assertEqual "place -2"
+        (DS.fromList [
+            itemOne
+            , itemFour
+            , itemNegTwo
+            , itemSix
+            ], [])
+        (mix (makeSeq smallCaseItems, [itemNegTwo]))
+    )
     ]

@@ -24,6 +24,8 @@ import Text.Parsec as P
 import qualified Data.Sequence as DS
 import qualified Data.List as L
 import qualified Data.Foldable as F
+import qualified Data.Set as S
+import qualified Data.Map as M
 import Data.Maybe
 
 
@@ -65,13 +67,17 @@ run input = do
             print $ "parsing error:" ++ show e
             die "bad input"
         Right numbers -> do
-            print $ "parsed numbers:" ++ show numbers
+            --print $ "parsed numbers:" ++ show numbers
+            print $ "number count:" ++ show (length numbers)
+            print $ "unique item count:" ++ show ((length . L.nub) numbers)
             print $ "is list unique?:" ++ show (length numbers == length (L.nub numbers))
+            let itemCountList = countOccurences numbers
+            print $ "duped items:" ++ show (M.filter (> 1) itemCountList)
             let items = wrapItems numbers
             let asSeq = itemListToSeq items
             -- print asSeq
             let (mixed, _) = mix (asSeq, items)
-            print $ showItems mixed
+            --print $ showItems mixed
             let part1AnswerIndices = [1000, 2000, 3000] :: [Int]
                 maxIndex = length numbers
                 idxOfZero = fromJust $ DS.elemIndexL (Item 0) mixed
@@ -79,8 +85,16 @@ run input = do
                 part1AnswerItems = mapMaybe (mixed DS.!?) part1AnswerIndicesWrapped
             print $ "index of 0:" ++ show idxOfZero
             print $ "part 1 answer wrappedIndices:" ++ show part1AnswerIndicesWrapped
-            print $ "part 1 answer items:" ++ show part1AnswerItems
+            --print $ "part 1 answer items:" ++ show part1AnswerItems
             print $ "part 1 answer:" ++ show (sum (map itemVal part1AnswerItems))
+
+countOccurences :: [Int] -> M.Map Int Int
+countOccurences numbers = go numbers M.empty
+    where
+        go [] acc = acc
+        go (x:xs) acc = case M.lookup x acc of
+            Just foundItemCount -> go xs (M.update (\_ -> Just (foundItemCount + 1)) x acc)
+            Nothing -> go xs (M.insert x 1 acc)
 
 type MixableList = DS.Seq Item
 

@@ -32,6 +32,10 @@ import Parsing (
     )
 
 
+myTrace :: String -> a -> a
+--myTrace = trace
+myTrace _ something = something
+
 --newtype Increment = Increment Int deriving (Eq, Show)
 --newtype StartIndex = StartIndex Int deriving (Eq, Show)
 --newtype CurrentIndex = CurrentIndex Int deriving (Eq, Show)
@@ -42,6 +46,9 @@ import Parsing (
 newtype Item = Item Int
     deriving (Eq, Show)
 
+itemVal :: Item -> Int
+itemVal (Item x) = x
+
 mkItem :: Int -> Item
 mkItem = Item
 
@@ -49,6 +56,7 @@ wrapItems :: [Int] -> [Item]
 --wrapItems numbers = [mkItem (Increment num) (StartIndex idx) | (num, idx) <- zip numbers [0..]]
 wrapItems = map Item
 
+-- part1, 5169 is too low
 run :: String -> IO ()
 run input = do
     print "day20"
@@ -64,6 +72,15 @@ run input = do
             -- print asSeq
             let (mixed, _) = mix (asSeq, items)
             print $ showItems mixed
+            let part1AnswerIndices = [1000, 2000, 3000] :: [Int]
+                maxIndex = length numbers
+                idxOfZero = fromJust $ DS.elemIndexL (Item 0) mixed
+                part1AnswerIndicesWrapped = map (\offset -> (offset + idxOfZero) `mod` maxIndex) part1AnswerIndices
+                part1AnswerItems = mapMaybe (mixed DS.!?) part1AnswerIndicesWrapped
+            print $ "index of 0:" ++ show idxOfZero
+            print $ "part 1 answer wrappedIndices:" ++ show part1AnswerIndicesWrapped
+            print $ "part 1 answer items:" ++ show part1AnswerItems
+            print $ "part 1 answer:" ++ show (sum (map itemVal part1AnswerItems))
 
 type MixableList = DS.Seq Item
 
@@ -77,7 +94,7 @@ mix :: (MixableList, [Item]) -> (MixableList, [Item])
 mix (items, []) = (items, [])
 mix (items, x:xs) =
     let nextIter@(nextItems, _) = (DS.insertAt itemNextIndex x (DS.deleteAt doItemStartIndex items), xs)
-    in trace (showItems nextItems) (mix nextIter)
+    in myTrace (showItems nextItems) (mix nextIter)
     where
         itemNextIndex = nextIndex (DS.length items) x doItemStartIndex
         doItemStartIndex = fromJust $ DS.elemIndexL x items
@@ -87,15 +104,19 @@ nextIndex numItems (Item move) currIdx
     | move == 0 = currIdx
     | move > 0 =
         ((currIdx + (move `mod` numItems)) `mod` numItems) + (if didWrap then 1 else 0)
-    | move < 0 =
+    | isMinus =
         let moveAmount = (abs move `mod` numItems)
-        in ((currIdx - moveAmount) `mod` numItems) + (if didWrap then (-1) else 0)
+            finalIndex = ((currIdx - moveAmount) `mod` numItems) + (if didWrap then (-1) else 0)
+        in myTrace
+            ("moving:" ++ show move ++ " final index:" ++ show finalIndex)
+            (if finalIndex == 0 then numItems else finalIndex)
     where
         -- if it wraps around the list to the right or left, it's position will need
         -- to be adjusted such that it ends up to the right of the element occupying
         -- that space in the '+' case, and needs moved one to the left in the
         -- '-' case
         didWrap = let nextIdx = currIdx + move in nextIdx < 0 || nextIdx >= numItems
+        isMinus = move < 0
 
 parseInput :: P.Parsec String () [Int]
 parseInput = P.many (integer <* P.endOfLine) <* P.eof

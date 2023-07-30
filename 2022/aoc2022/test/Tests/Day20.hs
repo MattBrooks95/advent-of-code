@@ -18,12 +18,14 @@ import Day20 (
     , Increment(..)
     , StartIndex(..)
     , CurrentIndex(..)
+    , nextIndex
     )
 
 tests :: Test
 tests = TestList [
     parsingTests
     , modelTests
+    , indexTests
     ]
 
 shortCaseNumbers :: [Int]
@@ -66,5 +68,29 @@ modelTests = TestList [
         , mkItem (Increment 4) (StartIndex 6)
         ]
         (wrapItems shortCaseNumbers)
+    )
+    ]
+
+indexTests :: Test
+indexTests = TestList [
+    TestCase (
+        assertEqual "calc 1's new index"
+        1
+        (nextIndex 7 (mkItem (Increment 1) (StartIndex 0)) 0)
+    )
+    , TestCase (
+        assertEqual "calc 2's new index"
+        2
+        (nextIndex 7 (mkItem (Increment 2) (StartIndex 1)) 0)
+    )
+    , TestCase (
+        assertEqual "calc -3's new index"
+        4
+        (nextIndex 7 (mkItem (Increment (-3)) (StartIndex 2)) 1)
+    )
+    , TestCase (
+        assertEqual "calc 4's new index"
+        3
+        (nextIndex 7 (mkItem (Increment 4) (StartIndex 6)) 5)
     )
     ]

@@ -10,6 +10,9 @@ import Text.RawString.QQ (
     r
     )
 
+import qualified Data.Sequence as DS
+import Data.Maybe
+
 import Day20 (
     parseInput
     , Item(..)
@@ -22,6 +25,10 @@ import Day20 (
     , mix
     , itemListToSeq
     , MixableList
+    , ItemOrigIndex(..)
+    , ItemValue(..)
+    , findItemInSeq
+    , makeSeq
     )
 
 tests :: Test
@@ -80,33 +87,50 @@ indexTests = TestList [
     TestCase (
         assertEqual "calc 1's new index"
         1
-        (nextIndex 7 (mkItem 1) 0)
+        (nextIndex 7 (mkItem (ItemValue 1) (ItemOrigIndex 0)) 0)
     )
     , TestCase (
         assertEqual "calc 2's new index"
         2
-        (nextIndex 7 (mkItem 2) 0)
+        (nextIndex 7 (mkItem (ItemValue 2) (ItemOrigIndex 0)) 0)
     )
     , TestCase (
         assertEqual "calc -3's new index"
         4
-        (nextIndex 7 (mkItem (-3)) 1)
+        (nextIndex 7 (mkItem (ItemValue (-3)) (ItemOrigIndex 1)) 1)
     )
     , TestCase (
         assertEqual "calc 4's new index"
         3
-        (nextIndex 7 (mkItem 4) 5)
+        (nextIndex 7 (mkItem (ItemValue 4) (ItemOrigIndex 5)) 5)
     )
     ]
 
-numberListToItemSeq :: [Int] -> Day20.MixableList
-numberListToItemSeq = itemListToSeq . wrapItems
+--smallCase :: [Int]
+--smallCase = [1, -2, 4, 6]
+
+itemNegTwo :: Item
+itemNegTwo = mkItem (ItemValue (-2)) (ItemOrigIndex 1)
+itemOne :: Item
+itemOne = mkItem (ItemValue 1) (ItemOrigIndex 0)
+itemFour :: Item
+itemFour = mkItem (ItemValue 4) (ItemOrigIndex 2)
+itemSix :: Item
+itemSix = mkItem (ItemValue 6) (ItemOrigIndex 3)
+
+smallCaseItems :: [Item]
+smallCaseItems = [itemOne, itemNegTwo, itemFour, itemSix]
 
 mixTests :: Test
 mixTests = TestList [
     TestCase (
-        assertEqual "-2 wraps around to end of list"
-        (numberListToItemSeq [1, 2, -3, 0, 3, 4, -2], wrapItems [])
-        (mix (numberListToItemSeq [1, 2, -2, -3, 0, 3, 4], wrapItems [-2]))
+        assertEqual "place 1"
+        (DS.fromList [
+            itemNegTwo
+            , itemOne
+            , itemFour
+            , itemSix
+            ], [])
+        (mix (makeSeq smallCaseItems, take 1 smallCaseItems))
     )
     ]

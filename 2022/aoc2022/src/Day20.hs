@@ -11,6 +11,10 @@ module Day20 (
     , mix
     , itemListToSeq
     , MixableList
+    , ItemOrigIndex(..)
+    , ItemValue(..)
+    , findItemInSeq
+    , makeSeq
     ) where
 
 import System.Exit (
@@ -28,6 +32,9 @@ import qualified Data.Set as S
 import qualified Data.Map as M
 import Data.Maybe
 
+import Control.Monad (
+    when
+    )
 
 import Parsing (
     integer
@@ -45,18 +52,26 @@ myTrace _ something = something
 --data Item = Item Increment StartIndex CurrentIndex
 --    deriving (Eq, Show)
 
-newtype Item = Item Int
+newtype ItemValue = ItemValue Int
+    deriving (Eq, Show)
+newtype ItemOrigIndex = ItemOrigIndex Int
+    deriving (Eq, Show)
+
+data Item = Item ItemValue ItemOrigIndex
     deriving (Eq, Show)
 
 itemVal :: Item -> Int
-itemVal (Item x) = x
+itemVal (Item (ItemValue x) _) = x
 
-mkItem :: Int -> Item
+mkItem :: ItemValue -> ItemOrigIndex -> Item
 mkItem = Item
 
 wrapItems :: [Int] -> [Item]
 --wrapItems numbers = [mkItem (Increment num) (StartIndex idx) | (num, idx) <- zip numbers [0..]]
-wrapItems = map Item
+wrapItems numbers = map (\(val, origIdx) -> Item (ItemValue val) (ItemOrigIndex origIdx)) (zip numbers [0..])
+
+makeSeq :: [Item] -> DS.Seq Item
+makeSeq = DS.fromList
 
 -- part1, 5169 is too low
 run :: String -> IO ()
@@ -74,19 +89,25 @@ run input = do
             let itemCountList = countOccurences numbers
             print $ "duped items:" ++ show (M.filter (> 1) itemCountList)
             let items = wrapItems numbers
+            let zeroItem = F.find (\(Item (ItemValue val) _) -> val == 0) items
+            when (isNothing zeroItem) (die "couldn't find the 0 item")
             let asSeq = itemListToSeq items
             -- print asSeq
             let (mixed, _) = mix (asSeq, items)
             --print $ showItems mixed
             let part1AnswerIndices = [1000, 2000, 3000] :: [Int]
                 maxIndex = length numbers
-                idxOfZero = fromJust $ DS.elemIndexL (Item 0) mixed
+                idxOfZero = fromJust $ DS.elemIndexL (fromJust zeroItem) mixed
                 part1AnswerIndicesWrapped = map (\offset -> (offset + idxOfZero) `mod` maxIndex) part1AnswerIndices
                 part1AnswerItems = mapMaybe (mixed DS.!?) part1AnswerIndicesWrapped
             print $ "index of 0:" ++ show idxOfZero
             print $ "part 1 answer wrappedIndices:" ++ show part1AnswerIndicesWrapped
             --print $ "part 1 answer items:" ++ show part1AnswerItems
             print $ "part 1 answer:" ++ show (sum (map itemVal part1AnswerItems))
+
+findItemInSeq :: ItemValue -> DS.Seq Item -> Maybe Item
+findItemInSeq (ItemValue findVal) =
+    F.find (\(Item (ItemValue val) _) -> val == findVal)
 
 countOccurences :: [Int] -> M.Map Int Int
 countOccurences numbers = go numbers M.empty
@@ -102,7 +123,7 @@ itemListToSeq :: [Item] -> MixableList
 itemListToSeq =  DS.fromList
 
 showItems :: DS.Seq Item -> String
-showItems itemSeq = show $ map (\(Item num) -> num) (F.toList itemSeq)
+showItems itemSeq = show $ map (\(Item (ItemValue num) _) -> num) (F.toList itemSeq)
 
 mix :: (MixableList, [Item]) -> (MixableList, [Item])
 mix (items, []) = (items, [])
@@ -114,7 +135,7 @@ mix (items, x:xs) =
         doItemStartIndex = fromJust $ DS.elemIndexL x items
 
 nextIndex :: Int -> Item -> Int -> Int
-nextIndex numItems (Item move) currIdx
+nextIndex numItems (Item (ItemValue move) _) currIdx
     | move == 0 = currIdx
     | move > 0 =
         ((currIdx + (move `mod` numItems)) `mod` numItems) + (if didWrap then 1 else 0)

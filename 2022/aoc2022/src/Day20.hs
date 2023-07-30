@@ -136,7 +136,7 @@ mix (items, x:xs) =
 
 nextIndex :: Int -> Item -> Int -> Int
 nextIndex numItems (Item (ItemValue move) _) currIdx
-    | move == 0 = currIdx
+    | move == 0 || move == numItems = currIdx
     | move > 0 =
         ((currIdx + (move `mod` numItems)) `mod` numItems) + (if didWrap then 1 else 0)
     | isMinus =

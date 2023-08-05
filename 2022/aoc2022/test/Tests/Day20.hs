@@ -36,6 +36,7 @@ tests = TestList [
     parsingTests
 --    , modelTests
 --  , indexTests
+    , shortInputTests
     , mixTests
     ]
 
@@ -150,8 +151,8 @@ smallCaseItems = [
     , itemFour
     ]
 
-mixTests :: Test
-mixTests = TestList [
+shortInputTests :: Test
+shortInputTests = TestList [
     TestCase (
         assertEqual "place 1"
         (DS.fromList [
@@ -241,5 +242,50 @@ mixTests = TestList [
             assertEqual "does short input"
             (DS.fromList [itemOne, itemTwo, itemNegThree, itemFour, itemZero, itemThree, itemNegTwo], [])
             (mix (makeSeq startingArrangement, startingArrangement))
+    )
+    ]
+
+quickItem :: Int -> Int -> Item
+quickItem val idx = Item (ItemValue val) (ItemOrigIndex idx)
+
+mixTestsOne :: Item
+mixTestsOne = quickItem 1 0
+
+mixTestsNegThree :: Item
+mixTestsNegThree = quickItem (-3) 1
+
+mixTestsSix :: Item
+mixTestsSix = quickItem 6 2
+
+mixTestsTwo :: Item
+mixTestsTwo = quickItem 2 3
+
+mixTestsNegTwo :: Item
+mixTestsNegTwo = quickItem (-2) 4
+
+mixTestsNegSix :: Item
+mixTestsNegSix = quickItem 6 5
+
+mixTestsStart :: [Item]
+mixTestsStart = [
+    mixTestsOne
+    , mixTestsNegThree
+    , mixTestsSix
+    , mixTestsTwo
+    , mixTestsNegTwo
+    , mixTestsNegSix
+    ]
+
+mixTests :: Test
+mixTests = TestList [
+    TestCase (
+        assertEqual "offset is a multiple of # items"
+        (DS.fromList mixTestsStart, [])
+        (mix (makeSeq mixTestsStart, [mixTestsSix]))
+    )
+    , TestCase (
+        assertEqual "offset is a negative multiple of # items"
+        (DS.fromList mixTestsStart, [])
+        (mix (makeSeq mixTestsStart, [mixTestsSix]))
     )
     ]

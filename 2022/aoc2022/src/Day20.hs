@@ -155,7 +155,10 @@ mix (items, x@(Item (ItemValue shiftValue) _):xs)
                 --let wrappedIndex = if nextIndex < 0 then length items - abs nextIndex else nextIndex
                 let wrappedIndex = wrapIndex (length items) nextIndex
                 in
-                    let replaceItem = fromJust $ items DS.!? wrappedIndex
+                    -- TODO minus wrapped case, test case for mod moveamount == 0
+                    let
+                        didWrap = wrappedIndex /= nextIndex
+                        replaceItem = fromJust $ items DS.!? wrappedIndex
                         afterModification = DS.adjust' (const x) wrappedIndex items
                         afterDeletion = DS.deleteAt startIndex afterModification
                         movedItemDest = wrappedIndex
@@ -179,7 +182,8 @@ mix (items, x@(Item (ItemValue shiftValue) _):xs)
                     -- get rid of the item that we moved
                     doDeletion =
                         DS.deleteAt startIndex
-                    movedItemDest = if wrappedIndex /= rawNextIndex then wrappedIndex + 1 else wrappedIndex - 1
+                    didWrap = wrappedIndex /= rawNextIndex
+                    movedItemDest = if didWrap then wrappedIndex + 1 else wrappedIndex - 1
                     finalSeq = placeDisplacedItem (doDeletion afterModification)
                         --if movedItemDest == 0
                         --then doDeletion afterModification DS.|> replaceItem

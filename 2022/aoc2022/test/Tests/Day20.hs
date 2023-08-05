@@ -288,4 +288,16 @@ mixTests = TestList [
         (DS.fromList mixTestsStart, [])
         (mix (makeSeq mixTestsStart, [mixTestsSix]))
     )
+    , let items = [ quickItem val idx | (val, idx) <- zip [4, -2, 5, 6, 7, 8, 9] [0..]] in TestCase (
+        assertEqual "-2 case from the problem statement"
+        (DS.fromList [quickItem 4 0, quickItem 5 2, quickItem 6 3, quickItem 7 4, quickItem 8 5, quickItem (-2) 1, quickItem 9 6], [])
+        (mix (makeSeq items, [items !! 1]))
+    )
+    -- fails, not sure if the test case I came up with matches the spec
+    --, let items@[itemOne, itemTwo, itemThree, itemFive, itemThirteen, itemFourteen] = [quickItem 1 0, quickItem 2 1, quickItem 3 2, quickItem 5 3, quickItem 13 4, quickItem 14 5] in
+    --    TestCase (
+    --        assertEqual "piece wraps to 1 less than it's starting index"
+    --        (DS.fromList [itemOne, itemTwo, itemFive, itemThree, itemThirteen, itemFourteen], [])
+    --        (mix (makeSeq items, [quickItem 5 3]))
+    --)
     ]

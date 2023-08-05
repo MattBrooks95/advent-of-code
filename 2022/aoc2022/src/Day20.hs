@@ -152,7 +152,8 @@ mix (items, x@(Item (ItemValue shiftValue) _):xs)
         Left -> case trace ("minus next idx:" ++ show rawNextIndex) rawNextIndex of
             0 -> mix (DS.deleteAt startIndex items DS.|> x, xs)
             nextIndex ->
-                let wrappedIndex = if nextIndex < 0 then length items - abs nextIndex else nextIndex
+                --let wrappedIndex = if nextIndex < 0 then length items - abs nextIndex else nextIndex
+                let wrappedIndex = wrapIndex (length items) nextIndex
                 in
                     let replaceItem = fromJust $ items DS.!? wrappedIndex
                         afterModification = DS.adjust' (const x) wrappedIndex items
@@ -162,29 +163,28 @@ mix (items, x@(Item (ItemValue shiftValue) _):xs)
                             if movedItemDest == length items
                             then replaceItem DS.<| afterDeletion
                             else DS.insertAt movedItemDest replaceItem afterDeletion
-                    in (finalSeq, xs)
+                    in mix (finalSeq, xs)
         Right ->
             if rawNextIndex == length items - 1
             then (x DS.<| DS.deleteAt startIndex items, xs)
             else
-                let replaceItem = fromJust $ items DS.!? rawNextIndex
+                let wrappedIndex = if rawNextIndex > length items - 1 then rawNextIndex - (length items - 1) else rawNextIndex
+                    replaceItem = fromJust $ items DS.!? wrappedIndex
                     -- place item in its next spot
                     afterModification =
-                        DS.adjust' (const x) (trace ("\n" ++ show rawNextIndex) rawNextIndex) items
+                        DS.adjust' (const x) (trace ("\n TODO handle wrapped case??? wrapped idx:" ++ show wrappedIndex) wrappedIndex) items
                     -- function to move the replaced item
-                    -- I think this is no good, it overwrites another item that has nothing
-                    -- to do with this operation
                     placeDisplacedItem =
                         DS.insertAt movedItemDest replaceItem
                     -- get rid of the item that we moved
                     doDeletion =
                         DS.deleteAt startIndex
-                    movedItemDest = rawNextIndex - 1
+                    movedItemDest = if wrappedIndex /= rawNextIndex then wrappedIndex + 1 else wrappedIndex - 1
                     finalSeq = placeDisplacedItem (doDeletion afterModification)
                         --if movedItemDest == 0
                         --then doDeletion afterModification DS.|> replaceItem
                         --else doDeletion $ DS.insertAt movedItemDest replaceItem afterModification
-                in (finalSeq, xs)
+                in mix (finalSeq, xs)
         where
             -- the index as calculated, without worrying about things like
             -- being on the beginning or the end of the list
@@ -194,6 +194,12 @@ mix (items, x@(Item (ItemValue shiftValue) _):xs)
             startIndex = fromJust $ DS.elemIndexL x items
             shiftMagnitude = abs shiftValue `mod` length items
             dir = if shiftValue > 0 then Right else Left
+
+wrapIndex :: Int -> Int -> Int
+wrapIndex numItems idx
+    | idx == 0 = idx
+    | idx > numItems - 1 = idx `mod` numItems
+    | otherwise = numItems - abs idx
 
 --insertItem :: DS.Seq Item -> Int -> Item -> InsertDir -> DS.Seq Item
 --insertItem items 0 item Left = DS.insertAt (length items - 1) item (DS.deleteAt

@@ -191,24 +191,55 @@ mixTests = TestList [
             ], [])
         (mix (makeSeq [itemOne, itemNegThree, itemTwo, itemThree, itemNegTwo, itemZero, itemFour], [itemNegThree]))
     )
-    --, TestCase (
-    --    assertEqual "place 4"
-    --    (DS.fromList [
-    --        itemOne
-    --        , itemNegTwo
-    --        , itemFour
-    --        , itemSix
-    --        ], [])
-    --    (mix (makeSeq smallCaseItems, [itemFour]))
-    --)
-    --, TestCase (
-    --    assertEqual "place 6"
-    --    (DS.fromList [
-    --        itemOne
-    --        , itemNegTwo
-    --        , itemSix
-    --        , itemFour
-    --        ], [])
-    --    (mix (makeSeq smallCaseItems, [itemSix]))
-    --)
+    , TestCase (
+        assertEqual "place 3"
+        (DS.fromList [
+            itemOne
+            , itemTwo
+            , itemNegTwo
+            , itemNegThree
+            , itemZero
+            , itemThree
+            , itemFour
+            ], [])
+        (mix (makeSeq [itemOne, itemTwo, itemThree, itemNegTwo, itemNegThree, itemZero, itemFour], [itemThree]))
+    )
+    , TestCase (
+        assertEqual "place -2"
+        (DS.fromList [
+            itemOne
+            , itemTwo
+            , itemNegThree
+            , itemZero
+            , itemThree
+            , itemFour
+            , itemNegTwo
+            ], [])
+        (mix (makeSeq [itemOne, itemTwo, itemNegTwo, itemNegThree, itemZero, itemThree, itemFour], [itemNegTwo]))
+    )
+    , let nums = [itemOne, itemTwo,itemNegThree,itemZero,itemThree,itemFour,itemNegTwo] in
+        TestCase (
+            assertEqual "place 0"
+            (DS.fromList nums, [])
+            (mix (makeSeq nums, [itemZero]))
+        )
+    , TestCase (
+        assertEqual "place 4"
+        (DS.fromList [
+            itemOne
+            , itemTwo
+            , itemNegThree
+            , itemFour
+            , itemZero
+            , itemThree
+            , itemNegTwo
+            ], [])
+        (mix (makeSeq [itemOne, itemTwo, itemNegThree, itemZero, itemThree, itemFour, itemNegTwo], [itemFour]))
+    )
+    , let startingArrangement = [itemOne, itemTwo, itemNegThree, itemThree, itemNegTwo, itemZero, itemFour]
+        in TestCase (
+            assertEqual "does short input"
+            (DS.fromList [itemOne, itemTwo, itemNegThree, itemFour, itemZero, itemThree, itemNegTwo], [])
+            (mix (makeSeq startingArrangement, startingArrangement))
+    )
     ]

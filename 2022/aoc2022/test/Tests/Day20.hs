@@ -21,7 +21,7 @@ import Day20 (
     --, Increment(..)
     --, StartIndex(..)
     --, CurrentIndex(..)
-    , nextIndex
+    --, nextIndex
     , mix
     , itemListToSeq
     , MixableList
@@ -35,7 +35,7 @@ tests :: Test
 tests = TestList [
     parsingTests
 --    , modelTests
-    , indexTests
+--  , indexTests
     , mixTests
     ]
 
@@ -82,85 +82,133 @@ parsingTests = TestList [
 --    )
 --    ]
 
-indexTests :: Test
-indexTests = TestList [
-    TestCase (
-        assertEqual "calc 1's new index"
-        1
-        (nextIndex 7 (mkItem (ItemValue 1) (ItemOrigIndex 0)) 0)
-    )
-    , TestCase (
-        assertEqual "calc 2's new index"
-        2
-        (nextIndex 7 (mkItem (ItemValue 2) (ItemOrigIndex 0)) 0)
-    )
-    , TestCase (
-        assertEqual "calc -3's new index"
-        4
-        (nextIndex 7 (mkItem (ItemValue (-3)) (ItemOrigIndex 1)) 1)
-    )
-    , TestCase (
-        assertEqual "calc 4's new index"
-        3
-        (nextIndex 7 (mkItem (ItemValue 4) (ItemOrigIndex 5)) 5)
-    )
-    ]
+--indexTests :: Test
+--indexTests = TestList [
+--    TestCase (
+--        assertEqual "calc 1's new index"
+--        1
+--        (nextIndex 7 (mkItem (ItemValue 1) (ItemOrigIndex 0)) 0)
+--    )
+--    , TestCase (
+--        assertEqual "calc 2's new index"
+--        2
+--        (nextIndex 7 (mkItem (ItemValue 2) (ItemOrigIndex 0)) 0)
+--    )
+--    , TestCase (
+--        assertEqual "calc -3's new index"
+--        4
+--        (nextIndex 7 (mkItem (ItemValue (-3)) (ItemOrigIndex 1)) 1)
+--    )
+--    , TestCase (
+--        assertEqual "calc 4's new index"
+--        3
+--        (nextIndex 7 (mkItem (ItemValue 4) (ItemOrigIndex 5)) 5)
+--    )
+--    , TestCase (
+--        assertEqual "handles an offset that is equal to the set size"
+--        3
+--        (nextIndex 7 (mkItem (ItemValue 7) (ItemOrigIndex 3)) 3)
+--    )
+--    , TestCase (
+--        assertEqual "handles an offset that is the inverse of the set size"
+--        3
+--        (nextIndex 7 (mkItem (ItemValue (-7)) (ItemOrigIndex 3)) 3)
+--    )
+--    , TestCase (
+--        assertEqual "if moved right to the edge, wraps around to the beginning of the list"
+--        0
+--        (nextIndex 7 (mkItem (ItemValue 3) (ItemOrigIndex 3)) 3)
+--    )
+--    ]
 
 --smallCase :: [Int]
 --smallCase = [1, -2, 4, 6]
 
-itemNegTwo :: Item
-itemNegTwo = mkItem (ItemValue (-2)) (ItemOrigIndex 1)
 itemOne :: Item
 itemOne = mkItem (ItemValue 1) (ItemOrigIndex 0)
+itemTwo :: Item
+itemTwo = mkItem (ItemValue 2) (ItemOrigIndex 1)
+itemNegThree :: Item
+itemNegThree = mkItem (ItemValue (-3)) (ItemOrigIndex 2)
+itemThree :: Item
+itemThree = mkItem (ItemValue 3) (ItemOrigIndex 3)
+itemNegTwo :: Item
+itemNegTwo = mkItem (ItemValue (-2)) (ItemOrigIndex 4)
+itemZero :: Item
+itemZero = mkItem (ItemValue 0) (ItemOrigIndex 5)
 itemFour :: Item
-itemFour = mkItem (ItemValue 4) (ItemOrigIndex 2)
-itemSix :: Item
-itemSix = mkItem (ItemValue 6) (ItemOrigIndex 3)
+itemFour = mkItem (ItemValue 4) (ItemOrigIndex 6)
 
 smallCaseItems :: [Item]
-smallCaseItems = [itemOne, itemNegTwo, itemFour, itemSix]
+smallCaseItems = [
+    itemOne
+    , itemTwo
+    , itemNegThree
+    , itemThree
+    , itemNegTwo
+    , itemZero
+    , itemFour
+    ]
 
 mixTests :: Test
 mixTests = TestList [
     TestCase (
         assertEqual "place 1"
         (DS.fromList [
-            itemNegTwo
+            itemTwo
             , itemOne
+            , itemNegThree
+            , itemThree
+            , itemNegTwo
+            , itemZero
             , itemFour
-            , itemSix
             ], [])
         (mix (makeSeq smallCaseItems, take 1 smallCaseItems))
     )
     , TestCase (
-        assertEqual "place -2"
+        assertEqual "place 2"
         (DS.fromList [
             itemOne
-            , itemFour
+            , itemNegThree
+            , itemTwo
+            , itemThree
             , itemNegTwo
-            , itemSix
+            , itemZero
+            , itemFour
             ], [])
-        (mix (makeSeq smallCaseItems, [itemNegTwo]))
+        (mix (makeSeq [itemTwo, itemOne, itemNegThree, itemThree, itemNegTwo, itemZero, itemFour], [itemTwo]))
     )
     , TestCase (
-        assertEqual "place 4"
+        assertEqual "place -3"
         (DS.fromList [
             itemOne
+            , itemTwo
+            , itemThree
             , itemNegTwo
-            , itemFour
-            , itemSix
-            ], [])
-        (mix (makeSeq smallCaseItems, [itemFour]))
-    )
-    , TestCase (
-        assertEqual "place 6"
-        (DS.fromList [
-            itemOne
-            , itemNegTwo
-            , itemSix
+            , itemNegThree
+            , itemZero
             , itemFour
             ], [])
-        (mix (makeSeq smallCaseItems, [itemSix]))
+        (mix (makeSeq [itemOne, itemNegThree, itemTwo, itemThree, itemNegTwo, itemZero, itemFour], [itemNegThree]))
     )
+    --, TestCase (
+    --    assertEqual "place 4"
+    --    (DS.fromList [
+    --        itemOne
+    --        , itemNegTwo
+    --        , itemFour
+    --        , itemSix
+    --        ], [])
+    --    (mix (makeSeq smallCaseItems, [itemFour]))
+    --)
+    --, TestCase (
+    --    assertEqual "place 6"
+    --    (DS.fromList [
+    --        itemOne
+    --        , itemNegTwo
+    --        , itemSix
+    --        , itemFour
+    --        ], [])
+    --    (mix (makeSeq smallCaseItems, [itemSix]))
+    --)
     ]

@@ -293,11 +293,17 @@ mixTests = TestList [
         (DS.fromList [quickItem 4 0, quickItem 5 2, quickItem 6 3, quickItem 7 4, quickItem 8 5, quickItem (-2) 1, quickItem 9 6], [])
         (mix (makeSeq items, [items !! 1]))
     )
-    -- fails, not sure if the test case I came up with matches the spec
+    ---- fails, not sure if the test case I came up with matches the spec
     --, let items@[itemOne, itemTwo, itemThree, itemFive, itemThirteen, itemFourteen] = [quickItem 1 0, quickItem 2 1, quickItem 3 2, quickItem 5 3, quickItem 13 4, quickItem 14 5] in
     --    TestCase (
     --        assertEqual "piece wraps to 1 less than it's starting index"
-    --        (DS.fromList [itemOne, itemTwo, itemFive, itemThree, itemThirteen, itemFourteen], [])
+    --        (DS.fromList [itemOne, itemTwo, itemThree, itemFive, itemThirteen, itemFourteen], [])
     --        (mix (makeSeq items, [quickItem 5 3]))
     --)
+    --, let items = [quickItem 1 0, quickItem (-1) 1, quickItem 3 2] in
+    --    TestCase (
+    --        assertEqual "item goes left to 0"
+    --        (DS.fromList [quickItem 1 0, quickItem 3 2, quickItem (-1) 1], [])
+    --        (mix (makeSeq items, [quickItem (-1) 1]))
+    --    )
     ]

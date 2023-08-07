@@ -59,6 +59,7 @@ myTrace _ something = something
 --    deriving (Eq, Show)
 
 data InsertDir = Left | Right
+    deriving (Show)
 
 newtype ItemValue = ItemValue Int
     deriving (Eq, Show, Ord)
@@ -70,7 +71,7 @@ data Item = Item ItemValue ItemOrigIndex
 
 instance Show Item where
     show (Item (ItemValue val) (ItemOrigIndex origIdx)) =
-        "(val:" ++ show val ++ ", origIdx:" ++ show origIdx ++ ")"
+        "(v:" ++ show val ++ ", oIdx:" ++ show origIdx ++ ")"
 
 itemVal :: Item -> Int
 itemVal (Item (ItemValue x) _) = x
@@ -86,6 +87,7 @@ makeSeq :: [Item] -> DS.Seq Item
 makeSeq = DS.fromList
 
 -- part1, 5169 is too low
+-- -11323 no good
 run :: String -> IO ()
 run input = do
     print "day20"
@@ -94,6 +96,7 @@ run input = do
             print $ "parsing error:" ++ show e
             die "bad input"
         E.Right numbers -> do
+            --print $ "numbers:" ++ show numbers
             --print $ "parsed numbers:" ++ show numbers
             print $ "number count:" ++ show (length numbers)
             print $ "unique item count:" ++ show ((length . L.nub) numbers)
@@ -113,6 +116,7 @@ run input = do
                 idxOfZero = fromJust $ DS.elemIndexL (fromJust zeroItem) mixed
                 part1AnswerIndicesWrapped = map (\offset -> (offset + idxOfZero) `mod` maxIndex) part1AnswerIndices
                 part1AnswerItems = mapMaybe (mixed DS.!?) part1AnswerIndicesWrapped
+            --print $ "as seq" ++ show asSeq
             print $ "index of 0:" ++ show idxOfZero
             print $ "part 1 answer wrappedIndices:" ++ show part1AnswerIndicesWrapped
             --print $ "part 1 answer items:" ++ show part1AnswerItems
@@ -149,55 +153,30 @@ mix (items, x@(Item (ItemValue shiftValue) _):xs)
     -- do nothing
     | shiftValue `mod` length items == 0 = mix (items, xs)
     | otherwise = case dir of
-        Left -> case trace ("minus next idx:" ++ show rawNextIndex) rawNextIndex of
-            0 -> mix (DS.deleteAt startIndex items DS.|> x, xs)
-            nextIndex ->
-                --let wrappedIndex = if nextIndex < 0 then length items - abs nextIndex else nextIndex
-                let wrappedIndex = wrapIndex (length items) nextIndex
-                in
-                    -- TODO minus wrapped case, test case for mod moveamount == 0
-                    let
-                        didWrap = wrappedIndex /= nextIndex
-                        replaceItem = fromJust $ items DS.!? wrappedIndex
-                        afterModification = DS.adjust' (const x) wrappedIndex items
-                        afterDeletion = DS.deleteAt startIndex afterModification
-                        movedItemDest = wrappedIndex
-                        finalSeq =
-                            if movedItemDest == length items
-                            then replaceItem DS.<| afterDeletion
-                            else DS.insertAt movedItemDest replaceItem afterDeletion
-                    in mix (finalSeq, xs)
+        Left ->
+            let targetDest = startIndex + shiftValue
+                insertIndex = targetDest - 1
+                replaceItem = fromJust $ DS.lookup insertIndex items
+            in
+                if insertIndex < 0
+                then mix (DS.deleteAt startIndex (DS.insertAt (numItems - abs targetDest) x items), xs)
+                else mix (DS.insertAt (insertIndex + 1) (trace ("minus replace item:" ++ show replaceItem) replaceItem) (DS.deleteAt startIndex (DS.update insertIndex x items)), xs)
         Right ->
-            if rawNextIndex == length items - 1
-            then (x DS.<| DS.deleteAt startIndex items, xs)
-            else
-                let wrappedIndex = if rawNextIndex > length items - 1 then rawNextIndex - (length items - 1) else rawNextIndex
-                    replaceItem = fromJust $ items DS.!? wrappedIndex
-                    -- place item in its next spot
-                    afterModification =
-                        DS.adjust' (const x) (trace ("\n TODO handle wrapped case??? wrapped idx:" ++ show wrappedIndex) wrappedIndex) items
-                    -- function to move the replaced item
-                    placeDisplacedItem =
-                        DS.insertAt movedItemDest replaceItem
-                    -- get rid of the item that we moved
-                    doDeletion =
-                        DS.deleteAt startIndex
-                    didWrap = wrappedIndex /= rawNextIndex
-                    movedItemDest = if didWrap then wrappedIndex + 1 else wrappedIndex - 1
-                    finalSeq = placeDisplacedItem (doDeletion afterModification)
-                        --if movedItemDest == 0
-                        --then doDeletion afterModification DS.|> replaceItem
-                        --else doDeletion $ DS.insertAt movedItemDest replaceItem afterModification
-                in mix (finalSeq, xs)
+            let targetDest = startIndex + shiftValue
+                insertIndex = targetDest + 1
+                replaceItem idx = fromJust $ DS.lookup (trace ("replace idx:" ++ show idx) idx) items
+            in
+                if insertIndex > lastIndex
+                then
+                    let newInsertIndex = insertIndex - numItems
+                    in mix (DS.insertAt (newInsertIndex + 1) (let ri = replaceItem newInsertIndex in trace ("plus replace item" ++ show ri) ri) (DS.deleteAt startIndex (DS.update newInsertIndex x items)), xs)
+                else mix (DS.deleteAt startIndex (DS.insertAt insertIndex x items), xs)
         where
-            -- the index as calculated, without worrying about things like
-            -- being on the beginning or the end of the list
-            rawNextIndex = case dir of
-                Left -> startIndex - shiftMagnitude
-                Right -> startIndex + shiftMagnitude
-            startIndex = fromJust $ DS.elemIndexL x items
-            shiftMagnitude = abs shiftValue `mod` length items
             dir = if shiftValue > 0 then Right else Left
+            startIndex = fromJust (if isNothing startIndexMaybe then trace ("couldn't find item:" ++ show x ++ " num items:" ++ show numItems) startIndexMaybe else startIndexMaybe)
+            startIndexMaybe = DS.elemIndexL x items
+            lastIndex = numItems - 1
+            numItems = length items
 
 wrapIndex :: Int -> Int -> Int
 wrapIndex numItems idx

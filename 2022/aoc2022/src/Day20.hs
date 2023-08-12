@@ -88,6 +88,7 @@ makeSeq = DS.fromList
 
 -- part1, 5169 is too low
 -- -11323 no good
+-- 12962 was no good, after fixing several bugs
 run :: String -> IO ()
 run input = do
     print "day20"
@@ -105,6 +106,7 @@ run input = do
             -- print $ "duped items:" ++ show (M.filter (> 1) itemCountList)
             let items = wrapItems numbers
             print $ "is list w/origIndices unique?:" ++ show (S.size (S.fromList items) == length numbers)
+            print $ "items at start:" ++ show items
             let zeroItem = F.find (\(Item (ItemValue val) _) -> val == 0) items
             when (isNothing zeroItem) (die "couldn't find the 0 item")
             let asSeq = itemListToSeq items
@@ -154,29 +156,54 @@ mix (items, x@(Item (ItemValue shiftValue) _):xs)
     | shiftValue `mod` length items == 0 = mix (items, xs)
     | otherwise = case dir of
         Left ->
-            let targetDest = startIndex + shiftValue
+            let targetDest = startIndex - moddedShiftValue
                 insertIndex = targetDest - 1
                 replaceItem = fromJust $ DS.lookup insertIndex items
             in
                 if insertIndex < 0
-                then mix (DS.deleteAt startIndex (DS.insertAt (numItems - abs targetDest) x items), xs)
-                else mix (DS.insertAt (insertIndex + 1) (trace ("minus replace item:" ++ show replaceItem) replaceItem) (DS.deleteAt startIndex (DS.update insertIndex x items)), xs)
+                then mix (deleteWrapper (
+                    "minus then, startIndex" ++ show startIndex
+                    ++ " targetDest:" ++ show targetDest
+                    ++ "shift value:" ++ show shiftValue ++ show " modded:" ++ show moddedShiftValue
+                    ++ " insertIndex:" ++ show (numItems - abs targetDest)
+                    ++ " processing item:" ++ show x
+                    ) startIndex (DS.insertAt (numItems - abs targetDest) x items), xs)
+                else mix (DS.insertAt (insertIndex + 1) (trace ("minus replace item:" ++ show replaceItem) replaceItem) (deleteWrapper "minus else" startIndex (DS.update insertIndex x items)), xs)
         Right ->
-            let targetDest = startIndex + shiftValue
+            let targetDest = startIndex + moddedShiftValue
                 insertIndex = targetDest + 1
                 replaceItem idx = fromJust $ DS.lookup (trace ("replace idx:" ++ show idx) idx) items
             in
                 if insertIndex > lastIndex
                 then
                     let newInsertIndex = insertIndex - numItems
-                    in mix (DS.insertAt (newInsertIndex + 1) (let ri = replaceItem newInsertIndex in trace ("plus replace item" ++ show ri) ri) (DS.deleteAt startIndex (DS.update newInsertIndex x items)), xs)
-                else mix (DS.deleteAt startIndex (DS.insertAt insertIndex x items), xs)
+                    in mix (DS.insertAt (newInsertIndex + 1) (let ri = replaceItem newInsertIndex in trace ("plus replace item" ++ show ri) ri) (deleteWrapper "right then" startIndex (DS.update newInsertIndex x items)), xs)
+                else mix (deleteWrapper "right else" startIndex (DS.insertAt insertIndex x items), xs)
         where
             dir = if shiftValue > 0 then Right else Left
-            startIndex = fromJust (if isNothing startIndexMaybe then trace ("couldn't find item:" ++ show x ++ " num items:" ++ show numItems) startIndexMaybe else startIndexMaybe)
+            moddedShiftValue = abs shiftValue `mod` numItems
+            startIndex =
+                fromJust (
+                    if isNothing startIndexMaybe
+                    then trace ("couldn't find item:"
+                        ++ show x
+                        ++ " num items:"
+                        ++ show numItems
+                        ++ " items:"
+                        ++ show items) startIndexMaybe 
+                    else startIndexMaybe
+                )
             startIndexMaybe = DS.elemIndexL x items
             lastIndex = numItems - 1
             numItems = length items
+
+deleteWrapper :: String -> Int -> MixableList -> MixableList
+deleteWrapper debugMsg idx itemSeq =
+    case itemSeq DS.!? idx of
+        Nothing -> trace ("couldn't find item at idx:" ++ show idx ++ " to delete") afterDeletion
+        Just item -> trace ("deleting item:" ++ show item ++ " " ++ debugMsg) afterDeletion
+    where
+        afterDeletion = DS.deleteAt idx itemSeq
 
 wrapIndex :: Int -> Int -> Int
 wrapIndex numItems idx

@@ -125,6 +125,12 @@ run input = do
             let answerItems = map itemVal part1AnswerItems
             print $ "part 1 answer items:" ++ show answerItems
             print $ "part 1 answer:" ++ show (sum answerItems)
+            let startItems = S.fromList (F.toList items)
+                endItems = S.fromList (F.toList mixed)
+                startEndDiff = S.difference startItems endItems
+            -- ensure that we didn't lose data
+            print $ "difference length: " ++ show (length startEndDiff) ++ "start list and end list difference:" ++ show startEndDiff
+            print $ "num items start:" ++ show (length startItems) ++ " num items end:" ++ show (length endItems)
 
 findItemInSeq :: ItemValue -> DS.Seq Item -> Maybe Item
 findItemInSeq (ItemValue findVal) =

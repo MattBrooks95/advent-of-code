@@ -293,6 +293,22 @@ mixTests = TestList [
         (DS.fromList [quickItem 4 0, quickItem 5 2, quickItem 6 3, quickItem 7 4, quickItem 8 5, quickItem (-2) 1, quickItem 9 6], [])
         (mix (makeSeq items, [items !! 1]))
     )
+    , let items = [quickItem val idx | (val, idx) <- zip [0, 1, 2, -3, 4, 5] [0..]] in
+        TestCase (
+            assertEqual "go left to exactly 0, wrap around to the end of the list"
+            (DS.fromList [quickItem 0 0, quickItem 1 1, quickItem 2 2, quickItem 4 4, quickItem 5 5, quickItem (-3) 3]
+                , []
+            )
+            (mix (makeSeq items, [items !! 3]))
+        )
+    , let items = [quickItem val idx | (val, idx) <- zip [0, 1, 2, 3, 4] [0..]] in
+        TestCase (
+            assertEqual "go right to exactly the end of the list, wrap around to beginning"
+            (DS.fromList [quickItem 2 2, quickItem 0 0, quickItem 1 1, quickItem 3 3, quickItem 4 4]
+                , []
+            )
+            (mix (makeSeq items, [items !! 2]))
+        )
     ---- fails, not sure if the test case I came up with matches the spec
     --, let items@[itemOne, itemTwo, itemThree, itemFive, itemThirteen, itemFourteen] = [quickItem 1 0, quickItem 2 1, quickItem 3 2, quickItem 5 3, quickItem 13 4, quickItem 14 5] in
     --    TestCase (

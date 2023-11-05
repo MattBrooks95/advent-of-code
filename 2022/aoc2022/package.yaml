@@ -27,9 +27,12 @@ dependencies:
 - vector
 - mtl 
 - parsec >= 3.1.14.0
+- attoparsec
 - strict
 - HUnit
 - raw-strings-qq
+- bytestring
+- word8
 
 ghc-options:
 - -Wall

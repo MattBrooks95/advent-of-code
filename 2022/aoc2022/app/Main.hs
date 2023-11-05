@@ -103,6 +103,9 @@ import Day19 (
 import Day20 (
     run
     )
+import Day20_2 (
+    run
+    )
 
 
 main :: IO ()
@@ -138,5 +141,6 @@ main = do
     --Day17.run fileContents
     --Day18.run fileContents
     --Day19.run fileContents
-    Day20.run fileContents
+    --Day20.run fileContents
+    Day20_2.run filePath
 

@@ -113,14 +113,11 @@ run input = do
             -- print asSeq
             let (mixed, _) = mix (asSeq, items)
             --print $ showItems mixed
-            let part1AnswerIndices = [1000, 2000, 3000] :: [Int]
-                maxIndex = length numbers
+            let part1AnswerIndices = (1000, 2000, 3000) :: (Int, Int, Int)
                 idxOfZero = fromJust $ DS.elemIndexL (fromJust zeroItem) mixed
-                part1AnswerIndicesWrapped = map (\offset -> (offset + idxOfZero) `mod` maxIndex) part1AnswerIndices
-                part1AnswerItems = mapMaybe (mixed DS.!?) part1AnswerIndicesWrapped
+                part1AnswerItems = getPart1AnswerItems (1000, 2000, 3000) mixed
             --print $ "as seq" ++ show asSeq
             print $ "index of 0:" ++ show idxOfZero
-            print $ "part 1 answer wrappedIndices:" ++ show part1AnswerIndicesWrapped
             --print $ "part 1 answer items:" ++ show part1AnswerItems
             let answerItems = map itemVal part1AnswerItems
             print $ "part 1 answer items:" ++ show answerItems
@@ -131,6 +128,22 @@ run input = do
             -- ensure that we didn't lose data
             print $ "difference length: " ++ show (length startEndDiff) ++ "start list and end list difference:" ++ show startEndDiff
             print $ "num items start:" ++ show (length startItems) ++ " num items end:" ++ show (length endItems)
+            let lastItem = fromJust $ DS.lookup (length mixed - 1) mixed
+                firstItem = fromJust $ DS.lookup 0 mixed
+            print $ "off by one?"
+                 -- how does this not change the answer????????
+                 -- oh, it's because we start counting from 0, so removing from the left one item and
+                 -- adding to the right one item doesn't change anything, I'd have to shift 0 to the left or the right once
+                 -- to test this theory
+                 ++ show (sum (map itemVal (getPart1AnswerItems part1AnswerIndices ((lastItem DS.<| DS.deleteAt (length mixed - 1) mixed)))))
+
+getPart1AnswerItems :: (Int, Int, Int) -> MixableList -> [Item]
+getPart1AnswerItems (idxOne, idxTwo, idxThree) items =
+    let maxIndex = length items
+        zeroItem = F.find (\(Item (ItemValue val) _) -> val == 0) items
+        idxOfZero = fromJust $ DS.elemIndexL (fromJust zeroItem) items
+        part1AnswerIndicesWrapped = map (\offset -> (offset + idxOfZero) `mod` maxIndex) [idxOne, idxTwo, idxThree]
+    in map (\idx -> fromJust (items DS.!? idx)) part1AnswerIndicesWrapped
 
 findItemInSeq :: ItemValue -> DS.Seq Item -> Maybe Item
 findItemInSeq (ItemValue findVal) =

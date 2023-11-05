@@ -100,6 +100,9 @@ mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex _)):xs)
         Nothing -> Left $ "failed to find index of item:" <> show x <> "in " <> show itemsList
         Just itemStartIdx ->
             let targetIndex = (itemStartIdx + val) `mod` length itemsList
+                -- this arbitrary +1 is probably the issue, I think the condition here is:
+                -- was the offset negative (determines sliding direction on insert)
+                -- what to do at the left or right edge?
                 useTargetIndex = if isNeg then targetIndex else targetIndex + 1
                 (leftItems, rightItems) = S.splitAt (myDebug ("itemStart:" <> show itemStartIdx <> " targIndex:" <> show useTargetIndex) useTargetIndex) itemsList
             in

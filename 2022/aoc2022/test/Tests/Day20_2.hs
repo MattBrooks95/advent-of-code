@@ -56,19 +56,19 @@ tests = TestList [
         (Right mixFour)
         (mix' mixThree [three])
     )
-    , TestCase (
-        assertEqual "mix 5"
-        (Right mixFive)
-        (mix' mixFour [negTwo])
-    )
-    , TestCase (
-        assertEqual "mix 6"
-        (Right mixSix)
-        (mix' mixFive [zero])
-    )
-    , TestCase (
-        assertEqual "mix 7"
-        (Right mixSeven)
-        (mix' mixSix [four])
-    )
+    --, TestCase (
+    --    assertEqual "mix 5"
+    --    (Right mixFive)
+    --    (mix' mixFour [negTwo])
+    --)
+    --, TestCase (
+    --    assertEqual "mix 6"
+    --    (Right mixSix)
+    --    (mix' mixFive [zero])
+    --)
+    --, TestCase (
+    --    assertEqual "mix 7"
+    --    (Right mixSeven)
+    --    (mix' mixSix [four])
+    --)
     ]

@@ -25,7 +25,7 @@ import Debug.Trace
 
 -- so that I can 'disable' the tracing just by changing this definition
 myDebug :: String -> a -> a
-myDebug msg val = trace msg val
+myDebug msg val = trace ("\n" ++ msg) val
 
 newtype MixItemValue = MixItemValue Int deriving (Eq)
 instance Show MixItemValue where
@@ -95,18 +95,20 @@ mix input = mix' input (toList input)
 mix' :: MixItemsList -> [MixItem] -> Either String MixItemsList
 mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex _)):xs)
     -- 0 or result of mod w/ length of sequence == 0 then nothing to do because index doesn't change
-    | myDebug ("val:" <> show val) val `mod` length itemsList == 0 = myDebug "offset multiple of list length, skipping" (mix' itemsList xs)
-    | otherwise = case myDebug ("outer case, val:" <> show val) (findItemIndex itemsList x) of
+    | val `mod` length itemsList == 0 = myDebug "offset multiple of list length, skipping" (mix' itemsList xs)
+    | otherwise = case findItemIndex itemsList x of
         Nothing -> Left $ "failed to find index of item:" <> show x <> "in " <> show itemsList
-        Just itemStartIdx -> myDebug "just case" $
-            let targetIndex = itemStartIdx + val `mod` length itemsList
-                (leftItems, rightItems) = S.splitAt (if isNeg then targetIndex else targetIndex + 1) itemsList
+        Just itemStartIdx ->
+            let targetIndex = (itemStartIdx + val) `mod` length itemsList
+                useTargetIndex = if isNeg then targetIndex else targetIndex + 1
+                (leftItems, rightItems) = S.splitAt (myDebug ("itemStart:" <> show itemStartIdx <> " targIndex:" <> show useTargetIndex) useTargetIndex) itemsList
             in
-                myDebug ("left:" <> show leftItems <> " right:" <> show rightItems) $
-                    let newItemsList = myDebug ("startIdx:" <> show itemStartIdx <> " offset: " <> show val) $ if itemStartIdx < targetIndex
-                        then S.deleteAt itemStartIdx leftItems S.>< (x S.<| rightItems)
-                        else (leftItems S.|> x) S.>< S.deleteAt (itemStartIdx - length leftItems) rightItems
-                    in myDebug ("recursing, new list:" <> show newItemsList) (mix' newItemsList xs)
+                myDebug ("\nleft:" <> show leftItems <> " right:" <> show rightItems) $
+                    let newItemsList =
+                            if itemStartIdx < targetIndex
+                            then S.deleteAt itemStartIdx leftItems S.>< (x S.<| rightItems)
+                            else (leftItems S.|> x) S.>< S.deleteAt (itemStartIdx - length leftItems) rightItems
+                    in mix' newItemsList xs
             where
                 isNeg = val < 0
 mix' itemsList [] = Right itemsList

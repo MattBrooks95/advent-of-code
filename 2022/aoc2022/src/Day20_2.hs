@@ -101,7 +101,7 @@ mix input = runWriter $ mix' input (toList input)
 mix' :: MixItemsList -> [MixItem] -> Writer [String] (Either String MixItemsList)
 mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex itemOrigIndex)):xs)
     -- 0 or result of mod w/ length of sequence == 0 then nothing to do because index doesn't change
-    | val `mod` length itemsList == 0 = myDebug "offset multiple of list length, skipping" (mix' itemsList xs)
+    | val `mod` length itemsList == 0 = tell ["offset:" <> show val <> " is multiple of list length, skipping"] >> mix' itemsList xs
     | otherwise = case findItemIndex itemsList x of
         Nothing -> pure $ Left $ "failed to find index of item:" <> show x <> "in " <> show itemsList
         Just itemStartIdx ->

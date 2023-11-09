@@ -124,11 +124,12 @@ mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex itemOrigIndex)):xs)
                     in -- mix' newItemsList xs
                     -- if they end up on the edge of the array, wrap them around because the rules
                     -- of this problem are weird
-                    if leftToLeftEdge
-                    then mix' (S.deleteAt 0 (newItemsList S.|> x)) xs
-                    else if rightToRightEdge
-                        then mix' (S.deleteAt (length newItemsList) (x S.<| newItemsList)) xs
-                        else mix' newItemsList xs
+                    --I didn't know you could use guards like this, in a let binding no less
+                    let nextIterationSequence
+                            | leftToLeftEdge = S.deleteAt 0 (newItemsList S.|> x)
+                            | rightToRightEdge = S.deleteAt (length newItemsList) (x S.<| newItemsList)
+                            | otherwise = newItemsList
+                    in mix' nextIterationSequence xs
             where
                 isNeg = val < 0
 mix' itemsList [] = pure $ Right itemsList

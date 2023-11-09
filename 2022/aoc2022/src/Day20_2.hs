@@ -22,6 +22,8 @@ import qualified Data.Sequence as S
 import Data.Foldable (toList)
 
 import Debug.Trace
+import Control.Monad.Writer.Lazy (Writer)
+import Control.Monad.Writer (runWriter, tell)
 
 -- so that I can 'disable' the tracing just by changing this definition
 myDebug :: String -> a -> a
@@ -61,7 +63,7 @@ run inputFilePath = do
         --use zipWith
         withIndices = zipWith (curry MixItem) values indices
         itemsSequence = S.fromList withIndices :: MixItemsList
-        mixed = mix itemsSequence
+        (mixed, log) = mix itemsSequence
     coords <- case mixed of
         Left err -> die $ "mixing failed" <> err
         Right safelyMixed -> do
@@ -75,6 +77,7 @@ run inputFilePath = do
     --print itemsSequence
     --printed out the values with their indices to to check that I'm not high
     --mapM_ print withIndices
+    mapM_ print log
 
 sumThreeple :: (Int, Int, Int) -> Int
 sumThreeple (x, y, z) = x + y + z
@@ -91,16 +94,16 @@ getCoordinates mixedItems = do
         len = length mixedItems
         idxFrom0 zeroIndex coordOffset = (coordOffset + zeroIndex) `mod` len
 
-mix :: MixItemsList -> Either String MixItemsList
-mix input = mix' input (toList input)
+mix :: MixItemsList -> (Either String MixItemsList, [String])
+mix input = runWriter $ mix' input (toList input)
 
 -- | item list to be mixed -> list of items not yet processed -> items in mixed order
-mix' :: MixItemsList -> [MixItem] -> Either String MixItemsList
-mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex _)):xs)
+mix' :: MixItemsList -> [MixItem] -> Writer [String] (Either String MixItemsList)
+mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex itemOrigIndex)):xs)
     -- 0 or result of mod w/ length of sequence == 0 then nothing to do because index doesn't change
     | val `mod` length itemsList == 0 = myDebug "offset multiple of list length, skipping" (mix' itemsList xs)
     | otherwise = case findItemIndex itemsList x of
-        Nothing -> Left $ "failed to find index of item:" <> show x <> "in " <> show itemsList
+        Nothing -> pure $ Left $ "failed to find index of item:" <> show x <> "in " <> show itemsList
         Just itemStartIdx ->
             let targetIndex = (itemStartIdx + val) `mod` length itemsList
                 -- this arbitrary +1 is probably the issue, I think the condition here is:
@@ -112,7 +115,8 @@ mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex _)):xs)
                 (leftItems, rightItems) =
                     S.splitAt (myDebug ("itemStart:" <> show itemStartIdx <> " targIndex:" <> show useTargetIndex) useTargetIndex) itemsList
             in
-                myDebug ("\nleft:" <> show leftItems <> " right:" <> show rightItems) $
+                tell ["itemOrigIdx:" <> show itemOrigIndex <> " itemVal:" <> show val <> " currentIndex:" <> show itemStartIdx <> " targetIndex:" <> show targetIndex] >>
+                --tell ["\nleft:" <> show leftItems <> " right:" <> show rightItems] >>
                     let newItemsList =
                             if itemStartIdx < targetIndex
                             then S.deleteAt itemStartIdx leftItems S.>< (x S.<| rightItems)
@@ -127,7 +131,7 @@ mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex _)):xs)
                         else mix' newItemsList xs
             where
                 isNeg = val < 0
-mix' itemsList [] = Right itemsList
+mix' itemsList [] = pure $ Right itemsList
 
 findItemIndex :: MixItemsList -> MixItem -> Maybe Int
 findItemIndex = flip S.elemIndexL

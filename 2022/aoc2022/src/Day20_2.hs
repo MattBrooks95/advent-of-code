@@ -73,6 +73,8 @@ run inputFilePath = do
             print $ "coords:" <> show c
             print $ "total score:" <> show (sumThreeple c)
     --print itemsSequence
+    --printed out the values with their indices to to check that I'm not high
+    --mapM_ print withIndices
 
 sumThreeple :: (Int, Int, Int) -> Int
 sumThreeple (x, y, z) = x + y + z
@@ -116,6 +118,8 @@ mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex _)):xs)
                             then S.deleteAt itemStartIdx leftItems S.>< (x S.<| rightItems)
                             else (leftItems S.|> x) S.>< S.deleteAt (itemStartIdx - length leftItems) rightItems
                     in -- mix' newItemsList xs
+                    -- if they end up on the edge of the array, wrap them around because the rules
+                    -- of this problem are weird
                     if leftToLeftEdge
                     then mix' (S.deleteAt 0 (newItemsList S.|> x)) xs
                     else if rightToRightEdge

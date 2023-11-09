@@ -9,6 +9,7 @@ module Day20_2 (
     ) where
 
 import System.Exit (die)
+import Prelude hiding (log)
 
 import qualified Data.ByteString as BSS (
     readFile
@@ -24,6 +25,7 @@ import Data.Foldable (toList)
 import Debug.Trace
 import Control.Monad.Writer.Lazy (Writer)
 import Control.Monad.Writer (runWriter, tell)
+import Data.Maybe (fromJust)
 
 -- so that I can 'disable' the tracing just by changing this definition
 myDebug :: String -> a -> a
@@ -68,31 +70,36 @@ run inputFilePath = do
         Left err -> die $ "mixing failed" <> err
         Right safelyMixed -> do
             print safelyMixed
-            pure $ getCoordinates safelyMixed
+            let zeroIdx = S.findIndexL (\(MixItem (MixItemValue v, _)) -> v == 0) safelyMixed
+            print $ "zero index:" <> show zeroIdx
+            pure $ getCoordinates (fromJust zeroIdx) safelyMixed
     case coords of
         Nothing -> die "failed to find coordinates in mixed list"
-        Just c -> do
+        Just c@(c1@(c1val, c1idx), c2@(c2val, c2idx), c3@(c3val, c3idx)) -> do
             print $ "coords:" <> show c
-            print $ "total score:" <> show (sumThreeple c)
+            print $ "total score:" <> show (sumThreeple (c1val, c2val, c3val))
     --print itemsSequence
     --printed out the values with their indices to to check that I'm not high
     --mapM_ print withIndices
-    mapM_ print log
+    mapM_ putStrLn log
 
 sumThreeple :: (Int, Int, Int) -> Int
 sumThreeple (x, y, z) = x + y + z
 
-getCoordinates :: MixItemsList -> Maybe (Int, Int, Int)
-getCoordinates mixedItems = do
-    zeroIndex <- S.findIndexL (\(MixItem (MixItemValue v, _)) -> v == 0) mixedItems
-    let getCoordIdx = idxFrom0 zeroIndex
-    firstCoord <- getMixVal <$> mixedItems S.!? getCoordIdx 1000
-    secondCoord <- getMixVal <$> mixedItems S.!? getCoordIdx 2000
-    thirdCoord <- getMixVal <$> mixedItems S.!? getCoordIdx 3000
-    pure (firstCoord, secondCoord, thirdCoord)
+-- the value of the item, the idx it was found at
+type ProblemCoordinates = (Int, Int)
+getCoordinates :: Int -> MixItemsList -> Maybe (ProblemCoordinates, ProblemCoordinates, ProblemCoordinates)
+getCoordinates zeroIndex mixedItems = do
+    firstCoord <- getMixVal <$> mixedItems S.!? idx1
+    secondCoord <- getMixVal <$> mixedItems S.!? idx2
+    thirdCoord <- getMixVal <$> mixedItems S.!? idx3
+    pure ((firstCoord, idx1), (secondCoord, idx2), (thirdCoord, idx3))
         where
+        idx1 = idxFrom0 1000
+        idx2 = idxFrom0 2000
+        idx3 = idxFrom0 3000
         len = length mixedItems
-        idxFrom0 zeroIndex coordOffset = (coordOffset + zeroIndex) `mod` len
+        idxFrom0 coordOffset = (coordOffset + zeroIndex) `mod` len
 
 mix :: MixItemsList -> (Either String MixItemsList, [String])
 mix input = runWriter $ mix' input (toList input)

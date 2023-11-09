@@ -43,39 +43,39 @@ mixSeven = S.fromList [one, two, negThree, four, zero, three, negTwo]
 
 tests :: Test
 tests = TestList [
-    --TestCase (
-    --    assertEqual "mix 1"
-    --    (Right mixOne)
-    --    (mix' startingSeq [one])
-    --)
-    --, TestCase (
-    --    assertEqual "mix 2"
-    --    (Right mixTwo)
-    --    (mix' mixOne [two])
-    --)
-    --, TestCase (
-    --    assertEqual "mix 3"
-    --    (Right mixThree)
-    --    (mix' mixTwo [negThree])
-    --)
-    --, TestCase (
-    --    assertEqual "mix 4"
-    --    (Right mixFour)
-    --    (mix' mixThree [three])
-    --)
     TestCase (
-        assertEqual "mix 5"
+        assertEqual "mix 1"
+        (Right mixOne)
+        (mix' startingSeq [one])
+    )
+    , TestCase (
+        assertEqual "mix 2"
+        (Right mixTwo)
+        (mix' mixOne [two])
+    )
+    , TestCase (
+        assertEqual "mix 3"
+        (Right mixThree)
+        (mix' mixTwo [negThree])
+    )
+    , TestCase (
+        assertEqual "mix 4"
+        (Right mixFour)
+        (mix' mixThree [three])
+    )
+    , TestCase (
+        assertEqual ("mix 5 " <> show mixFive)
         (Right mixFive)
         (mix' mixFour [negTwo])
     )
-    --, TestCase (
-    --    assertEqual "mix 6"
-    --    (Right mixSix)
-    --    (mix' mixFive [zero])
-    --)
-    --, TestCase (
-    --    assertEqual "mix 7"
-    --    (Right mixSeven)
-    --    (mix' mixSix [four])
-    --)
+    , TestCase (
+        assertEqual "mix 6"
+        (Right mixSix)
+        (mix' mixFive [zero])
+    )
+    , TestCase (
+        assertEqual "mix 7"
+        (Right mixSeven)
+        (mix' mixSix [four])
+    )
     ]

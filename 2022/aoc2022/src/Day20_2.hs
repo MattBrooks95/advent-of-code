@@ -25,7 +25,8 @@ import Debug.Trace
 
 -- so that I can 'disable' the tracing just by changing this definition
 myDebug :: String -> a -> a
-myDebug msg val = trace ("\n" ++ msg) val
+--myDebug msg val = trace ("\n" ++ msg) val
+myDebug _ val = val
 
 newtype MixItemValue = MixItemValue Int deriving (Eq)
 instance Show MixItemValue where
@@ -104,14 +105,22 @@ mix' itemsList (x@(MixItem (MixItemValue val, MixItemIndex _)):xs)
                 -- was the offset negative (determines sliding direction on insert)
                 -- what to do at the left or right edge?
                 useTargetIndex = if isNeg then targetIndex else targetIndex + 1
-                (leftItems, rightItems) = S.splitAt (myDebug ("itemStart:" <> show itemStartIdx <> " targIndex:" <> show useTargetIndex) useTargetIndex) itemsList
+                leftToLeftEdge = isNeg && targetIndex == 0
+                rightToRightEdge = (not isNeg) && targetIndex == length itemsList - 1
+                (leftItems, rightItems) =
+                    S.splitAt (myDebug ("itemStart:" <> show itemStartIdx <> " targIndex:" <> show useTargetIndex) useTargetIndex) itemsList
             in
                 myDebug ("\nleft:" <> show leftItems <> " right:" <> show rightItems) $
                     let newItemsList =
                             if itemStartIdx < targetIndex
                             then S.deleteAt itemStartIdx leftItems S.>< (x S.<| rightItems)
                             else (leftItems S.|> x) S.>< S.deleteAt (itemStartIdx - length leftItems) rightItems
-                    in mix' newItemsList xs
+                    in -- mix' newItemsList xs
+                    if leftToLeftEdge
+                    then mix' (S.deleteAt 0 (newItemsList S.|> x)) xs
+                    else if rightToRightEdge
+                        then mix' (S.deleteAt (length newItemsList) (x S.<| newItemsList)) xs
+                        else mix' newItemsList xs
             where
                 isNeg = val < 0
 mix' itemsList [] = Right itemsList

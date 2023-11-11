@@ -45,4 +45,12 @@ testParseMonkey = TestList [
         (Right $ Monkey (MonkeyName "dbpl") (LiteralMonkey 5))
         (AP.parseOnly parseMonkey "dbpl: 5")
     )
+    , TestCase (
+        assertEqual "parses an expression monkey"
+        (Right $ Monkey
+            (MonkeyName "pppw")
+            (ExpressionMonkey (Expression (MonkeyName "cczh") Div (MonkeyName "lfqf")))
+        )
+        (AP.parseOnly parseMonkey "pppw: cczh / lfqf")
+    )
     ]

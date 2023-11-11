@@ -7,6 +7,7 @@ import Tests.Day18
 import Tests.Day19
 import Tests.Day20
 import Tests.Day20_2
+import Tests.Day21
 
 testsDay17 = [
     testVertBar
@@ -44,11 +45,12 @@ testsDay19 = [
 main :: IO Int
 main = do
     countResults <- runTestTT (TestList (
-        testsDay17
+        --testsDay17
         -- ++ testsDay18
         -- ++ testsDay19
         -- ++ [Tests.Day20.tests]
-        ++ [Tests.Day20_2.tests]
+        -- ++ [Tests.Day20_2.tests]
+        [Tests.Day21.tests]
         ))
     print countResults
     let err = errors countResults

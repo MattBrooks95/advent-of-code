@@ -44,6 +44,7 @@ run fp = do
     let monkeyMap = M.fromList $ zip (map monkeyName parseResult) parseResult
         (answer, endState) = runState (evaluateMonkeys (MonkeyName "root")) monkeyMap
     putStrLn $ "answer:" <> show answer
+    putStrLn $ "answer as int:" <> show (floor <$> answer :: Maybe Int)
     putStrLn $ "final state:" <> show endState
     print "Day21"
 

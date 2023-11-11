@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Day21 (
     run
     , MonkeyType(..)
@@ -14,10 +15,13 @@ import System.Exit (
     die
     )
 
+import Debug.Trace
+
 import System.FilePath (
     FilePath
     )
 
+import qualified Data.Map as M
 import qualified Data.ByteString as BS
 import qualified Data.ByteString as BSL
 import qualified Data.ByteString as BSS (
@@ -27,6 +31,7 @@ import qualified Data.Word8 as W
 import qualified Data.Attoparsec.ByteString.Lazy as AP
 import qualified Data.Attoparsec.ByteString.Char8 as APC
 import Control.Applicative ((<|>))
+import Control.Monad.State (State, get, modify, runState)
 
 run :: FilePath -> IO ()
 run fp = do
@@ -36,10 +41,44 @@ run fp = do
             Left err -> die ("failed to parse" <> err)
             Right pr -> pure pr
     print parseResult
+    let monkeyMap = M.fromList $ zip (map monkeyName parseResult) parseResult
+        (answer, endState) = runState (evaluateMonkeys (MonkeyName "root")) monkeyMap
+    putStrLn $ "answer:" <> show answer
+    putStrLn $ "final state:" <> show endState
     print "Day21"
 
+type MonkeyStates = M.Map MonkeyName Monkey
+
+evaluateMonkeys :: MonkeyName -> State MonkeyStates (Maybe Double)
+evaluateMonkeys thisMonkeyName@(MonkeyName rawMonkeyName) = do
+    monkeyMap <- get
+    evalResult <- case M.lookup thisMonkeyName monkeyMap of
+        Nothing -> trace ("monkey:" <> show rawMonkeyName <> " did not exist in map:" <> show monkeyMap) (pure Nothing)
+        Just (Monkey _ (Evaluated val)) -> pure (Just val)
+        Just (Monkey _ (LiteralMonkey val)) -> pure (Just (fromIntegral val :: Double))
+        Just (Monkey _ (ExpressionMonkey (Expression left op right))) -> do
+            evalLeftMonkey <- evaluateMonkeys left
+            evalRightMonkey <- evaluateMonkeys right
+            let mathOperation = getMathOperation op
+                result = mathOperation <$> evalLeftMonkey <*> evalRightMonkey
+            case result of
+                Nothing -> pure Nothing
+                Just res -> do
+                    let resMonkey = Monkey thisMonkeyName (Evaluated res)
+                    modify $ M.adjust (const resMonkey) thisMonkeyName
+                    pure result
+    pure evalResult
+
+getMathOperation :: (Fractional a) => Op -> (a -> a -> a)
+getMathOperation op =
+    case op of
+        Add -> (+)
+        Sub -> (-)
+        Mult -> (*)
+        Div -> (/)
+
 newtype MonkeyName = MonkeyName BSL.ByteString
-    deriving (Show, Eq)
+    deriving (Show, Eq, Ord)
 
 data Op = Add | Sub | Mult | Div deriving (Show, Eq)
 
@@ -63,6 +102,9 @@ data MonkeyType = Evaluated Double
 --deriving instance Show (Monkey BS.ByteString)
 data Monkey = Monkey MonkeyName MonkeyType
     deriving (Show, Eq)
+
+monkeyName :: Monkey -> MonkeyName
+monkeyName (Monkey name _) = name
 
 parse :: AP.Parser [Monkey]
 parse = AP.sepBy' parseMonkey APC.endOfLine

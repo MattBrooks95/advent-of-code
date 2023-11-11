@@ -112,11 +112,11 @@ parse = AP.sepBy' parseMonkey APC.endOfLine
 
 parseMonkey :: AP.Parser Monkey
 parseMonkey = do
-    monkeyName <- (MonkeyName <$> AP.takeTill (== W._colon)) AP.<?> "parse monkey name"
+    parsedMonkeyName <- (MonkeyName <$> AP.takeTill (== W._colon)) AP.<?> "parse monkey name"
     _ <- AP.word8 W._colon
     _ <- AP.word8 W._space
     monkeyValue <- (parseLiteralMonkey <|> parseExpressionMonkey) AP.<?> "parse monkey value"
-    pure $ Monkey monkeyName monkeyValue
+    pure $ Monkey parsedMonkeyName monkeyValue
     AP.<?> "parseMonkey"
 
 parseLiteralMonkey :: AP.Parser MonkeyType

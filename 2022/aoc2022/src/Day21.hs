@@ -4,6 +4,10 @@ module Day21 (
     , Monkey(..)
     , Expression(..)
     , parseLiteralMonkey
+    , Op(..)
+    , parseExpressionMonkey
+    , MonkeyName(..)
+    , parseMonkey
     ) where
 
 import System.Exit (
@@ -65,10 +69,12 @@ parse = AP.sepBy' parseMonkey APC.endOfLine
 
 parseMonkey :: AP.Parser Monkey
 parseMonkey = do
-    monkeyName <- MonkeyName <$> AP.takeTill (== W._colon)
+    monkeyName <- (MonkeyName <$> AP.takeTill (== W._colon)) AP.<?> "parse monkey name"
+    _ <- AP.word8 W._colon
     _ <- AP.word8 W._space
-    monkeyValue <- parseLiteralMonkey <|> parseExpressionMonkey
+    monkeyValue <- (parseLiteralMonkey <|> parseExpressionMonkey) AP.<?> "parse monkey value"
     pure $ Monkey monkeyName monkeyValue
+    AP.<?> "parseMonkey"
 
 parseLiteralMonkey :: AP.Parser MonkeyType
 parseLiteralMonkey = LiteralMonkey <$> APC.decimal
@@ -76,14 +82,20 @@ parseLiteralMonkey = LiteralMonkey <$> APC.decimal
 parseExpressionMonkey :: AP.Parser MonkeyType
 parseExpressionMonkey = ExpressionMonkey <$> parseExpression
 
+skipSpace :: AP.Parser ()
+skipSpace = AP.skip (== W._space)
+
 parseExpression :: AP.Parser Expression
 parseExpression = Expression <$>
-    parseMonkeyNameInExp
-    <*> parseOp
+    (parseMonkeyNameInExp <* skipSpace)
+    <*> (parseOp <* skipSpace)
     <*> parseMonkeyNameInExp
+    AP.<?> "parseExpression"
 
 parseMonkeyNameInExp :: AP.Parser MonkeyName
-parseMonkeyNameInExp = MonkeyName <$> AP.takeWhile (AP.inClass "a-z")
+parseMonkeyNameInExp = MonkeyName
+    <$> AP.takeWhile (AP.inClass "a-z")
+    AP.<?> "parseMonkeyNameInExp"
 
 parseOp :: AP.Parser Op
 parseOp =  AP.choice [AP.word8 W._plus >> pure Add

@@ -9,6 +9,8 @@ module Day21 (
     , parseExpressionMonkey
     , MonkeyName(..)
     , parseMonkey
+    , getMathOperationInverse
+    , solveEquation
     ) where
 
 import System.Exit (
@@ -59,6 +61,7 @@ partOne monkeys = do
 
 -- the code now works enough to produce an answer, but it is not correct
 -- 8328390935499 is too high
+-- 4476 is more believable but also wrong (too low)
 partTwo :: [Monkey] -> IO ()
 partTwo monkeys = do
     let monkeyMap = M.fromList $ zip (map monkeyName monkeys) (map Unprocessed monkeys)
@@ -138,17 +141,24 @@ evaluateMonkeysPart2 startMonkeyName variableMonkeyName = do
         case M.lookup currMonkeyName currInferState of
             Just (NeedsInference (Monkey mName (ExpressionMonkey (Expression left op right)))) -> do
                 case pickInferenceMonkeys currInferState left right of
-                    Just (evaluatedMonkey, figureOutMonkey) -> 
+                    Just (inferenceSide, (evaluatedMonkey, figureOutMonkey)) -> 
                         case figureOutMonkey of
                             NeedsInference (Monkey needsInferenceName _) ->
                                 case evaluatedMonkey of
                                     -- calculate the value necessary to satisfy our current infer value
                                     -- and then recurse, looking for the 'humn' monkey
                                     SuccessfullyEvaluated val ->
-                                        let inverseOp = getMathOperationInverse op
-                                            newExpectedValue = inferValue `inverseOp` val
+                                        let inverseOpToken = getMathOperationInverse op
+                                            inverseOp = getMathOperation inverseOpToken
+                                            newExpectedValue = case inferenceSide of
+                                                MyLeft -> inferValue `inverseOp` val
+                                                MyRight -> inferValue `inverseOp` val
                                         in
-                                            inferMonkeys (needsInferenceName, trace ("expected:" <> show inferValue <> " new expected:" <> show newExpectedValue) newExpectedValue)
+                                            trace ("expected:" <> show inferValue <> " existing value:" <> show val <> " op:" <> show op <> " inversed op:" <> show inverseOpToken <> " new expected:" <> show newExpectedValue)
+                                                inferMonkeys (
+                                                    needsInferenceName
+                                                    ,  newExpectedValue
+                                                )
                                     _ -> trace "other monkey wasn't evaluated" (pure Nothing)
                             _ -> trace "figure out monkey wasn't an inference monkey" (pure Nothing)
                     Nothing -> trace "couldn't decide which monkey was evaluated and which one needs inferred" (pure Nothing)
@@ -191,14 +201,17 @@ isJust :: Maybe a -> Bool
 isJust Nothing = False
 isJust _ = True
 
+data Dir = MyLeft | MyRight deriving (Show)
+
 -- returs (monkey that was successfully evaluated, monkey that needs it's value inferred)
-pickInferenceMonkeys :: Part2MonkeyStates -> MonkeyName -> MonkeyName -> Maybe (ExpectedMonkey, ExpectedMonkey)
+pickInferenceMonkeys :: Part2MonkeyStates -> MonkeyName -> MonkeyName -> Maybe (Dir, (ExpectedMonkey, ExpectedMonkey))
 pickInferenceMonkeys monkeyStates leftMonkeyName rightMonkeyName = do
     leftMonkey <- M.lookup leftMonkeyName monkeyStates
     rightMonkey <- M.lookup rightMonkeyName monkeyStates
-    let figureOutMonkey = if isNeedsInference leftMonkey then leftMonkey else rightMonkey
+    let dir = if isNeedsInference leftMonkey then MyLeft else MyRight
+        figureOutMonkey = if isNeedsInference leftMonkey then leftMonkey else rightMonkey
         otherMonkey = if isNeedsInference leftMonkey then rightMonkey else leftMonkey
-    pure (otherMonkey, figureOutMonkey)
+    pure (dir, (otherMonkey, figureOutMonkey))
 
 type MonkeyStates = M.Map MonkeyName Monkey
 
@@ -233,13 +246,13 @@ getMathOperation op =
         Mult -> (*)
         Div -> (/)
 
-getMathOperationInverse :: (Fractional a) => Op -> (a -> a -> a)
+getMathOperationInverse :: Op -> Op
 getMathOperationInverse op =
     case op of
-        Add -> (-)
-        Sub -> (+)
-        Mult -> (/)
-        Div -> (*)
+        Add -> Sub
+        Sub -> Add
+        Mult -> Div
+        Div -> Mult
 
 newtype MonkeyName = MonkeyName BSL.ByteString
     deriving (Show, Eq, Ord)
@@ -269,6 +282,23 @@ data Monkey = Monkey MonkeyName MonkeyType
 
 monkeyName :: Monkey -> MonkeyName
 monkeyName (Monkey name _) = name
+
+solveEquation :: Double -> Op -> Double -> Double
+solveEquation result op knownArg =
+    -- result = knownArg op <unknownVal>
+    case op of
+        -- result - knownArg = <unk>
+        Add -> result - knownArg
+        -- result + <unk> = knownArg
+        -- <unk> = knownArg - result
+        Sub -> knownArg - result
+        -- <unk> = result / knownArg
+        Mult -> result / knownArg
+        -- result * <unk> = knownArg
+        -- <unk> = knownArg / result
+        Div -> knownArg / result
+
+
 
 parse :: AP.Parser [Monkey]
 parse = AP.sepBy' parseMonkey APC.endOfLine

@@ -11,6 +11,7 @@ import Day21 (
     , parseExpressionMonkey
     , MonkeyName(..), Monkey (..)
     , parseMonkey
+    , solveEquation
     )
 
 
@@ -22,6 +23,7 @@ tests :: Test
 tests = TestList [
     testParseExpression
     , testParseMonkey
+    , testInverseMath
     ]
 
 testParseExpression :: Test
@@ -52,5 +54,29 @@ testParseMonkey = TestList [
             (ExpressionMonkey (Expression (MonkeyName "cczh") Div (MonkeyName "lfqf")))
         )
         (AP.parseOnly parseMonkey "pppw: cczh / lfqf")
+    )
+    ]
+
+testInverseMath :: Test
+testInverseMath = TestList [
+    TestCase (
+        assertEqual "solves addition"
+        20
+        (solveEquation 30 Add 10)
+    )
+    , TestCase (
+        assertEqual "solves subtraction"
+        10
+        (solveEquation 30 Sub 40)
+    )
+    , TestCase (
+        assertEqual "solves multiplication"
+        2
+        (solveEquation 30 Mult 15)
+    )
+    , TestCase (
+        assertEqual "solves division"
+        2
+        (solveEquation 30 Div 60)
     )
     ]

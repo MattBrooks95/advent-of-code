@@ -63,6 +63,8 @@ partOne monkeys = do
 -- the code now works enough to produce an answer, but it is not correct
 -- 8328390935499 is too high
 -- 4476 is more believable but also wrong (too low)
+-- 3782852515583 babeeeeee we did it
+--  part2 code is so ugly tho
 partTwo :: [Monkey] -> IO ()
 partTwo monkeys = do
     let monkeyMap = M.fromList $ zip (map monkeyName monkeys) (map Unprocessed monkeys)
@@ -149,13 +151,16 @@ evaluateMonkeysPart2 startMonkeyName variableMonkeyName = do
                                     -- calculate the value necessary to satisfy our current infer value
                                     -- and then recurse, looking for the 'humn' monkey
                                     SuccessfullyEvaluated val ->
-                                        let inverseOpToken = getMathOperationInverse op
-                                            inverseOp = getMathOperation inverseOpToken
+                                        let
+                                            --inverseOpToken = getMathOperationInverse op
+                                            --inverseOp = getMathOperation inverseOpToken
                                             newExpectedValue = case inferenceSide of
-                                                MyLeft -> inferValue `inverseOp` val
-                                                MyRight -> inferValue `inverseOp` val
+                                                MyLeft -> solveEquation UnknownToKnown inferValue op val
+                                                    --inferValue `inverseOp` val
+                                                MyRight -> solveEquation KnownToUnknown inferValue op val
+                                                    --inferValue `inverseOp` val
                                         in
-                                            trace ("expected:" <> show inferValue <> " existing value:" <> show val <> " op:" <> show op <> " inversed op:" <> show inverseOpToken <> " new expected:" <> show newExpectedValue)
+                                            trace ("expected:" <> show inferValue <> " existing value:" <> show val <> " op:" <> show op <> " new expected:" <> show newExpectedValue)
                                                 inferMonkeys (
                                                     needsInferenceName
                                                     ,  newExpectedValue

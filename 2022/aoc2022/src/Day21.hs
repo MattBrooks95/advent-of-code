@@ -11,6 +11,7 @@ module Day21 (
     , parseMonkey
     , getMathOperationInverse
     , solveEquation
+    , ItemOrder(..)
     ) where
 
 import System.Exit (
@@ -283,20 +284,40 @@ data Monkey = Monkey MonkeyName MonkeyType
 monkeyName :: Monkey -> MonkeyName
 monkeyName (Monkey name _) = name
 
-solveEquation :: Double -> Op -> Double -> Double
-solveEquation result op knownArg =
-    -- result = knownArg op <unknownVal>
-    case op of
-        -- result - knownArg = <unk>
-        Add -> result - knownArg
-        -- result + <unk> = knownArg
-        -- <unk> = knownArg - result
-        Sub -> knownArg - result
-        -- <unk> = result / knownArg
-        Mult -> result / knownArg
-        -- result * <unk> = knownArg
-        -- <unk> = knownArg / result
-        Div -> knownArg / result
+data ItemOrder = UnknownToKnown | KnownToUnknown
+
+-- |which side of the operator known val is on -> result -> operation -> known operand
+-- this function takes a binary operation, one operand, and the side of the operator
+-- that the unknown value is on, and then solves the equation to find the unknown operand
+solveEquation :: ItemOrder -> Double -> Op -> Double -> Double
+solveEquation itemOrder result op knownArg =
+    case itemOrder of
+        KnownToUnknown ->
+            -- result = knownArg op <unknownVal>
+            case op of
+                -- result - knownArg = <unk>
+                Add -> result - knownArg
+                -- result + <unk> = knownArg
+                -- <unk> = knownArg - result
+                Sub -> knownArg - result
+                -- <unk> = result / knownArg
+                Mult -> result / knownArg
+                -- result * <unk> = knownArg
+                -- <unk> = knownArg / result
+                Div -> knownArg / result
+        UnknownToKnown ->
+            -- result = <unknownVal> op knownArg
+            case op of
+                -- result - knownArg = <unk>
+                Add -> result - knownArg
+                -- result + knownArg = <unk>
+                Sub -> result + knownArg
+                -- result / knownArg = <unk>
+                Mult -> result / knownArg
+                -- result = <unk> op knownArg
+                -- result * knownArg = unk
+                -- <unk> = knownArg / result
+                Div -> knownArg * result
 
 
 

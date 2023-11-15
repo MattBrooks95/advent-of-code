@@ -11,7 +11,7 @@ import Day21 (
     , parseExpressionMonkey
     , MonkeyName(..), Monkey (..)
     , parseMonkey
-    , solveEquation
+    , solveEquation, ItemOrder (..)
     )
 
 
@@ -62,21 +62,46 @@ testInverseMath = TestList [
     TestCase (
         assertEqual "solves addition"
         20
-        (solveEquation 30 Add 10)
+        (solveEquation KnownToUnknown 30 Add 10)
     )
     , TestCase (
         assertEqual "solves subtraction"
         10
-        (solveEquation 30 Sub 40)
+        (solveEquation KnownToUnknown 30 Sub 40)
     )
     , TestCase (
         assertEqual "solves multiplication"
         2
-        (solveEquation 30 Mult 15)
+        (solveEquation KnownToUnknown 30 Mult 15)
     )
     , TestCase (
         assertEqual "solves division"
         2
-        (solveEquation 30 Div 60)
+        (solveEquation KnownToUnknown 30 Div 60)
+    )
+    -- result = <unk> op knownArg
+    -- 10 = X + 30
+    -- 10 = -20 + 30
+    , TestCase (
+        assertEqual "solves addition with unknown value on the felt"
+        (-20)
+        (solveEquation UnknownToKnown 10 Add 30)
+    )
+    , TestCase (
+        assertEqual "solves subtraction with unknown value on the left"
+        100
+        (solveEquation UnknownToKnown 30 Sub 70)
+    )
+    , TestCase (
+        assertEqual "solves multiplication with unknown value on the left"
+        2
+        (solveEquation UnknownToKnown 30 Mult 15)
+    )
+    -- result = <unk> op knownArg
+    -- 25 = X / 3
+    , TestCase (
+        assertEqual "solves division with unknown value on the left"
+        75
+        (solveEquation UnknownToKnown 25 Div 3)
     )
     ]

@@ -32,6 +32,10 @@ fn run_file(file: &String) {
 
 fn solve_part_2(contents: &Vec<Vec<InputValue>>) -> () {
     println!("part2");
+    let (sums, errors): (Vec<_>, Vec<_>) = contents
+        .iter()
+        .map(sum_line_part_2)
+        .partition(Result::is_ok);
 }
 
 fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
@@ -46,10 +50,19 @@ fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
     println!("errs: {:?}", errs)
 }
 
-fn sum_line_part_2(contents: &vec<InputValue) -> Result<usize, &str> {
+fn sum_line_part_2(contents: &Vec<InputValue>) -> Result<usize, &str> {
+    let values: Vec<usize> = get_nums_and_nums_from_words(contents)
+        .iter()
+        .map(get_nums_and_nums_from_words)?;
 }
 
-fn get_nums_and_nums_from_words(contents: &vec<InputValue>) -> Vec<usize> {
+fn get_nums_and_nums_from_words(contents: &Vec<InputValue>) -> Vec<usize> {
+    let values = contents
+        .iter()
+        .map(get_nums_from_input)
+        .filter(Option::is_some)
+        .collect();
+    values
 }
 
 fn get_nums_from_input(item: &InputValue) -> Option<Vec<NumParseRes>> {
@@ -81,6 +94,8 @@ fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<NumParseRes>> {
 }
 
 fn parse_num(input: &str) -> IResult<&str, &str> {
+    //I might need a general "match alphabet characters" in here too
+    //to skip over the gaps in between the number words, or something like that
     nom::branch::alt((
         tag("one"),
         tag("two"),

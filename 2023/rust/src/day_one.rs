@@ -163,6 +163,12 @@ fn get_number_words(input: &str) -> (&str, Vec<usize>) {
     //succeeds, which is probably slow
     //let (remainder, _) = nom::
     let (matches, errs): (Vec<Option<usize>>, Vec<_>) = NUMBER_REGEX
+        //"Returns an iterator that yields successive non-overlapping
+        //matches in the given haystack."
+        //it looks like we need to find overlapping patterns
+        //4one1eightzgcpkgbpgmsevenninetwonetk
+        //^ an example from my input where the regex will report a two
+        //when it should report one at the end of the line, throwing off the answer
         .find_iter(input)
         .map(|m| number_letters_to_val(m.as_str()))
         .partition(Option::is_some)

@@ -6,7 +6,7 @@ use nom::error::context;
 use nom::IResult;
 use nom::bytes::complete::tag;
 
-pub fn run(files: [String; 3]) {
+pub fn run(files: [String; 2]) {
     println!("Day One, running for files {} and {}", files[0], files[1]);
     //run just the short input from the example
     //run_file(&files[0]);
@@ -26,16 +26,16 @@ fn run_file(file: &String) {
     match parse_file(&contents) {
         Ok((_, a)) => {
             solve_part_1(&a);
+            solve_part_2(&a);
         },
         Err(err) => println!("some sort of error {:?}", err)
     }
     //println!("parsed result {:?}", parsed_result);
-    solve_part_2(&contents);
 }
 
 type Vec2D<T> = Vec<Vec<T>>;
 
-fn solve_part_2(step_one_parse_result: Vec2D<InputValue>) -> () {
+fn solve_part_2(step_one_parse_result: &Vec2D<InputValue>) -> () {
     println!("part2");
     let with_additional_numbers: Vec2D<usize> =
         step_one_parse_result
@@ -45,7 +45,14 @@ fn solve_part_2(step_one_parse_result: Vec2D<InputValue>) -> () {
     println!("part2 processed numbers list {:?}", with_additional_numbers);
 }
 
-fn make_part2_val_list(inputVals: &Vec<InputValue>) -> Vec<usize> {
+fn make_part2_val_list(input_vals: &Vec<InputValue>) -> Vec<usize> {
+    //let with_new_vals: Vec2D<usize> = inputVals
+    let with_new_vals: Vec<usize> = input_vals
+        .iter()
+        .flat_map(|s| get_nums_for_input_value(s))
+        .collect();
+    //concat!(with_new_vals)
+    with_new_vals
 }
 
 fn get_nums_for_input_value(val: &InputValue) -> Vec<usize> {
@@ -55,27 +62,12 @@ fn get_nums_for_input_value(val: &InputValue) -> Vec<usize> {
                         .expect("was able to parse char into number");
                 vec!(parsed)
             },
-        InputValue::Letters(parse_me) => letters_to_numbers(&parse_me),
+        InputValue::Letters(parse_me) => {
+            let (_, ans) = parse_nums_from_words(&parse_me)
+                    .expect("expected to be able to pull values out of a string");
+            ans
+        },
     }
-}
-
-fn letters_to_numbers(val: &str) -> Vec<usize> {
-}
-
-fn parse_part2(contents: &str) -> IResult<&str, Vec2D<InputValue>> {
-    //shamelessly copy and pasted
-    //I think I could de-duplicate this code if I knew how to parameterize it on the
-    //function in charge of parsing the characters (parse_alphabet), then I could just
-    //pass in the part one version or the part 2 version
-
-    //since part1 will parse & save the alphabet strings, I should just be able to
-    //rip the numbers out of them as like a post-processing step
-    //that's less code duplication than re-doing the parsing code
-    let (rem, result) = context("parse_lines", many1(parse_line))(contents)?;
-
-    let (rem, _) = context("end of file", nom::combinator::eof)(rem)?;
-
-    return Ok((rem, result));
 }
 
 fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
@@ -90,52 +82,42 @@ fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
     println!("errs: {:?}", errs)
 }
 
-//fn sum_line_part_2(contents: &Vec<InputValue>) -> Result<usize, &str> {
-//    let values: Vec<usize> = get_nums_and_nums_from_words(contents)
-//        .iter()
-//        .map(get_nums_and_nums_from_words)?;
-//}
-//
-//fn get_nums_and_nums_from_words(contents: &Vec<InputValue>) -> Vec<usize> {
-//    let values = contents
-//        .iter()
-//        .map(get_nums_from_input)
-//        .filter(Option::is_some)
-//        .collect();
-//    values
-//}
-//
-//fn get_nums_from_input(item: &InputValue) -> Option<Vec<NumParseRes>> {
-//    match item {
-//        InputValue::Number(val) => Some(vec!(String::from(*val).parse::<usize>())),
-//        InputValue::Letters(chars) => {
-//            let parse_res = parse_nums_from_words(chars);
-//            match parse_res {
-//                Ok((_, ok_result)) => Some(ok_result),
-//                Err(err) => { println!("{}", err); None }
-//            }
-//        },
-//    }
-//}
-
 type NumParseRes = Result<usize, std::num::ParseIntError>;
 
-fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<NumParseRes>> {
+fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
     let (rem, number_words) = nom::multi::many0(
         parse_num
     )(input)?;
+    println!("number words: {:?}", number_words);
 
-    let parsed_nums = number_words
-        .iter()
-        .map(|w| w.parse::<usize>())
-        .collect();
+    let (failed, parsed_nums): (Vec<_>, Vec<_>) = number_words
+        .into_iter()
+        .map(number_letters_to_val)
+        .partition(Option::is_some);
+    if !failed.is_empty() {
+        println!("warning, parse_nums_from_words had failure cases");
+    }
 
-    Ok((rem, parsed_nums))
+    Ok((rem, parsed_nums.into_iter().map(Option::unwrap).collect()))
+}
+
+fn number_letters_to_val(input: &str) -> Option<usize> {
+    match input {
+        "one" => Some(1),
+        "two" => Some(2),
+        "three" => Some(3),
+        "four" => Some(4),
+        "five" => Some(5),
+        "six" => Some(6),
+        "seven" => Some(7),
+        "eight" => Some(8),
+        "nine" => Some(9),
+        "zero" => Some(0),
+        _ => None
+    }
 }
 
 fn parse_num(input: &str) -> IResult<&str, &str> {
-    //I might need a general "match alphabet characters" in here too
-    //to skip over the gaps in between the number words, or something like that
     nom::branch::alt((
         tag("one"),
         tag("two"),

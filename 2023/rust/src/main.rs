@@ -5,6 +5,5 @@ fn main() {
 	day_one::run([
 		"../inputs/day1-short.txt".to_string(),
 		"../inputs/day1.txt".to_string(),
-        "../inputs/day1-part2-short.txt".to_string(),
 	]);
 }

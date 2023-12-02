@@ -28,15 +28,32 @@ fn run_file(file: &String) {
         Err(err) => println!("some sort of error {:?}", err)
     }
     //println!("parsed result {:?}", parsed_result);
+    solve_part_2(&contents);
 }
 
-fn solve_part_2(contents: &Vec<Vec<InputValue>>) -> () {
+fn solve_part_2(file_contents: &str) -> () {
     println!("part2");
-    let (sums, errors): (Vec<_>, Vec<_>) = contents
-        .iter()
-        .map(sum_line_part_2)
-        .partition(Result::is_ok);
+    match parse_part2(file_contents) {
+    }
+    //let (sums, errors): (Vec<_>, Vec<_>) = contents
+    //    .iter()
+    //    .map(sum_line_part_2)
+    //    .partition(Result::is_ok);
 }
+
+fn parse_part2(contents: &str) -> IResult<&str, Vec<Vec<InputValue>>> {
+    //shamelessly copy and pasted
+    //I think I could de-duplicate this code if I knew how to parameterize it on the
+    //function in charge of parsing the characters (parse_alphabet), then I could just
+    //pass in the part one version or the part 2 version
+    let (rem, result) = context("parse_lines", many1(parse_line_part2))(contents)?;
+
+    let (rem, _) = context("end of file", nom::combinator::eof)(rem)?;
+
+    return Ok((rem, result));
+}
+
+fn parse
 
 fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
     let (sums, errs): (Vec<_>, Vec<_>) = contents
@@ -50,33 +67,33 @@ fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
     println!("errs: {:?}", errs)
 }
 
-fn sum_line_part_2(contents: &Vec<InputValue>) -> Result<usize, &str> {
-    let values: Vec<usize> = get_nums_and_nums_from_words(contents)
-        .iter()
-        .map(get_nums_and_nums_from_words)?;
-}
-
-fn get_nums_and_nums_from_words(contents: &Vec<InputValue>) -> Vec<usize> {
-    let values = contents
-        .iter()
-        .map(get_nums_from_input)
-        .filter(Option::is_some)
-        .collect();
-    values
-}
-
-fn get_nums_from_input(item: &InputValue) -> Option<Vec<NumParseRes>> {
-    match item {
-        InputValue::Number(val) => Some(vec!(String::from(*val).parse::<usize>())),
-        InputValue::Letters(chars) => {
-            let parse_res = parse_nums_from_words(chars);
-            match parse_res {
-                Ok((_, ok_result)) => Some(ok_result),
-                Err(err) => { println!("{}", err); None }
-            }
-        },
-    }
-}
+//fn sum_line_part_2(contents: &Vec<InputValue>) -> Result<usize, &str> {
+//    let values: Vec<usize> = get_nums_and_nums_from_words(contents)
+//        .iter()
+//        .map(get_nums_and_nums_from_words)?;
+//}
+//
+//fn get_nums_and_nums_from_words(contents: &Vec<InputValue>) -> Vec<usize> {
+//    let values = contents
+//        .iter()
+//        .map(get_nums_from_input)
+//        .filter(Option::is_some)
+//        .collect();
+//    values
+//}
+//
+//fn get_nums_from_input(item: &InputValue) -> Option<Vec<NumParseRes>> {
+//    match item {
+//        InputValue::Number(val) => Some(vec!(String::from(*val).parse::<usize>())),
+//        InputValue::Letters(chars) => {
+//            let parse_res = parse_nums_from_words(chars);
+//            match parse_res {
+//                Ok((_, ok_result)) => Some(ok_result),
+//                Err(err) => { println!("{}", err); None }
+//            }
+//        },
+//    }
+//}
 
 type NumParseRes = Result<usize, std::num::ParseIntError>;
 

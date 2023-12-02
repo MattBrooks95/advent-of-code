@@ -24,36 +24,59 @@ fn run_file(file: &String) {
     //let parsed_result = parse_file(&contents);
 
     match parse_file(&contents) {
-        Ok((_, a)) => solve_part_1(&a),
+        Ok((_, a)) => {
+            solve_part_1(&a);
+        },
         Err(err) => println!("some sort of error {:?}", err)
     }
     //println!("parsed result {:?}", parsed_result);
     solve_part_2(&contents);
 }
 
-fn solve_part_2(file_contents: &str) -> () {
+type Vec2D<T> = Vec<Vec<T>>;
+
+fn solve_part_2(step_one_parse_result: Vec2D<InputValue>) -> () {
     println!("part2");
-    match parse_part2(file_contents) {
-    }
-    //let (sums, errors): (Vec<_>, Vec<_>) = contents
-    //    .iter()
-    //    .map(sum_line_part_2)
-    //    .partition(Result::is_ok);
+    let with_additional_numbers: Vec2D<usize> =
+        step_one_parse_result
+            .iter()
+            .map(make_part2_val_list)
+            .collect();
+    println!("part2 processed numbers list {:?}", with_additional_numbers);
 }
 
-fn parse_part2(contents: &str) -> IResult<&str, Vec<Vec<InputValue>>> {
+fn make_part2_val_list(inputVals: &Vec<InputValue>) -> Vec<usize> {
+}
+
+fn get_nums_for_input_value(val: &InputValue) -> Vec<usize> {
+    match val {
+        InputValue::Number(val) => {
+                let parsed = String::from(*val).parse::<usize>()
+                        .expect("was able to parse char into number");
+                vec!(parsed)
+            },
+        InputValue::Letters(parse_me) => letters_to_numbers(&parse_me),
+    }
+}
+
+fn letters_to_numbers(val: &str) -> Vec<usize> {
+}
+
+fn parse_part2(contents: &str) -> IResult<&str, Vec2D<InputValue>> {
     //shamelessly copy and pasted
     //I think I could de-duplicate this code if I knew how to parameterize it on the
     //function in charge of parsing the characters (parse_alphabet), then I could just
     //pass in the part one version or the part 2 version
-    let (rem, result) = context("parse_lines", many1(parse_line_part2))(contents)?;
+
+    //since part1 will parse & save the alphabet strings, I should just be able to
+    //rip the numbers out of them as like a post-processing step
+    //that's less code duplication than re-doing the parsing code
+    let (rem, result) = context("parse_lines", many1(parse_line))(contents)?;
 
     let (rem, _) = context("end of file", nom::combinator::eof)(rem)?;
 
     return Ok((rem, result));
 }
-
-fn parse
 
 fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
     let (sums, errs): (Vec<_>, Vec<_>) = contents

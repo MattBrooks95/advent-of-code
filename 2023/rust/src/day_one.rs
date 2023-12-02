@@ -4,8 +4,9 @@ use nom::character::complete::digit1;
 use nom::multi::many1;
 use nom::error::context;
 use nom::IResult;
+use nom::bytes::complete::tag;
 
-pub fn run(files: [String; 2]) {
+pub fn run(files: [String; 3]) {
     println!("Day One, running for files {} and {}", files[0], files[1]);
     //run just the short input from the example
     //run_file(&files[0]);
@@ -29,6 +30,10 @@ fn run_file(file: &String) {
     //println!("parsed result {:?}", parsed_result);
 }
 
+fn solve_part_2(contents: &Vec<Vec<InputValue>>) -> () {
+    println!("part2");
+}
+
 fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
     let (sums, errs): (Vec<_>, Vec<_>) = contents
         .iter()
@@ -37,8 +42,57 @@ fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
     //println!("sums: {:?}", sums);
     let nums: Vec<usize> = sums.into_iter().map(Result::unwrap).collect();
     let final_sum: usize = nums.iter().sum();
-    println!("final sum: {:?}", final_sum);
+    println!("part 1 final sum: {:?}", final_sum);
     println!("errs: {:?}", errs)
+}
+
+fn sum_line_part_2(contents: &vec<InputValue) -> Result<usize, &str> {
+}
+
+fn get_nums_and_nums_from_words(contents: &vec<InputValue>) -> Vec<usize> {
+}
+
+fn get_nums_from_input(item: &InputValue) -> Option<Vec<NumParseRes>> {
+    match item {
+        InputValue::Number(val) => Some(vec!(String::from(*val).parse::<usize>())),
+        InputValue::Letters(chars) => {
+            let parse_res = parse_nums_from_words(chars);
+            match parse_res {
+                Ok((_, ok_result)) => Some(ok_result),
+                Err(err) => { println!("{}", err); None }
+            }
+        },
+    }
+}
+
+type NumParseRes = Result<usize, std::num::ParseIntError>;
+
+fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<NumParseRes>> {
+    let (rem, number_words) = nom::multi::many0(
+        parse_num
+    )(input)?;
+
+    let parsed_nums = number_words
+        .iter()
+        .map(|w| w.parse::<usize>())
+        .collect();
+
+    Ok((rem, parsed_nums))
+}
+
+fn parse_num(input: &str) -> IResult<&str, &str> {
+    nom::branch::alt((
+        tag("one"),
+        tag("two"),
+        tag("three"),
+        tag("four"),
+        tag("five"),
+        tag("six"),
+        tag("seven"),
+        tag("eight"),
+        tag("nine"),
+        tag("zero"),
+    ))(input)
 }
 
 fn sum_line_part_1(contents: &Vec<InputValue>) -> Result<usize, &str> {

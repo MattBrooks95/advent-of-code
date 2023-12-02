@@ -86,8 +86,16 @@ fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
 type NumParseRes = Result<usize, std::num::ParseIntError>;
 
 fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
-    let (rem, number_words) = nom::multi::many0(
-        parse_num
+    //let (rem, number_words) = nom::multi::many0(
+    //    parse_num
+    //)(input)?;
+    let (rem, number_words) = nom::multi::fold_many0(
+        take_next_number_word,
+        Vec::new,
+        |mut acc: Vec<_>, item| {
+            acc.push(item);
+            acc
+        }
     )(input)?;
     println!("number words: {:?}", number_words);
 
@@ -96,10 +104,19 @@ fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
         .map(number_letters_to_val)
         .partition(Option::is_some);
     if !failed.is_empty() {
-        println!("warning, parse_nums_from_words had failure cases");
+        println!("warning, parse_nums_from_words had {} failure cases", failed.len());
     }
 
     Ok((rem, parsed_nums.into_iter().map(Option::unwrap).collect()))
+}
+
+fn take_next_number_word(input: &str) -> IResult<&str, &str> {
+    let (remainder, (skipped, potential_word)) = nom::multi::many_till(
+        nom::character::complete::alpha1,
+        parse_num
+    )(input)?;
+    println!("skipped input:{:?}", skipped);
+    Ok((remainder, potential_word))
 }
 
 fn number_letters_to_val(input: &str) -> Option<usize> {
@@ -119,6 +136,7 @@ fn number_letters_to_val(input: &str) -> Option<usize> {
 }
 
 fn parse_num(input: &str) -> IResult<&str, &str> {
+    println!("parse_num called {}", input);
     nom::branch::alt((
         tag("one"),
         tag("two"),

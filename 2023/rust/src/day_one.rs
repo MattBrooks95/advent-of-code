@@ -1,5 +1,6 @@
 use std::fs;
 
+use lazy_static::lazy_static;
 use nom::character::complete::digit1;
 use nom::multi::many1;
 use nom::error::context;
@@ -41,13 +42,29 @@ fn solve_part_2(step_one_parse_result: &Vec2D<InputValue>) -> () {
         step_one_parse_result
             .iter()
             .map(|item| {
-                println!("#########################");
+                //println!("#########################");
                 let x = make_part2_val_list(item);
-                println!("#########################");
+                //println!("#########################");
                 x
             })
             .collect();
-    println!("part2 processed numbers list {:?}", with_additional_numbers);
+    //println!("part2 processed numbers list {:?}", with_additional_numbers);
+    let (valid_sums, errs): (Vec<_>, Vec<_>) = with_additional_numbers
+        .iter()
+        .map(|v| -> Option<usize> {
+            let first = v.first()?;
+            let last =  v.last()?;
+            Some(first + last)
+        })
+        .partition(Option::is_some)
+        ;
+    if !errs.is_empty() {
+        println!("had an error in the summation for part 2");
+    }
+    let unwrapped_sums: Vec<usize> = valid_sums.into_iter().map(Option::unwrap).collect();
+    //10006 too low
+    let final_answer: usize = unwrapped_sums.iter().sum();
+    println!("part 2 final answer: {}", final_answer);
 }
 
 fn make_part2_val_list(input_vals: &Vec<InputValue>) -> Vec<usize> {
@@ -71,6 +88,7 @@ fn get_nums_for_input_value(val: &InputValue) -> Vec<usize> {
         InputValue::Letters(parse_me) => {
             let (_, ans) = parse_nums_from_words(&parse_me)
                     .expect("expected to be able to pull values out of a string");
+            //TODO filter out the empty arrays that occur when the regex doesn't match?
             ans
         },
     }
@@ -91,40 +109,58 @@ fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
 type NumParseRes = Result<usize, std::num::ParseIntError>;
 
 fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
-    let (rem, number_words) = nom::multi::fold_many0(
-        take_next_number_word,
-        Vec::new,
-        |mut acc: Vec<_>, item| {
-            acc.push(item);
-            acc
-        }
-    )(input)?;
+    //let (rem, number_words) = nom::multi::fold_many0(
+    //    take_next_number_word,
+    //    Vec::new,
+    //    |mut acc: Vec<_>, item| {
+    //        acc.push(item);
+    //        acc
+    //    }
+    //)(input)?;
+    //take_next_number_word
+    let (rem, number_words) = get_number_words(input);
     println!("number words: {:?}", number_words);
+    Ok((rem, number_words))
 
-    let (failed, parsed_nums): (Vec<_>, Vec<_>) = number_words
-        .into_iter()
-        .map(number_letters_to_val)
-        .partition(Option::is_some);
-    if !failed.is_empty() {
-        println!("warning, parse_nums_from_words had {} failure cases", failed.len());
-    }
+    //let (failed, parsed_nums): (Vec<_>, Vec<_>) = number_words
+    //    .into_iter()
+    //    .map(number_letters_to_val)
+    //    .partition(Option::is_some);
+    //if !failed.is_empty() {
+    //    println!("warning, parse_nums_from_words had {} failure cases", failed.len());
+    //}
 
-    Ok((rem, parsed_nums.into_iter().map(Option::unwrap).collect()))
+    //Ok((rem, parsed_nums.into_iter().map(Option::unwrap).collect()))
 }
 
-fn take_next_number_word(input: &str) -> IResult<&str, &str> {
+fn get_number_words(input: &str) -> (&str, Vec<usize>) {
+    //need to use this macro to declare a regular expression
+    //it gets compiled when it gets used, and being static means
+    //that it should only be compiled once?
+    lazy_static! {
+        static ref NUMBER_REGEX: regex::Regex = regex::Regex::new(r"(one|two|three|four|five|six|seven|eight|nine|zero)").unwrap();
+    }
+
     //yeah this ain't gonna work
-    let (remainder, (skipped, potential_word)) = nom::multi::many_till(
-        nom::character::complete::alpha1,
-        parse_num
-    )(input)?;
+    //let (remainder, (skipped, potential_word)) = nom::multi::many_till(
+    //    nom::character::complete::alpha1,
+    //    parse_num
+    //)(input)?;
     //println!("skipped input:{:?}", skipped);
     //try regular expression
     //or find a way to say alt(number_word, singleAlphabetCharactor) and have it run until it
     //succeeds, which is probably slow
     //let (remainder, _) = nom::
+    let (matches, errs): (Vec<Option<usize>>, Vec<_>) = NUMBER_REGEX
+        .find_iter(input)
+        .map(|m| number_letters_to_val(m.as_str()))
+        .partition(Option::is_some)
+        ;
+    if !errs.is_empty() {
+        println!("take_next_number_word had errors");
+    }
 
-    Ok((remainder, potential_word))
+    ("", matches.into_iter().map(Option::unwrap).collect())
 }
 
 fn number_letters_to_val(input: &str) -> Option<usize> {

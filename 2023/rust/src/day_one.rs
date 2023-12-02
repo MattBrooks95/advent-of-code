@@ -113,11 +113,17 @@ fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
 }
 
 fn take_next_number_word(input: &str) -> IResult<&str, &str> {
+    //yeah this ain't gonna work
     let (remainder, (skipped, potential_word)) = nom::multi::many_till(
         nom::character::complete::alpha1,
         parse_num
     )(input)?;
-    println!("skipped input:{:?}", skipped);
+    //println!("skipped input:{:?}", skipped);
+    //try regular expression
+    //or find a way to say alt(number_word, singleAlphabetCharactor) and have it run until it
+    //succeeds, which is probably slow
+    //let (remainder, _) = nom::
+
     Ok((remainder, potential_word))
 }
 

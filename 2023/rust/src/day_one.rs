@@ -40,7 +40,12 @@ fn solve_part_2(step_one_parse_result: &Vec2D<InputValue>) -> () {
     let with_additional_numbers: Vec2D<usize> =
         step_one_parse_result
             .iter()
-            .map(make_part2_val_list)
+            .map(|item| {
+                println!("#########################");
+                let x = make_part2_val_list(item);
+                println!("#########################");
+                x
+            })
             .collect();
     println!("part2 processed numbers list {:?}", with_additional_numbers);
 }
@@ -86,9 +91,6 @@ fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
 type NumParseRes = Result<usize, std::num::ParseIntError>;
 
 fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
-    //let (rem, number_words) = nom::multi::many0(
-    //    parse_num
-    //)(input)?;
     let (rem, number_words) = nom::multi::fold_many0(
         take_next_number_word,
         Vec::new,

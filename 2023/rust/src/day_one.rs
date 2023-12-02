@@ -49,6 +49,7 @@ fn make_part2_val_list(input_vals: &Vec<InputValue>) -> Vec<usize> {
     //let with_new_vals: Vec2D<usize> = inputVals
     let with_new_vals: Vec<usize> = input_vals
         .iter()
+        //unnecessary lambda, but I did this to check the argument type
         .flat_map(|s| get_nums_for_input_value(s))
         .collect();
     //concat!(with_new_vals)

@@ -51,10 +51,18 @@ fn solve_part_2(step_one_parse_result: &Vec2D<InputValue>) -> () {
     //println!("part2 processed numbers list {:?}", with_additional_numbers);
     let (valid_sums, errs): (Vec<_>, Vec<_>) = with_additional_numbers
         .iter()
-        .map(|v| -> Option<usize> {
+        .enumerate() //enumerate gives you the index too
+        .map(|(idx, v)| -> Option<usize> {
             let first = v.first()?;
             let last =  v.last()?;
-            Some(first + last)
+            //let sum = first + last;
+            //println!("{} + {} = {}", first, last, sum);
+            //duh, the 10006 answer was wrong because you don't add them together
+            //you use both digits to make a 2 digit number
+            let number = first * 10 + last;
+            //54871 too high
+            println!("line {}\n\tvals:{:?}\n\t{} * 10 + {} = {}", idx + 1, v, first, last, number);
+            Some(number)
         })
         .partition(Option::is_some)
         ;
@@ -71,10 +79,13 @@ fn make_part2_val_list(input_vals: &Vec<InputValue>) -> Vec<usize> {
     //let with_new_vals: Vec2D<usize> = inputVals
     let with_new_vals: Vec<usize> = input_vals
         .iter()
-        //unnecessary lambda, but I did this to check the argument type
-        .flat_map(|s| get_nums_for_input_value(s))
-        .collect();
+        .flat_map(|s| {
+            let nums = get_nums_for_input_value(s);
+            //println!("nums for line {:?}", nums);
+            nums
+        }).collect();
     //concat!(with_new_vals)
+    //println!("with new vals: {:?}", with_new_vals);
     with_new_vals
 }
 
@@ -119,7 +130,7 @@ fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
     //)(input)?;
     //take_next_number_word
     let (rem, number_words) = get_number_words(input);
-    println!("number words: {:?}", number_words);
+    //println!("number words: {:?}", number_words);
     Ok((rem, number_words))
 
     //let (failed, parsed_nums): (Vec<_>, Vec<_>) = number_words
@@ -209,6 +220,7 @@ fn sum_line_part_1(contents: &Vec<InputValue>) -> Result<usize, &str> {
         let digit_one = match digits[0] { InputValue::Number(val) => val, _ => panic!("failed match 1") };
         let digit_two = match digits[digits.len() - 1] { InputValue::Number(val) => val, _ => panic!("failed match 2")};
         //let mut digits_together = String::from("");
+        //dude you could have just done <first number>*10 + <second number>
         let digits_together = format!("{}{}", *digit_one, *digit_two);
         match digits_together.parse::<usize>() {
             Ok(num) => Ok(num),

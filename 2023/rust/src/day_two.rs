@@ -1,12 +1,15 @@
 use nom::IResult;
 use nom::bytes::complete::tag;
+use nom::error::context;
 
 pub fn run(file_paths: [&str; 2]) {
     println!("day 2");
-    file_paths
-        .into_iter()
-        .for_each(do_file)
-        ;
+    //run both
+    //file_paths
+    //    .into_iter()
+    //    .for_each(do_file)
+    //    ;
+    do_file(file_paths[0])
 }
 
 #[derive(Debug)]
@@ -84,9 +87,16 @@ fn do_file(file_path: &str) {
     println!("file:{}", file_path);
     let contents = std::fs::read_to_string(file_path)
         .expect("read file");
-    let (_, games) = nom::multi::many1(parse_line)(&contents)
-        .expect("parsed into games");
-    println!("{:?}", games);
+    let parse_result = nom::multi::many1(parse_line)(&contents);
+    match parse_result {
+        Ok((_, games)) => {
+            println!("{:?}", games);
+        },
+        Err(err) => {
+            println!("error:{:?}", err);
+            panic!("had error");
+        }
+    }
 }
 
 fn parse_line(input: &str) -> IResult<&str, Game> {
@@ -105,9 +115,9 @@ fn parse_line(input: &str) -> IResult<&str, Game> {
 
 fn parse_game_id(input: &str) -> IResult<&str, i32> {
     let (rem, _) = tag("Game ")(input)?;
-    let (rem, id) = nom::character::complete::i32(input)?;
+    let (rem, id) = nom::character::complete::i32(rem)?;
     //throw away the colon and the space
-    let (rem, _) = tag(": ")(input)?;
+    let (rem, _) = tag(": ")(rem)?;
     Ok((rem, id))
 }
 
@@ -120,8 +130,8 @@ fn parse_hints(input: &str) -> IResult<&str, Vec<Hint>> {
 
 fn parse_hint_instance(input: &str) -> IResult<&str, Hint> {
     let (rem, tupes) = nom::multi::separated_list1(
-        tag(", "),
-        parse_color_hint
+        context("comma separator", tag(", ")),
+        context("parse color hint", parse_color_hint),
     )(input)?;
     let color_counts: Vec<Count> = tupes
         .into_iter()
@@ -148,7 +158,7 @@ fn mk_hint(colors: &Vec<Count>) -> Hint {
 }
 
 fn parse_color_hint(input: &str) -> IResult<&str, (&str, i32)> {
-    let (rem, num) = nom::character::complete::i32(input)?;
+    let (rem, num) = context("parse out a number", nom::character::complete::i32)(input)?;
     //throw away the space in between the number and the color
     let (rem, _) = nom::character::complete::multispace1(rem)?;
     let (rem, color) = nom::branch::alt((tag("blue"), tag("red"), tag("green")))(rem)?;

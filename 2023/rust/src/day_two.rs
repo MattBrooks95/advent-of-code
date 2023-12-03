@@ -2,14 +2,15 @@ use nom::IResult;
 use nom::bytes::complete::tag;
 use nom::error::context;
 
+//2904 too high
 pub fn run(file_paths: [&str; 2]) {
     println!("day 2");
     //run both
-    //file_paths
-    //    .into_iter()
-    //    .for_each(do_file)
-    //    ;
-    do_file(file_paths[0])
+    file_paths
+        .into_iter()
+        .for_each(do_file)
+        ;
+    //do_file(file_paths[0])
 }
 
 #[derive(Debug)]

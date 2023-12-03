@@ -79,8 +79,12 @@ fn make_part2_val_list(input_vals: &Vec<InputValue>) -> Vec<usize> {
     //let with_new_vals: Vec2D<usize> = inputVals
     let with_new_vals: Vec<usize> = input_vals
         .iter()
-        .flat_map(|s| {
-            let nums = get_nums_for_input_value(s);
+        //to handle the 'twone', 'oneight' special cases at the ass end of the line
+        //gotta reverse the pattern and the input to find the last match instead of the first
+        .enumerate()
+        .flat_map(|(idx, s)| {
+            let is_last = idx == input_vals.len() - 1;
+            let nums = get_nums_for_input_value(s, is_last);
             //println!("nums for line {:?}", nums);
             nums
         }).collect();
@@ -89,7 +93,7 @@ fn make_part2_val_list(input_vals: &Vec<InputValue>) -> Vec<usize> {
     with_new_vals
 }
 
-fn get_nums_for_input_value(val: &InputValue) -> Vec<usize> {
+fn get_nums_for_input_value(val: &InputValue, is_last: bool) -> Vec<usize> {
     match val {
         InputValue::Number(val) => {
                 let parsed = String::from(*val).parse::<usize>()
@@ -97,7 +101,7 @@ fn get_nums_for_input_value(val: &InputValue) -> Vec<usize> {
                 vec!(parsed)
             },
         InputValue::Letters(parse_me) => {
-            let (_, ans) = parse_nums_from_words(&parse_me)
+            let (_, ans) = parse_nums_from_words(&parse_me, is_last)
                     .expect("expected to be able to pull values out of a string");
             //TODO filter out the empty arrays that occur when the regex doesn't match?
             ans
@@ -119,7 +123,7 @@ fn solve_part_1(contents: &Vec<Vec<InputValue>>) -> () {
 
 type NumParseRes = Result<usize, std::num::ParseIntError>;
 
-fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
+fn parse_nums_from_words(input: &str, is_last: bool) -> IResult<&str, Vec<usize>> {
     //let (rem, number_words) = nom::multi::fold_many0(
     //    take_next_number_word,
     //    Vec::new,
@@ -129,7 +133,7 @@ fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
     //    }
     //)(input)?;
     //take_next_number_word
-    let (rem, number_words) = get_number_words(input);
+    let (rem, number_words) = get_number_words(input, is_last);
     //println!("number words: {:?}", number_words);
     Ok((rem, number_words))
 
@@ -144,12 +148,13 @@ fn parse_nums_from_words(input: &str) -> IResult<&str, Vec<usize>> {
     //Ok((rem, parsed_nums.into_iter().map(Option::unwrap).collect()))
 }
 
-fn get_number_words(input: &str) -> (&str, Vec<usize>) {
+fn get_number_words(input: &str, is_last: bool) -> (&str, Vec<usize>) {
     //need to use this macro to declare a regular expression
     //it gets compiled when it gets used, and being static means
     //that it should only be compiled once?
     lazy_static! {
         static ref NUMBER_REGEX: regex::Regex = regex::Regex::new(r"(one|two|three|four|five|six|seven|eight|nine|zero)").unwrap();
+        static ref REVERSE_REGEX: regex::Regex = regex::Regex::new(r"(orez|enin|thgie|neves|xis|evif|ruof|eerht|owt|eno)").unwrap();
     }
 
     //yeah this ain't gonna work
@@ -158,28 +163,61 @@ fn get_number_words(input: &str) -> (&str, Vec<usize>) {
     //    parse_num
     //)(input)?;
     //println!("skipped input:{:?}", skipped);
+
     //try regular expression
     //or find a way to say alt(number_word, singleAlphabetCharactor) and have it run until it
     //succeeds, which is probably slow
-    //let (remainder, _) = nom::
-    let (matches, errs): (Vec<Option<usize>>, Vec<_>) = NUMBER_REGEX
-        //"Returns an iterator that yields successive non-overlapping
-        //matches in the given haystack."
-        //it looks like we need to find overlapping patterns
-        //4one1eightzgcpkgbpgmsevenninetwonetk
-        //^ an example from my input where the regex will report a 'two'
-        //when it should report 'one' at the end of the line, throwing off the answer
-        //5jlkfmtwoseventhreeoneightbsr
-        //^ 'oneight' needs to become 'eight'
-        .find_iter(input)
-        .map(|m| number_letters_to_val(m.as_str()))
-        .partition(Option::is_some)
-        ;
-    if !errs.is_empty() {
-        println!("take_next_number_word had errors");
-    }
 
-    ("", matches.into_iter().map(Option::unwrap).collect())
+
+    //duplicate the entire body because it won't let me pick a regular expression
+    //conditionally
+    if is_last {
+        //reversing a string is pretty involved
+        //I wonder how inefficient this string reversing is XD
+        let use_input = String::from(input).chars().rev().collect::<String>();
+        let (matches, errs): (Vec<Option<usize>>, Vec<_>) = REVERSE_REGEX
+            //"Returns an iterator that yields successive non-overlapping
+            //matches in the given haystack."
+            //it looks like we need to find overlapping patterns
+            //4one1eightzgcpkgbpgmsevenninetwonetk
+            //^ an example from my input where the regex will report a 'two'
+            //when it should report 'one' at the end of the line, throwing off the answer
+            //5jlkfmtwoseventhreeoneightbsr
+            //^ 'oneight' needs to become 'eight'
+            .find_iter(&use_input)
+            .map(|m| number_letters_to_val(m.as_str().chars().rev().collect::<String>().as_str()))
+            .partition(Option::is_some)
+            ;
+        if !errs.is_empty() {
+            println!("LAST take_next_number_word had errors:{}", use_input);
+            println!("{:?}", errs[0]);
+        }
+
+        ("", matches.into_iter().rev().map(Option::unwrap).collect())
+    } else {
+        let use_input = String::from(input);
+        let (matches, errs): (Vec<Option<usize>>, Vec<_>) = NUMBER_REGEX
+            //"Returns an iterator that yields successive non-overlapping
+            //matches in the given haystack."
+            //it looks like we need to find overlapping patterns
+            //4one1eightzgcpkgbpgmsevenninetwonetk
+            //^ an example from my input where the regex will report a 'two'
+            //when it should report 'one' at the end of the line, throwing off the answer
+            //5jlkfmtwoseventhreeoneightbsr
+            //^ 'oneight' needs to become 'eight'
+            //I wonder how inefficient this string reversing is XD
+            .find_iter(&use_input)
+            .map(|m| number_letters_to_val(m.as_str()))
+            .partition(Option::is_some)
+            ;
+        if !errs.is_empty() {
+            println!("take_next_number_word had errors");
+        }
+
+        ("", matches.into_iter().map(Option::unwrap).collect())
+    }
+    //why are these regexes different types
+    //let use_regex: regex::Regex = if is_last { REVERSE_REGEX } else { NUMBER_REGEX };
 }
 
 fn number_letters_to_val(input: &str) -> Option<usize> {

@@ -19,6 +19,18 @@ enum Count {
     GreenCount(i32),
 }
 
+struct Limits {
+    red: i32,
+    blue: i32,
+    green: i32
+}
+
+const DEFAULT_LIMITS: Limits = Limits {
+    red: RED_LIMIT,
+    blue: BLUE_LIMIT,
+    green: GREEN_LIMIT,
+};
+
 const RED_LIMIT: i32 = 12;
 const GREEN_LIMIT: i32 = 13;
 const BLUE_LIMIT: i32 = 14;
@@ -44,19 +56,33 @@ struct Hint {
     green: Count,
 }
 
+fn get_red(h: &Hint) -> i32 {
+    let Count::RedCount(val) = h.red else {panic!("how do I handle this, I know it's red")};
+    val
+}
+
+fn get_blue(h: &Hint) -> i32 {
+    let Count::BlueCount(val) = h.blue else {panic!("couldn't get blue")};
+    val
+}
+fn get_green(h: &Hint) -> i32 {
+    let Count::GreenCount(val) = h.green else {panic!("couldn't get green")};
+    val
+}
+
 /** how to de-duplicate these add methods???? */
 fn add_red(h: &mut Hint, v: &i32) {
-    let Count::RedCount(prev) = h.red else { panic!("how do I handle this, I know it's red") };
+    let prev = get_red(h);
     h.red = Count::RedCount(prev + v);
 }
 
 fn add_blue(h: &mut Hint, v: &i32) {
-    let Count::BlueCount(prev) = h.blue else { panic!("how do I handle this, I know it's blue") };
+    let prev = get_blue(h);
     h.blue = Count::BlueCount(prev + v);
 }
 
 fn add_green(h: &mut Hint, v: &i32) {
-    let Count::GreenCount(prev) = h.green else { panic!("how do I handle this, I know it's green") };
+    let prev = get_green(h);
     h.green = Count::GreenCount(prev + v);
 }
 
@@ -91,12 +117,35 @@ fn do_file(file_path: &str) {
     match parse_result {
         Ok((_, games)) => {
             println!("{:?}", games);
+            let possible_game_ids: Vec<_> = games
+                .into_iter()
+                .filter(|g| game_is_possible(g, DEFAULT_LIMITS))
+                .map(|g| g.id)
+                .collect();
+            println!("possible games {:?}", possible_game_ids);
+            let sum_possible_games_ids: i32 = possible_game_ids
+                .into_iter()
+                .sum();
+            print!("sum of possible game ids {}", sum_possible_games_ids);
+                
         },
         Err(err) => {
             println!("error:{:?}", err);
             panic!("had error");
         }
     }
+}
+
+fn game_is_possible(g: &Game, limits: Limits) -> bool {
+    for h in &g.hints[..] {
+        let redv = get_red(&h);
+        let bluev = get_red(&h);
+        let greenv = get_green(&h);
+        if redv > limits.red || bluev > limits.blue || greenv > limits.green {
+            return false
+        }
+    }
+    true
 }
 
 fn parse_line(input: &str) -> IResult<&str, Game> {

@@ -170,7 +170,7 @@ fn get_number_words(input: &str) -> (&str, Vec<usize>) {
         //^ an example from my input where the regex will report a 'two'
         //when it should report 'one' at the end of the line, throwing off the answer
         //5jlkfmtwoseventhreeoneightbsr
-        //^ 'oneight' needs to become 'one'
+        //^ 'oneight' needs to become 'eight'
         .find_iter(input)
         .map(|m| number_letters_to_val(m.as_str()))
         .partition(Option::is_some)

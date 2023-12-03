@@ -9,15 +9,16 @@ pub fn run(file_paths: [&str; 2]) {
         ;
 }
 
+#[derive(Debug)]
 enum Count {
     RedCount(i32),
     BlueCount(i32),
     GreenCount(i32),
 }
 
-const RED_LIMIT: usize = 12;
-const GREEN_LIMIT: usize = 13;
-const BLUE_LIMIT: usize = 14;
+const RED_LIMIT: i32 = 12;
+const GREEN_LIMIT: i32 = 13;
+const BLUE_LIMIT: i32 = 14;
 
 /**
  * TRUE -> Possible
@@ -33,26 +34,40 @@ fn check_limit(count: &Count) -> bool {
     *val <= limit
 }
 
+#[derive(Debug)]
 struct Hint {
     red: Count,
     blue: Count,
     green: Count,
 }
 
-fn add_red(h: &mut Hint, v: i32) {
-    let (Count::RedCount = h.red;
+/** how to de-duplicate these add methods???? */
+fn add_red(h: &mut Hint, v: &i32) {
+    let Count::RedCount(prev) = h.red else { panic!("how do I handle this, I know it's red") };
+    h.red = Count::RedCount(prev + v);
+}
+
+fn add_blue(h: &mut Hint, v: &i32) {
+    let Count::BlueCount(prev) = h.blue else { panic!("how do I handle this, I know it's blue") };
+    h.blue = Count::BlueCount(prev + v);
+}
+
+fn add_green(h: &mut Hint, v: &i32) {
+    let Count::GreenCount(prev) = h.green else { panic!("how do I handle this, I know it's green") };
+    h.green = Count::GreenCount(prev + v);
 }
 
 fn add_color(h: &mut Hint, c: &Count) {
     match c {
         Count::RedCount(val) => add_red(h, val),
-        Count::BlueCount(val) => ,
-        Count::GreenCount(val) => ,
+        Count::BlueCount(val) => add_blue(h, val),
+        Count::GreenCount(val) => add_green(h, val),
     }
 }
 
+#[derive(Debug)]
 struct Game {
-    id: usize,
+    id: i32,
     hints: Vec<Hint>,
 }
 
@@ -67,10 +82,25 @@ fn mk_color((color, num): (&str, i32)) -> Option<Count> {
 
 fn do_file(file_path: &str) {
     println!("file:{}", file_path);
+    let contents = std::fs::read_to_string(file_path)
+        .expect("read file");
+    let (_, games) = nom::multi::many1(parse_line)(&contents)
+        .expect("parsed into games");
+    println!("{:?}", games);
 }
 
 fn parse_line(input: &str) -> IResult<&str, Game> {
     let (rem, id) = parse_game_id(input)?;
+    let (rem, hints) = parse_hints(rem)?;
+    //remove the newline
+    let (rem, _) = nom::character::complete::line_ending(rem)?;
+    Ok((
+        rem,
+        Game {
+            id,
+            hints
+        }
+    ))
 }
 
 fn parse_game_id(input: &str) -> IResult<&str, i32> {
@@ -100,6 +130,8 @@ fn parse_hint_instance(input: &str) -> IResult<&str, Hint> {
         .map(Option::unwrap)
         .collect()
         ;
+    let new_hint = mk_hint(&color_counts);
+    Ok((rem, new_hint))
 }
 
 fn mk_hint(colors: &Vec<Count>) -> Hint {

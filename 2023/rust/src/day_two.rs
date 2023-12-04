@@ -104,7 +104,7 @@ fn do_file(file_path: &str) {
     let parse_result = nom::multi::many1(parse_line)(&contents);
     match parse_result {
         Ok((_, games)) => {
-            //println!("{:?}", games);
+            println!("{:?}", games);
             let possible_game_ids: Vec<_> = games
                 .into_iter()
                 .filter(|g| game_is_possible(g, DEFAULT_LIMITS))
@@ -115,6 +115,16 @@ fn do_file(file_path: &str) {
                 .into_iter()
                 .sum();
             print!("sum of possible game ids {}", sum_possible_games_ids);
+            //part 2
+            //TODO how do I make this nice? A tuple whose first element
+            //must be a red count, second element must be a green count...
+            //for now just now it's (red, green, blue)
+            //I need to figure out how to do that in Haskel too
+            let mininum_cube_sets: Vec<(i32, i32, i32)> = games
+                .iter()
+                .map(get_minimum_cube_set)
+                .collect()
+                ;
                 
         },
         Err(err) => {
@@ -122,6 +132,19 @@ fn do_file(file_path: &str) {
             panic!("had error");
         }
     }
+}
+
+fn get_minimum_cube_set(g: &Game) -> (i32, i32, i32) {
+    let mut minimums = (0, 0, 0);
+    for h in &g.hints[..] {
+        let redv = get_red(&h);
+        let greenv = get_green(&h);
+        let bluev = get_blue(&h);
+        minimums.0 = std::cmp::max(minimums.0, redv);
+        minimums.1 = std::cmp::max(minimums.1, greenv);
+        minimums.2 = std::cmp::max(minimums.2, bluev);
+    }
+    minimums
 }
 
 fn game_is_possible(g: &Game, limits: Limits) -> bool {

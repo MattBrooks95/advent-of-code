@@ -6,11 +6,11 @@ use nom::error::context;
 pub fn run(file_paths: [&str; 2]) {
     println!("day 2");
     //run both
-    file_paths
-        .into_iter()
-        .for_each(do_file)
-        ;
-    //do_file(file_paths[0])
+    //file_paths
+    //    .into_iter()
+    //    .for_each(do_file)
+    //    ;
+    do_file(file_paths[1])
 }
 
 #[derive(Debug)]
@@ -20,6 +20,7 @@ enum Count {
     GreenCount(i32),
 }
 
+#[derive(Debug)]
 struct Limits {
     red: i32,
     blue: i32,
@@ -117,7 +118,7 @@ fn do_file(file_path: &str) {
     let parse_result = nom::multi::many1(parse_line)(&contents);
     match parse_result {
         Ok((_, games)) => {
-            println!("{:?}", games);
+            //println!("{:?}", games);
             let possible_game_ids: Vec<_> = games
                 .into_iter()
                 .filter(|g| game_is_possible(g, DEFAULT_LIMITS))
@@ -138,14 +139,17 @@ fn do_file(file_path: &str) {
 }
 
 fn game_is_possible(g: &Game, limits: Limits) -> bool {
+    //println!("##############################");
+    //println!("{:?}", g);
     for h in &g.hints[..] {
         let redv = get_red(&h);
-        let bluev = get_red(&h);
+        let bluev = get_blue(&h);
         let greenv = get_green(&h);
         if redv > limits.red || bluev > limits.blue || greenv > limits.green {
             return false
         }
     }
+    //println!("##############################");
     true
 }
 

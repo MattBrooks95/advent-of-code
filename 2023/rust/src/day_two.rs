@@ -54,7 +54,7 @@ fn get_blue(h: &Hint) -> i32 {
     val
 }
 fn get_green(h: &Hint) -> i32 {
-    let Count::GreenCount(val) = h.green else {panic!("couldn't get green")};
+    let Count::GreenCount(val)= h.green else {panic!("couldn't get green")};
     val
 }
 
@@ -105,7 +105,9 @@ fn do_file(file_path: &str) {
     match parse_result {
         Ok((_, games)) => {
             println!("{:?}", games);
-            let possible_game_ids: Vec<_> = games
+            //pass in a slice instead, to stop it from moving
+            //TODO actually read the rust book and learn about moving
+            let possible_game_ids: Vec<_> = games[..]
                 .into_iter()
                 .filter(|g| game_is_possible(g, DEFAULT_LIMITS))
                 .map(|g| g.id)
@@ -120,11 +122,18 @@ fn do_file(file_path: &str) {
             //must be a red count, second element must be a green count...
             //for now just now it's (red, green, blue)
             //I need to figure out how to do that in Haskel too
-            let mininum_cube_sets: Vec<(i32, i32, i32)> = games
+            //2795, first try babeeee
+            let minimum_cube_sets: Vec<(i32, i32, i32)> = games
                 .iter()
                 .map(get_minimum_cube_set)
                 .collect()
                 ;
+            println!("minimum cube sets: {:?}", minimum_cube_sets);
+            let sum_of_cube_powers = minimum_cube_sets
+                .into_iter()
+                .fold(0, |acc, (r, g, b)| acc + r * g * b);
+            println!("sum of cube powers: {}", sum_of_cube_powers);
+        
                 
         },
         Err(err) => {

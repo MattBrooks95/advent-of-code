@@ -1,5 +1,3 @@
-use nom::IResult;
-
 //X values increase from 0 to W, left to right
 struct X(i32);
 //Y values increase from 0 to H, top to bottom
@@ -29,12 +27,35 @@ pub fn run(file_paths: [&str; 2]) {
     file_paths.iter().for_each(do_file);
 }
 
+//intermediate parsing state
+//getting these x/y indices with Nom looked difficult
+//so I'm just going to do nested loops and assign every character a location
+struct Input(char, X, Y);
+
 fn do_file(file_path: &str) -> () {
     println!("file:{}", file_path);
     let contents = std::fs::read_to_string(file_path)
         .expect("read file");
-    let parse_result = nom::multi::many1(parse_line)(&contents);
+    //will this work on windows? XD
+    let lines = contents.split('\n');
+    let character_matrix: Vec<Vec<_>> = lines
+        .into_iter()
+        .enumerate()
+        .map(|(line_index, line_contents)| {
+            line_contents
+                .chars()
+                .enumerate()
+                .map(|(char_index, char)| {
+                    (char, char_index, line_index)
+                })
+                .collect()
+        })
+        .collect()
+        ;
 }
 
-fn parse_line(input: &str) -> IResult<&str, Board> {
-}
+//fn parse_char(input: char) {
+//    match input {
+//         => 0,
+//    }
+//}

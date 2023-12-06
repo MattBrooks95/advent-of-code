@@ -1,15 +1,16 @@
 //X values increase from 0 to W, left to right
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Eq, PartialEq, Hash, Clone, Debug)]
 struct X(usize);
 //Y values increase from 0 to H, top to bottom
-#[derive(Eq, PartialEq, Hash, Clone)]
+#[derive(Eq, PartialEq, Hash, Clone, Debug)]
 struct Y(usize);
 
 //the top left corner of the input is 0,0
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Debug)]
 struct Location(X, Y);
 
 //a special character is the character and a location
+#[derive(Debug)]
 struct SpecialSymbol(char);
 
 struct Value(i32);
@@ -27,12 +28,14 @@ type Board = Vec<BoardEntity>;
 
 pub fn run(file_paths: [&str; 2]) {
     println!("day three, files:{:?}", file_paths);
-    file_paths.into_iter().for_each(do_file);
+    //file_paths.into_iter().for_each(do_file);
+    do_file(file_paths[0]);
 }
 
 //intermediate parsing state
 //getting these x/y indices with Nom looked difficult
 //so I'm just going to do nested loops and assign every character a location
+#[derive(Debug)]
 struct Input(char, X, Y);
 
 type SpecialCharsMap = std::collections::HashMap<Location, SpecialSymbol>;
@@ -58,6 +61,8 @@ fn do_file(file_path: &str) -> () {
         .collect()
         ;
     let special_char_map: SpecialCharsMap = get_special_character_map(&character_matrix);
+    //println!("{:?}", character_matrix);
+    println!("{:?}", special_char_map);
 }
 
 fn get_special_character_map(char_matrix: &Vec<Vec<Input>>) -> SpecialCharsMap {

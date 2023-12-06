@@ -64,7 +64,8 @@ fn do_file(file_path: &str) -> () {
     let special_char_map: SpecialCharsMap = get_special_character_map(&character_matrix);
     //println!("{:?}", character_matrix);
     println!("{:?}", special_char_map);
-    let touch_symbol_digits = get_digits_from_symbols(&character_matrix, &special_char_map);
+    let touch_symbol_digit_locs = get_digits_from_symbols(&character_matrix, &special_char_map);
+    println!("touch symbol digit locs {:?}", touch_symbol_digit_locs);
 }
 
 fn get_digits_from_symbols(
@@ -74,12 +75,10 @@ fn get_digits_from_symbols(
     let mut set = std::collections::HashSet::new();
     special_char_map
         .into_iter()
-        .for_each(|(loc@Location(x, y), _)| {
+        .for_each(|(loc, _)| {
             let search_locations = get_check_locations(loc);
             //get the index ranges of the digits that are close enough
             //to a special symbol to matter
-            //TODO put these into a set to ensure that each stretch of digits is included
-            //only once
             let digits: Vec<(Location, Location)> = search_locations
                 .into_iter()
                 //TODO be careful about the access order here
@@ -109,37 +108,47 @@ fn get_digits_from_symbols(
                 .filter(Option::is_some)
                 .map(Option::unwrap)
                 .collect();
+            digits.into_iter().for_each(|x| { set.insert(x); });
         });
     set
 }
 
-fn inc(x: usize) -> usize { x + 1 }
-fn dec(x: usize) -> usize { x - 1 }
+fn inc(x: usize) -> Option<usize> { Some(x + 1) }
+fn dec(x: usize) -> Option<usize> { if x == 0 { None } else { Some(x - 1) } }
 
 fn find_digit_edge(
     start_loc@Location(X(x), Y(y)): &Location,
     char_matrix: &Vec<Vec<Input>>,
-    update_x: &dyn Fn(usize) -> usize
+    update_x: &dyn Fn(usize) -> Option<usize>
 ) -> Location {
+    let mut prev_x = *x;
     let mut seek_x = update_x(*x);
+    println!("x:{:?} next:{:?}", prev_x, seek_x);
+    let get_row = char_matrix.get(*y).expect("row existed");
 
     let answer = loop {
-        let get_row = char_matrix.get(*y).expect("row existed");
-        
-        let get_col = get_row.get(*x);
+        let get_col = get_row.get(seek_x.unwrap());
 
         match get_col {
         //match char_matrix.get(*y)?.get(seek_x) {
             None => {
-                break Some(Location(X(seek_x + 1), Y(*y)))
+                break Location(X(prev_x), Y(*y))
             },
-            Some(_) => seek_x -= 1
+            Some(Input(c, _, _)) => {
+                if c.is_ascii_digit() {
+                    prev_x = seek_x.unwrap();
+                    match update_x(prev_x) {
+                        None => break Location(X(prev_x), Y(*y)),
+                        Some(v) => { seek_x = Some(v); },
+                    }
+                    //seek_x = update_x(seek_x?);
+                } else {
+                    break Location(X(prev_x), Y(*y))
+                }
+            }
         }
     };
-    match answer {
-        None => start_loc.clone(),
-        Some(new_loc) => new_loc,
-    }
+    answer
 }
 
 fn get_check_locations(Location(this_x@X(x), this_y@Y(y)): &Location) -> Vec<Location> {

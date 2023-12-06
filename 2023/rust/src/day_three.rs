@@ -1,12 +1,12 @@
 //X values increase from 0 to W, left to right
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Clone)]
 struct X(usize);
 //Y values increase from 0 to H, top to bottom
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Clone)]
 struct Y(usize);
 
 //the top left corner of the input is 0,0
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Hash)]
 struct Location(X, Y);
 
 //a special character is the character and a location
@@ -61,7 +61,7 @@ fn do_file(file_path: &str) -> () {
 }
 
 fn get_special_character_map(char_matrix: &Vec<Vec<Input>>) -> SpecialCharsMap {
-    let map = std::collections::HashMap::new();
+    let mut map = std::collections::HashMap::new();
     char_matrix
         .into_iter()
         .flatten()
@@ -70,9 +70,10 @@ fn get_special_character_map(char_matrix: &Vec<Vec<Input>>) -> SpecialCharsMap {
         //})
         .for_each(|Input(c, x, y)| {
             if !c.is_numeric() && *c != '.' {
-                map.insert((*x, *y), SpecialSymbol(*c));
+                map.insert(Location(x.clone(), y.clone()), SpecialSymbol(*c));
             }
         });
+    map
 }
 
 //fn parse_char(input: char) {

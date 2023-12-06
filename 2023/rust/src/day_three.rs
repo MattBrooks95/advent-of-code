@@ -6,7 +6,7 @@ struct X(usize);
 struct Y(usize);
 
 //the top left corner of the input is 0,0
-#[derive(Eq, PartialEq, Hash, Debug)]
+#[derive(Eq, PartialEq, Hash, Debug, Clone)]
 struct Location(X, Y);
 
 //a special character is the character and a location
@@ -39,7 +39,7 @@ pub fn run(file_paths: [&str; 2]) {
 struct Input(char, X, Y);
 
 type SpecialCharsMap = std::collections::HashMap<Location, SpecialSymbol>;
-type DigitHitSet = std::collections::HashSet<Location>;
+type DigitHitSet = std::collections::HashSet<(Location, Location)>;
 
 fn do_file(file_path: &str) -> () {
     println!("file:{}", file_path);
@@ -72,21 +72,35 @@ fn get_digits_from_symbols(
     special_char_map: &SpecialCharsMap
 ) -> DigitHitSet {
     let mut set = std::collections::HashSet::new();
-    let touching_digits_start_location = special_char_map
+    special_char_map
         .into_iter()
         .for_each(|(loc@Location(x, y), _)| {
             let search_locations = get_check_locations(loc);
-            let digits: Vec<_> = search_locations
+            //get the index ranges of the digits that are close enough
+            //to a special symbol to matter
+            //TODO put these into a set to ensure that each stretch of digits is included
+            //only once
+            let digits: Vec<(Location, Location)> = search_locations
                 .into_iter()
                 //TODO be careful about the access order here
                 //I think when I made the character matrix, y (rows) is the outer array
                 //index, and x (cols) is the inner array index
                 .map(|symbol_loc@Location(X(x), Y(y))| {
-                    let Input(c, _, _) = char_matrix.get(y)?.get(x)?;
-                    match char_matrix.get(y)?.get(x) {
+                    let symbol_lookup = char_matrix.get(y)?.get(x);
+                    match symbol_lookup {
                         None => None,
                         Some(Input(c, _, _)) => if c.is_ascii_digit() {
-                            Some(find_first_digit(&symbol_loc, char_matrix))
+                            let first_digit = find_digit_edge(
+                                &symbol_loc,
+                                char_matrix,
+                                &inc
+                                );
+                            let last_digit = find_digit_edge(
+                                &symbol_loc,
+                                char_matrix,
+                                &dec
+                                );
+                            Some((first_digit, last_digit))
                         } else {
                             None
                         },
@@ -99,9 +113,32 @@ fn get_digits_from_symbols(
     set
 }
 
-fn find_first_digit(Location(X(x), Y(y)): &Location, char_matrix: &Vec<Vec<Input>>) -> Location {
-    let mut seek_x = x - 1;
-    match char_matrix.get(y).get(x) {
+fn inc(x: usize) -> usize { x + 1 }
+fn dec(x: usize) -> usize { x - 1 }
+
+fn find_digit_edge(
+    start_loc@Location(X(x), Y(y)): &Location,
+    char_matrix: &Vec<Vec<Input>>,
+    update_x: &dyn Fn(usize) -> usize
+) -> Location {
+    let mut seek_x = update_x(*x);
+
+    let answer = loop {
+        let get_row = char_matrix.get(*y).expect("row existed");
+        
+        let get_col = get_row.get(*x);
+
+        match get_col {
+        //match char_matrix.get(*y)?.get(seek_x) {
+            None => {
+                break Some(Location(X(seek_x + 1), Y(*y)))
+            },
+            Some(_) => seek_x -= 1
+        }
+    };
+    match answer {
+        None => start_loc.clone(),
+        Some(new_loc) => new_loc,
     }
 }
 

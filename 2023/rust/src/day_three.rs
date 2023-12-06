@@ -66,6 +66,45 @@ fn do_file(file_path: &str) -> () {
     println!("{:?}", special_char_map);
     let touch_symbol_digit_locs = get_digits_from_symbols(&character_matrix, &special_char_map);
     println!("touch symbol digit locs {:?}", touch_symbol_digit_locs);
+    let (values, fails): (Vec<Option<i32>>, Vec<Option<i32>>) = touch_symbol_digit_locs
+        .iter()
+        .map(|z| get_digit_from_loc(&character_matrix, z.clone()))
+        .partition(Option::is_some)
+        ;
+    println!("parsed out numbers: {:?}", values);
+    if !fails.is_empty() {
+        panic!("failed to parse out one of the values");
+    }
+
+    let sum: i32 = values.into_iter().map(Option::unwrap).sum();
+    println!("sum: {}", sum);
+}
+
+fn get_digit_from_loc(
+    char_matrix: &Vec<Vec<Input>>,
+    (Location(X(start_x), Y(y)), Location(X(end_x), _)): (Location, Location)
+) -> Option<i32> {
+    let row = char_matrix.get(y)?;
+    let (digit_string, failures): (Vec<_>, Vec<_>) = (start_x..end_x)
+        .into_iter()
+        .map(|x| {
+            match row.get(x) {
+                None => None,
+                Some(Input(c, _, _)) => Some(c)
+            }
+        })
+        .partition(Option::is_some)
+        ;
+    if !failures.is_empty() {
+        panic!("failed to look up a digit that should exist")
+    } else {
+        let as_str = String::from_iter(digit_string.into_iter().map(Option::unwrap));
+        match as_str.parse::<i32>() {
+            Err(_) => panic!("failed to parse string: {}", as_str),
+            Ok(v) => Some(v)
+        }
+    }
+    
 }
 
 fn get_digits_from_symbols(
@@ -92,12 +131,12 @@ fn get_digits_from_symbols(
                             let first_digit = find_digit_edge(
                                 &symbol_loc,
                                 char_matrix,
-                                &inc
+                                &dec
                                 );
                             let last_digit = find_digit_edge(
                                 &symbol_loc,
                                 char_matrix,
-                                &dec
+                                &inc
                                 );
                             Some((first_digit, last_digit))
                         } else {

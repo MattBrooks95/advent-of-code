@@ -28,8 +28,8 @@ type Board = Vec<BoardEntity>;
 
 pub fn run(file_paths: [&str; 2]) {
     println!("day three, files:{:?}", file_paths);
-    //file_paths.into_iter().for_each(do_file);
-    do_file(file_paths[0]);
+    file_paths.into_iter().for_each(do_file);
+    //do_file(file_paths[0]);
 }
 
 //intermediate parsing state
@@ -85,7 +85,7 @@ fn get_digit_from_loc(
     (Location(X(start_x), Y(y)), Location(X(end_x), _)): (Location, Location)
 ) -> Option<i32> {
     let row = char_matrix.get(y)?;
-    let (digit_string, failures): (Vec<_>, Vec<_>) = (start_x..end_x)
+    let (digit_string, failures): (Vec<_>, Vec<_>) = (start_x..end_x + 1)
         .into_iter()
         .map(|x| {
             match row.get(x) {

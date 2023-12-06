@@ -81,11 +81,15 @@ fn get_digits_from_symbols(
                 //TODO be careful about the access order here
                 //I think when I made the character matrix, y (rows) is the outer array
                 //index, and x (cols) is the inner array index
-                .map(|Location(X(x), Y(y))| {
-                    let Input(c, _, _) = char_matrix.get(y)?.get(x);
-                    if (c.is_digit()) {
-                    } else {
-                        None
+                .map(|symbol_loc@Location(X(x), Y(y))| {
+                    let Input(c, _, _) = char_matrix.get(y)?.get(x)?;
+                    match char_matrix.get(y)?.get(x) {
+                        None => None,
+                        Some(Input(c, _, _)) => if c.is_ascii_digit() {
+                            Some(find_first_digit(&symbol_loc, char_matrix))
+                        } else {
+                            None
+                        },
                     }
                 })
                 .filter(Option::is_some)
@@ -96,7 +100,9 @@ fn get_digits_from_symbols(
 }
 
 fn find_first_digit(Location(X(x), Y(y)): &Location, char_matrix: &Vec<Vec<Input>>) -> Location {
-    
+    let mut seek_x = x - 1;
+    match char_matrix.get(y).get(x) {
+    }
 }
 
 fn get_check_locations(Location(this_x@X(x), this_y@Y(y)): &Location) -> Vec<Location> {

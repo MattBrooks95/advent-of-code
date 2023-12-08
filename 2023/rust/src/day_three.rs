@@ -63,21 +63,74 @@ fn do_file(file_path: &str) -> () {
         ;
     let special_char_map: SpecialCharsMap = get_special_character_map(&character_matrix);
     //println!("{:?}", character_matrix);
-    println!("{:?}", special_char_map);
+    //println!("{:?}", special_char_map);
     let touch_symbol_digit_locs = get_digits_from_symbols(&character_matrix, &special_char_map);
-    println!("touch symbol digit locs {:?}", touch_symbol_digit_locs);
+    //println!("touch symbol digit locs {:?}", touch_symbol_digit_locs);
     let (values, fails): (Vec<Option<i32>>, Vec<Option<i32>>) = touch_symbol_digit_locs
         .iter()
         .map(|z| get_digit_from_loc(&character_matrix, z.clone()))
         .partition(Option::is_some)
         ;
-    println!("parsed out numbers: {:?}", values);
+    //println!("parsed out numbers: {:?}", values);
     if !fails.is_empty() {
         panic!("failed to parse out one of the values");
     }
 
     let sum: i32 = values.into_iter().map(Option::unwrap).sum();
     println!("sum: {}", sum);
+    //part 2
+    //identify all of the gears
+    let gears: Vec<(Location, SpecialSymbol)> = special_char_map
+        .into_iter()
+        .filter(|(_, SpecialSymbol(c))| *c == '*')
+        .collect()
+        ;
+        //.collect::<Vec<(Location, SpecialSymbol)>>();
+    //println!("gears:{:?}", gears);
+    //get the locations of all the numbers that touch at least one gear
+    //println!("touch gears:{:?}", touch_gears_digit_locs);
+    let gear_digits: Vec<(Location, (i32, i32))> = gears
+        .iter()
+        .map(|(loc, SpecialSymbol(sym))| {
+            let digit_locs = get_digits_start_and_end_for_special_symbol(
+                loc,
+                &character_matrix
+            );
+            //can't have duplicates
+            let mut num_start_loc_set: std::collections::HashSet<(Location, Location)> = std::collections::HashSet::new();
+            let digits: Vec<i32> = digit_locs
+                .iter()
+                .map(|loc| {
+                    match num_start_loc_set.get(loc) {
+                        None => {
+                            num_start_loc_set.insert(loc.clone());
+                            let parsed_num = get_digit_from_loc(&character_matrix, loc.clone())?;
+                            Some(parsed_num)
+                        },
+                        Some(_) => None,
+                    }
+                })
+                .filter(Option::is_some)
+                .map(Option::unwrap)
+                .collect();
+            //println!("sym:{sym} l:{:?}, digits:{:?}", loc, digits);
+            if digits.len() == 2 {
+                Some((loc.clone(), (digits[0], digits[1])))
+            } else {
+                None
+            }
+        })
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .collect()
+        ;
+    //println!("gear digits:{:?}", gear_digits);
+    let gear_power_sum = gear_digits
+        .iter()
+        .map(|(_, (num1, num2))| {
+            num1 * num2
+        }).fold(0, |prev, curr| prev + curr);
+    println!("power gear sum:{}", gear_power_sum);
 }
 
 fn get_digit_from_loc(
@@ -115,41 +168,48 @@ fn get_digits_from_symbols(
     special_char_map
         .into_iter()
         .for_each(|(loc, _)| {
-            let search_locations = get_check_locations(loc);
             //get the index ranges of the digits that are close enough
             //to a special symbol to matter
-            let digits: Vec<(Location, Location)> = search_locations
-                .into_iter()
-                //TODO be careful about the access order here
-                //I think when I made the character matrix, y (rows) is the outer array
-                //index, and x (cols) is the inner array index
-                .map(|symbol_loc@Location(X(x), Y(y))| {
-                    let symbol_lookup = char_matrix.get(y)?.get(x);
-                    match symbol_lookup {
-                        None => None,
-                        Some(Input(c, _, _)) => if c.is_ascii_digit() {
-                            let first_digit = find_digit_edge(
-                                &symbol_loc,
-                                char_matrix,
-                                &dec
-                                );
-                            let last_digit = find_digit_edge(
-                                &symbol_loc,
-                                char_matrix,
-                                &inc
-                                );
-                            Some((first_digit, last_digit))
-                        } else {
-                            None
-                        },
-                    }
-                })
-                .filter(Option::is_some)
-                .map(Option::unwrap)
-                .collect();
+            let digits = get_digits_start_and_end_for_special_symbol(loc, char_matrix);
             digits.into_iter().for_each(|x| { set.insert(x); });
         });
     set
+}
+
+fn get_digits_start_and_end_for_special_symbol(
+    loc: &Location,
+    char_matrix: &Vec<Vec<Input>>,
+) -> Vec<(Location, Location)> {
+    let search_locations = get_check_locations(loc);
+    search_locations
+        .into_iter()
+        //TODO be careful about the access order here
+        //I think when I made the character matrix, y (rows) is the outer array
+        //index, and x (cols) is the inner array index
+        .map(|symbol_loc@Location(X(x), Y(y))| {
+            let symbol_lookup = char_matrix.get(y)?.get(x);
+            match symbol_lookup {
+                None => None,
+                Some(Input(c, _, _)) => if c.is_ascii_digit() {
+                    let first_digit = find_digit_edge(
+                        &symbol_loc,
+                        char_matrix,
+                        &dec
+                        );
+                    let last_digit = find_digit_edge(
+                        &symbol_loc,
+                        char_matrix,
+                        &inc
+                        );
+                    Some((first_digit, last_digit))
+                } else {
+                    None
+                },
+            }
+        })
+        .filter(Option::is_some)
+        .map(Option::unwrap)
+        .collect()
 }
 
 fn inc(x: usize) -> Option<usize> { Some(x + 1) }
@@ -162,7 +222,7 @@ fn find_digit_edge(
 ) -> Location {
     let mut prev_x = *x;
     let mut seek_x = update_x(*x);
-    println!("x:{:?} next:{:?}", prev_x, seek_x);
+    //println!("x:{:?} next:{:?}", prev_x, seek_x);
     let get_row = char_matrix.get(*y).expect("row existed");
 
     let answer = loop {
@@ -226,9 +286,3 @@ fn get_special_character_map(char_matrix: &Vec<Vec<Input>>) -> SpecialCharsMap {
         });
     map
 }
-
-//fn parse_char(input: char) {
-//    match input {
-//         => 0,
-//    }
-//}

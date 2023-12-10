@@ -23,15 +23,15 @@ fn do_file(file_path: &str) -> () {
     let contents = _contents.unwrap();
     let (_, (seeds, pre_map)) = nom::combinator::all_consuming(parse)(contents.as_str())
         .expect("parsed");
-    println!("seeds {:?}", seeds);
+    //println!("seeds {:?}", seeds);
     let map: Map = build_map(pre_map)
         .expect("built ranges struct");
-    println!("map {:?}", map);
+    //println!("map {:?}", map);
     let solved_seeds: Vec<SeedInfo> = seeds
         .iter()
         .map(|s| solve_seed(*s, &map))
         .collect();
-    println!("\nsolved seeds:{:?}", solved_seeds);
+    //println!("\nsolved seeds:{:?}", solved_seeds);
     if solved_seeds.len() <= 0 {
         panic!("no solved seeds to get locations from");
     }
@@ -40,6 +40,104 @@ fn do_file(file_path: &str) -> () {
         .map(|SeedInfo(_, SeedMapResult { loc, .. })| *loc)
         .fold(solved_seeds[0].1.loc, |p, c| std::cmp::min(p, c));
     println!("lowest location seed {}", lowest_location_seed);
+    let seed_ranges: Vec<SeedRange> = seeds
+        .chunks(2)
+        .map(|seed_data| {
+            if seed_data.len() != 2 {
+                panic!("seed range didn't have exactly 2 elements");
+            }
+            let [start, len] = seed_data else { panic!("couldn't match 2 elements") };
+            SeedRange(*start, start + len)
+        })
+        .collect();
+    //println!("seed ranges {:?}", seed_ranges);
+    let mut sorted_by_start = seed_ranges.clone();
+    sorted_by_start.sort_unstable_by(|a, b| {
+            a.0.partial_cmp(&b.0).unwrap()
+        });
+    //println!("sorted by start {:?}", sorted_by_start);
+    let joined_ranges = sorted_by_start
+        .iter()
+        .fold(Vec::new(), |mut acc, elem| {
+            //let try_combine = combine(acc, elem);
+            //try_combine.unwrap()
+            let last = acc.last();
+            match last {
+                None => {
+                    acc.push(*elem);
+                    acc
+                },
+                Some(l) => match combine(l, elem) {
+                    Some(combine_success) => {
+                        acc.pop();
+                        acc.push(combine_success);
+                        acc
+                    },
+                    None => {
+                        acc.push(*elem);
+                        acc
+                    }
+                }
+            }
+        });
+    //joining them hasn't worked out, it doesn't look like they overlap
+    //println!("not joined: {} joined: {}", sorted_by_start.len(), joined_ranges.len());
+    let num_seeds_to_compute: u32 = seed_ranges
+        .iter()
+        .map(|SeedRange(s, e)| e - s)
+        .sum()
+        ;
+    //println!("num seeds to compute: {}", num_seeds_to_compute);
+    let humidity_locations_to_compute: u32 = map.humid_to_loc.0
+        .iter()
+        .map(|Range { length, ..}| {
+            length
+        })
+        .sum()
+        ;
+    //println!("if I worked backwards, I would have to compute at least {} locations", humidity_locations_to_compute);
+    let location_ranges: Vec<(u64, u64)> = map.humid_to_loc.0
+        .iter()
+        .map(|Range {dest_start, length, ..}| {
+            println!("dest_start:{} length:{}", dest_start, length);
+            let dest64 = u64::from(*dest_start);
+            let len64 = u64::from(*length);
+            (dest64, dest64 + len64)
+        })
+        .collect();
+    let mut sorted_location_ranges = location_ranges.clone();
+    sorted_location_ranges
+        .sort_by(|a, b| {
+            a.0.partial_cmp(&b.0).unwrap()
+        });
+    //println!("sorted location ranges:{:?}", sorted_location_ranges);
+    let lowest_loc = 0;
+    //this was slow as shit but it worked within a 2 minutes or so
+    //78775051 - hurray for brute force
+    let highest_loc = sorted_location_ranges.last().unwrap().1;
+    //for loc_range@(start, end) in sorted_location_ranges {
+        //println!("start:{} end:{}", start, end);
+        //for loc_num in start..end {
+        println!("searching from {} to {}", lowest_loc, highest_loc);
+        for loc_num in lowest_loc..highest_loc {
+            match solve_location(loc_num, &map) {
+                None => continue,
+                Some(projected_value) => {
+                    for SeedRange(start, end) in seed_ranges.clone() {
+                        //println!("proj:{}, sr start:{} sr end:{}", projected_value, start, end);
+                        if projected_value >= start.into() && projected_value <= end.into() {
+                            println!(
+                                "lowest loc number: {} projected_value {}",
+                                loc_num,
+                                projected_value
+                            );
+                            return
+                        }
+                    }
+                }
+            }
+        }
+    //}
 }
 
 #[derive(Debug)]
@@ -55,6 +153,23 @@ struct SeedMapResult {
 
 #[derive(Debug)]
 struct SeedInfo(u32, SeedMapResult);
+
+fn solve_location(l: u64, m: &Map) -> Option<u64> {
+    let humid_num = map_loc_ranges(l, &m.humid_to_loc.0)
+        .unwrap_or(l);
+    let temp_num = map_loc_ranges(humid_num, &m.temp_to_humid.0)
+        .unwrap_or(humid_num);
+    let light_num = map_loc_ranges(temp_num, &m.light_to_temp.0)
+        .unwrap_or(temp_num);
+    let water_num = map_loc_ranges(light_num, &m.water_to_light.0)
+        .unwrap_or(light_num);
+    let fert_num = map_loc_ranges(water_num, &m.fert_to_water.0)
+        .unwrap_or(water_num);
+    let soil_num = map_loc_ranges(fert_num, &m.soil_to_fert.0)
+        .unwrap_or(fert_num);
+    let seed_num = map_loc_ranges(soil_num, &m.seed_to_soil.0);
+    seed_num
+}
 
 fn solve_seed(s: u32, m: &Map) -> SeedInfo {
     //there's a pattern here where each step modifies the number OR leaves it as-is
@@ -153,6 +268,32 @@ struct TempToHumid(Vec<Range>);
 #[derive(Debug)]
 struct HumidToLoc(Vec<Range>);
 
+#[derive(Debug, Clone, Copy)]
+struct SeedRange(u32, u32);
+
+/** the idea is to join ranges that overlap with eachother
+ * to prevent repeating work, and to get an idea of just doing this
+ * loop will be possible with the huge seed ranges
+ **/
+fn combine(SeedRange(x_s, x_e): &SeedRange, SeedRange(y_s, y_e): &SeedRange) -> Option<SeedRange> {
+    let start = if x_s >= y_s && x_s <= y_e {
+        Some(y_s)
+    } else if y_s >= x_s && y_s <= x_e {
+        Some(x_s)
+    } else { None };
+
+    let end = if x_e >= y_s && x_e <= y_e {
+        Some(y_e)
+    } else if y_e >= x_s && y_e <= x_e {
+        Some(x_e)
+    } else { None };
+
+    match (start, end) {
+        (Some(s), Some(e)) => Some(SeedRange(*s, *e)),
+        _ => None
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Range {
     length: u32,
@@ -167,6 +308,28 @@ fn map_seed_ranges(num: u32, ranges: &Vec<Range>) -> Option<u32> {
             None => continue,
             Some(new_val) => return Some(new_val)
         }
+    }
+    None
+}
+
+fn map_loc_ranges(num: u64, ranges: &Vec<Range>) -> Option<u64> {
+    for r in ranges {
+        match map_loc_range(num, r) {
+            None => continue,
+            Some(new_val) => return Some(new_val)
+        }
+    }
+    None
+}
+
+fn map_loc_range(num: u64, Range {length, source_start, dest_start}: &Range) -> Option<u64> {
+    let dest64 = u64::from(*dest_start);
+    let len64 = u64::from(*length);
+    let source64 = u64::from(*source_start);
+    if num >= dest64 && num <= dest64 + len64 {
+        let from_dest = num - dest64;
+        let source = source64 + from_dest;
+        return Some(source)
     }
     None
 }

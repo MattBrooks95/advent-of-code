@@ -2,6 +2,7 @@ use nom::IResult;
 use nom::character::complete::newline;
 use nom::bytes::complete::tag;
 use nom::character::complete::char;
+use std::collections::HashMap;
 
 pub fn run(fps: [&str; 2]) {
     do_file(fps[0]);
@@ -14,6 +15,48 @@ fn do_file(fp: &str) -> () {
     let parse_result = nom::combinator::all_consuming(parse)(&contents)
         .expect("successfully parsed all of the hands");
     println!("parse result: {:?}", parse_result);
+}
+
+fn hand_rank((h, _): &Hand) -> u32 {
+    let mut char_map: HashMap<char, u32> = HashMap::new();
+    for c in h {
+        match char_map.get(c) {
+            None => {
+                char_map.insert(*c, 1);
+            },
+            Some(prev_value) => {
+                char_map.insert(*c, prev_value + 1);
+            },
+        }
+    }
+    //five of a kind
+    if char_map.values().find(|v| **v == 5).is_some() {
+        return 7;
+    }
+
+    //four of a kind
+    if char_map.values().find(|v| **v == 4).is_some() {
+        return 6;
+    }
+
+    //full house
+    if char_map.values().find(|v| **v == 3).is_some()
+        && char_map.values().find(|v| **v == 2).is_some() {
+        return 5;
+    }
+
+    //three of a kind
+    if char_map.values().find(|v| **v == 3).is_some() {
+        return 4;
+    }
+
+    //two pair
+    for (k, v) in char_map
+
+    //one pair
+
+    //all characters are different, weakest hand
+    return 1;
 }
 
 fn card_value(c: &char) -> Option<u32> {

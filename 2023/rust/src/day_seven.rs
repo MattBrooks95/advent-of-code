@@ -20,7 +20,7 @@ fn do_file(fp: &str) -> () {
         .map(|hand| {
             EvaluatedHand {
                 hand: hand.clone(),
-                rank: hand_rank(hand)
+                kind: hand_rank(hand)
             }
         })
         .collect();
@@ -30,10 +30,21 @@ fn do_file(fp: &str) -> () {
 #[derive(Debug)]
 struct EvaluatedHand {
     hand: Hand,
-    rank: u32,
+    kind: HandType,
 }
 
-fn hand_rank((h, _): &Hand) -> u32 {
+#[derive(Debug)]
+enum HandType {
+    FiveOfAKind=7,
+    FourOfAKind=6,
+    FullHouse=5,
+    ThreeOfAKind=4,
+    TwoPair=3,
+    OnePair=2,
+    HighCard=1
+}
+
+fn hand_rank((h, _): &Hand) -> HandType {
     let mut char_map: HashMap<char, u32> = HashMap::new();
     for c in h {
         match char_map.get(c) {
@@ -47,38 +58,38 @@ fn hand_rank((h, _): &Hand) -> u32 {
     }
     //five of a kind
     if char_map.values().find(|v| **v == 5).is_some() {
-        return 7;
+        return HandType::FiveOfAKind;
     }
 
     //four of a kind
     if char_map.values().find(|v| **v == 4).is_some() {
-        return 6;
+        return HandType::FourOfAKind;
     }
 
     //full house
     if char_map.values().find(|v| **v == 3).is_some()
         && char_map.values().find(|v| **v == 2).is_some() {
-        return 5;
+        return HandType::FullHouse;
     }
 
     //three of a kind
     if char_map.values().find(|v| **v == 3).is_some() {
-        return 4;
+        return HandType::ThreeOfAKind;
     }
 
     //two pair
     let two_matches: Vec<&u32> = char_map.values().filter(|v| **v == 2).collect();
     if two_matches.len() == 2 {
-        return 3;
+        return HandType::TwoPair;
     }
 
     //one pair
     if two_matches.len() == 1 {
-        return 2;
+        return HandType::OnePair;
     }
 
     //all characters are different, weakest hand
-    1
+    HandType::HighCard
 }
 
 fn card_value(c: &char) -> Option<u32> {

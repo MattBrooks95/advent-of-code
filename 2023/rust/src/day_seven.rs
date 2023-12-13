@@ -23,7 +23,7 @@ fn do_file(fp: &str) -> () {
         .map(|hand| {
             EvaluatedHand {
                 hand: hand.clone(),
-                kind: hand_rank(hand)
+                kind: hand_type(hand)
             }
         })
         .collect();
@@ -61,7 +61,7 @@ enum HandType {
     HighCard=1
 }
 
-fn hand_rank(Hand(h, _): &Hand) -> HandType {
+fn hand_type(Hand(h, _): &Hand) -> HandType {
     let mut char_map: HashMap<char, u32> = HashMap::new();
     for c in h {
         match char_map.get(c) {

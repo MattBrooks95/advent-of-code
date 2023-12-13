@@ -15,7 +15,7 @@ fn do_file(fp: &str) -> () {
     println!("day 7 solving {}", fp);
     let contents = std::fs::read_to_string(fp)
         .expect("successfully read file");
-    let (_, parse_result) = nom::combinator::all_consuming(parse)(&contents)
+    let (_, parse_result) = nom::combinator::all_consuming(|i| parse(i, false))(&contents)
         .expect("successfully parsed all of the hands");
     println!("parse result: {:?}", parse_result);
     let hand_ranks: Vec<EvaluatedHand> = parse_result
@@ -23,7 +23,7 @@ fn do_file(fp: &str) -> () {
         .map(|hand| {
             EvaluatedHand {
                 hand: hand.clone(),
-                kind: hand_type(hand)
+                kind: hand_type_handle_wild(hand)
             }
         })
         .collect();
@@ -42,6 +42,10 @@ fn do_file(fp: &str) -> () {
             rank * (bid as u64)
         }).sum();
     println!("part 1 answer: {}", part1);
+
+    println!("### part 2 ###");
+    let (_, parsed) = nom::combinator::all_consuming(|i| parse(i, true))(&contents)
+        .expect("parsed for part 2");
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -198,19 +202,19 @@ impl PartialEq for Hand {
     }
 }
 
-fn parse(i: &str) -> IResult<&str, Vec<Hand>> {
+fn parse(i: &str, is_part_2: bool) -> IResult<&str, Vec<Hand>> {
     let (rem, hands) = nom::multi::separated_list1(
         newline,
-        parse_hand
+        |i| parse_hand(i, is_part_2)
     )(i)?;
 
     let (rem, _) = nom::sequence::tuple((newline, nom::combinator::eof))(rem)?;
     Ok((rem, hands))
 }
 
-fn parse_hand(i: &str) -> IResult<&str, Hand> {
+fn parse_hand(i: &str, is_part_2: bool) -> IResult<&str, Hand> {
     let (rem, hand) = nom::multi::count(
-        parse_card,
+        |i| parse_card(i, is_part_2),
         5
     )(i)?;
 
@@ -221,7 +225,7 @@ fn parse_hand(i: &str) -> IResult<&str, Hand> {
     Ok((rem, Hand(hand, wager)))
 }
 
-fn parse_card(i: &str) -> IResult<&str, PuzzleCard> {
+fn parse_card(i: &str, is_part_2: bool) -> IResult<&str, PuzzleCard> {
     let (rem, c) = nom::branch::alt((
         char('A'),
         char('K'),

@@ -5,7 +5,10 @@ use nom::character::complete::char;
 use std::collections::HashMap;
 
 pub fn run(fps: [&str; 2]) {
-    do_file(fps[0]);
+    fps
+        .into_iter()
+        .for_each(do_file);
+    //do_file(fps[0]);
 }
 
 fn do_file(fp: &str) -> () {
@@ -25,15 +28,29 @@ fn do_file(fp: &str) -> () {
         })
         .collect();
     println!("hand ranks {:?}", hand_ranks);
+    let mut sorted = hand_ranks.clone();
+    sorted.sort();
+    //println!("sorted:");
+    //for x in sorted {
+    //    println!("\t{:?}", x);
+    //}
+    let part1: u64 =sorted
+        .iter()
+        .enumerate()
+        .map(|(idx, &EvaluatedHand { hand: Hand(_, bid), .. })| -> u64 {
+            let rank: u64 = (idx as u64) + 1_u64;
+            rank * (bid as u64)
+        }).sum();
+    println!("part 1 answer: {}", part1);
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct EvaluatedHand {
-    hand: Hand,
     kind: HandType,
+    hand: Hand,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
 enum HandType {
     FiveOfAKind=7,
     FourOfAKind=6,
@@ -44,7 +61,7 @@ enum HandType {
     HighCard=1
 }
 
-fn hand_rank((h, _): &Hand) -> HandType {
+fn hand_rank(Hand(h, _): &Hand) -> HandType {
     let mut char_map: HashMap<char, u32> = HashMap::new();
     for c in h {
         match char_map.get(c) {
@@ -112,7 +129,45 @@ fn card_value(c: &char) -> Option<u32> {
 }
 
 /** (cards, bid) */
-type Hand = (Vec<char>, u32);
+#[derive(Clone, Debug)]
+struct Hand(Vec<char>, u32);
+
+impl PartialOrd for Hand {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Hand {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        let zipped: Vec<(&char, &char)> = self.0
+            .iter()
+            .zip(other.0.iter())
+            .collect();
+        for (my_c, their_c) in zipped {
+            if my_c != their_c {
+                return card_value(my_c).cmp(&card_value(their_c));
+            }
+        }
+        std::cmp::Ordering::Equal
+    }
+}
+
+impl Eq for Hand {
+}
+
+impl PartialEq for Hand {
+    fn eq(&self, other: &Self) -> bool {
+        let zipped: Vec<(&char, &char)> = self.0
+            .iter()
+            .zip(other.0.iter())
+            .collect();
+        for (myC, theirC) in zipped {
+            if myC != theirC { return false }
+        }
+        true
+    }
+}
 
 fn parse(i: &str) -> IResult<&str, Vec<Hand>> {
     let (rem, hands) = nom::multi::separated_list1(
@@ -134,7 +189,7 @@ fn parse_hand(i: &str) -> IResult<&str, Hand> {
 
     let (rem, wager) = nom::character::complete::u32(rem)?;
 
-    Ok((rem, (hand, wager)))
+    Ok((rem, Hand(hand, wager)))
 }
 
 fn parse_card(i: &str) -> IResult<&str, char> {

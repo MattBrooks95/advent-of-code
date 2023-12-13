@@ -12,9 +12,25 @@ fn do_file(fp: &str) -> () {
     println!("day 7 solving {}", fp);
     let contents = std::fs::read_to_string(fp)
         .expect("successfully read file");
-    let parse_result = nom::combinator::all_consuming(parse)(&contents)
+    let (_, parse_result) = nom::combinator::all_consuming(parse)(&contents)
         .expect("successfully parsed all of the hands");
     println!("parse result: {:?}", parse_result);
+    let hand_ranks: Vec<EvaluatedHand> = parse_result
+        .iter()
+        .map(|hand| {
+            EvaluatedHand {
+                hand: hand.clone(),
+                rank: hand_rank(hand)
+            }
+        })
+        .collect();
+    println!("hand ranks {:?}", hand_ranks);
+}
+
+#[derive(Debug)]
+struct EvaluatedHand {
+    hand: Hand,
+    rank: u32,
 }
 
 fn hand_rank((h, _): &Hand) -> u32 {
@@ -51,12 +67,18 @@ fn hand_rank((h, _): &Hand) -> u32 {
     }
 
     //two pair
-    for (k, v) in char_map
+    let two_matches: Vec<&u32> = char_map.values().filter(|v| **v == 2).collect();
+    if two_matches.len() == 2 {
+        return 3;
+    }
 
     //one pair
+    if two_matches.len() == 1 {
+        return 2;
+    }
 
     //all characters are different, weakest hand
-    return 1;
+    1
 }
 
 fn card_value(c: &char) -> Option<u32> {
@@ -78,6 +100,7 @@ fn card_value(c: &char) -> Option<u32> {
     }
 }
 
+/** (cards, bid) */
 type Hand = (Vec<char>, u32);
 
 fn parse(i: &str) -> IResult<&str, Vec<Hand>> {

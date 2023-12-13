@@ -61,8 +61,22 @@ enum HandType {
     HighCard=1
 }
 
-fn hand_type(Hand(h, _): &Hand) -> HandType {
-    let mut char_map: HashMap<char, u32> = HashMap::new();
+fn hand_type_handle_wild(hand@Hand(h, _): &Hand) -> HandType {
+    let (part1_hand_type, char_map) = hand_type(hand);
+
+    //if it's part2, we have some wild jokers
+    let wilds = char_map.get(&PuzzleCard::Wild('J'));
+    match wilds {
+        None => part1_hand_type,
+        Some(num_jokers) => {
+
+        }
+    }
+}
+
+type CharCountMap = HashMap<PuzzleCard, u32>;
+fn hand_type(Hand(h, _): &Hand) -> (HandType, CharCountMap) {
+    let mut char_map: CharCountMap = HashMap::new();
     for c in h {
         match char_map.get(c) {
             None => {
@@ -74,63 +88,78 @@ fn hand_type(Hand(h, _): &Hand) -> HandType {
         }
     }
     //five of a kind
-    if char_map.values().find(|v| **v == 5).is_some() {
-        return HandType::FiveOfAKind;
-    }
+    let hand_type = if char_map.values().find(|v| **v == 5).is_some() {
+        HandType::FiveOfAKind
 
     //four of a kind
-    if char_map.values().find(|v| **v == 4).is_some() {
-        return HandType::FourOfAKind;
-    }
+    } else if char_map.values().find(|v| **v == 4).is_some() {
+        HandType::FourOfAKind
 
     //full house
-    if char_map.values().find(|v| **v == 3).is_some()
+    } else if char_map.values().find(|v| **v == 3).is_some()
         && char_map.values().find(|v| **v == 2).is_some() {
-        return HandType::FullHouse;
-    }
+        HandType::FullHouse
 
     //three of a kind
-    if char_map.values().find(|v| **v == 3).is_some() {
-        return HandType::ThreeOfAKind;
-    }
+    } else if char_map.values().find(|v| **v == 3).is_some() {
+        HandType::ThreeOfAKind
 
+    //handle three weakest hands 
+    } else {
+        handle_weak_cards(&char_map)
+    };
+
+    (hand_type, char_map)
+}
+
+fn handle_weak_cards(char_map: &HashMap<char, u32>) -> HandType {
     //two pair
     let two_matches: Vec<&u32> = char_map.values().filter(|v| **v == 2).collect();
     if two_matches.len() == 2 {
-        return HandType::TwoPair;
+        return HandType::TwoPair
     }
 
     //one pair
     if two_matches.len() == 1 {
-        return HandType::OnePair;
+        return HandType::OnePair
     }
 
     //all characters are different, weakest hand
     HandType::HighCard
 }
 
-fn card_value(c: &char) -> Option<u32> {
+fn card_value(c: &PuzzleCard) -> Option<u32> {
     match c {
-        'A' => Some(14),
-        'K' => Some(13),
-        'Q' => Some(12),
-        'J' => Some(11),
-        'T' => Some(10),
-        '9' => Some(9),
-        '8' => Some(8),
-        '7' => Some(7),
-        '6' => Some(6),
-        '5' => Some(5),
-        '4' => Some(4),
-        '3' => Some(3),
-        '2' => Some(2),
+        PuzzleCard::Normal('A') => Some(14),
+        PuzzleCard::Normal('K') => Some(13),
+        PuzzleCard::Normal('Q') => Some(12),
+        //in part 1, a joker is of a high value
+        PuzzleCard::Wild('J') => Some(11),
+        //in a normal card-to-card comparison, in part 2,
+        //the joker is the weakest
+        PuzzleCard::Normal('J') => Some(1),
+        PuzzleCard::Normal('T') => Some(10),
+        PuzzleCard::Normal('9') => Some(9),
+        PuzzleCard::Normal('8') => Some(8),
+        PuzzleCard::Normal('7') => Some(7),
+        PuzzleCard::Normal('6') => Some(6),
+        PuzzleCard::Normal('5') => Some(5),
+        PuzzleCard::Normal('4') => Some(4),
+        PuzzleCard::Normal('3') => Some(3),
+        PuzzleCard::Normal('2') => Some(2),
         _ => None,
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+enum PuzzleCard {
+    Normal(char),
+    Wild(char),
+}
+
 /** (cards, bid) */
 #[derive(Clone, Debug)]
-struct Hand(Vec<char>, u32);
+struct Hand(Vec<PuzzleCard>, u32);
 
 impl PartialOrd for Hand {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -140,7 +169,7 @@ impl PartialOrd for Hand {
 
 impl Ord for Hand {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let zipped: Vec<(&char, &char)> = self.0
+        let zipped: Vec<(&PuzzleCard, &PuzzleCard)> = self.0
             .iter()
             .zip(other.0.iter())
             .collect();
@@ -158,7 +187,7 @@ impl Eq for Hand {
 
 impl PartialEq for Hand {
     fn eq(&self, other: &Self) -> bool {
-        let zipped: Vec<(&char, &char)> = self.0
+        let zipped: Vec<(&PuzzleCard, &PuzzleCard)> = self.0
             .iter()
             .zip(other.0.iter())
             .collect();
@@ -192,8 +221,8 @@ fn parse_hand(i: &str) -> IResult<&str, Hand> {
     Ok((rem, Hand(hand, wager)))
 }
 
-fn parse_card(i: &str) -> IResult<&str, char> {
-    nom::branch::alt((
+fn parse_card(i: &str) -> IResult<&str, PuzzleCard> {
+    let (rem, c) = nom::branch::alt((
         char('A'),
         char('K'),
         char('Q'),
@@ -207,5 +236,12 @@ fn parse_card(i: &str) -> IResult<&str, char> {
         char('4'),
         char('3'),
         char('2'),
-    ))(i)
+    ))(i)?;
+
+    let card = match c {
+        'J' => PuzzleCard::Wild(c),
+        _ => PuzzleCard::Normal(c),
+    };
+
+    Ok((rem, card))
 }

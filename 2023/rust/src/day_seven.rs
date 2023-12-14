@@ -116,7 +116,8 @@ fn hand_type_handle_wild(hand@Hand(h, _): &Hand) -> HandType {
                         //3 jokers and any other 2 unique cards could become a four of a kind
                         HandType::ThreeOfAKind => HandType::FourOfAKind,
                         //3J + 1 pair is a full house, could become a four of a kind
-                        HandType::FullHouse => HandType::FourOfAKind,
+                        //^ a five of a kind
+                        HandType::FullHouse => HandType::FiveOfAKind,
                         _ => part1_hand_type.clone()
                     }
                 },

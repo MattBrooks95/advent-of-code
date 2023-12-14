@@ -45,6 +45,8 @@ fn do_file(fp: &str) -> () {
 
     println!("### part 2 ###");
     //250688931 too high
+    //250387774 too high
+    //250116757 no good
     let (_, parsed) = nom::combinator::all_consuming(|i| parse(i, true))(&contents)
         .expect("parsed for part 2");
     let part2_hand_ranks: Vec<EvaluatedHand> = parsed
@@ -58,6 +60,9 @@ fn do_file(fp: &str) -> () {
         .collect();
     let mut part2_sorted = part2_hand_ranks.clone();
     part2_sorted.sort();
+    for (idx, hand) in part2_sorted.iter().enumerate() {
+        println!("idx {}, hand:{:?}", idx, hand);
+    }
     let part2: u64 = part2_sorted
         .iter()
         .enumerate()
@@ -90,8 +95,8 @@ fn hand_type_handle_wild(hand@Hand(h, _): &Hand) -> HandType {
 
     //if it's part2, we have some wild jokers
     let wilds = char_map.get(&PuzzleCard::Wild('J'));
-    match wilds {
-        None => part1_hand_type,
+    let return_hand = match wilds {
+        None => part1_hand_type.clone(),
         //note that there are hands like this that are all jokers
         //JJJJJ 996
         Some(num_jokers) => {
@@ -112,20 +117,21 @@ fn hand_type_handle_wild(hand@Hand(h, _): &Hand) -> HandType {
                         HandType::ThreeOfAKind => HandType::FourOfAKind,
                         //3J + 1 pair is a full house, could become a four of a kind
                         HandType::FullHouse => HandType::FourOfAKind,
-                        _ => part1_hand_type
+                        _ => part1_hand_type.clone()
                     }
                 },
                 2 => {
                     match part1_hand_type {
                         //a full house with 2 jokers means that one of the jokers could
                         //become the same type as the triple, making a four of a kind
-                        HandType::FullHouse => HandType::FourOfAKind,
+                        //^ no, that would be a five of a kind
+                        HandType::FullHouse => HandType::FiveOfAKind,
                         //2J and 2 others could become a four of a kind
                         HandType::TwoPair => HandType::FourOfAKind,
                         //if I had a single 2J pair and 3 distinct other cards
                         //I could combine the jokers with one of them to make a three of a kind
                         HandType::OnePair => HandType::ThreeOfAKind,
-                        _ => part1_hand_type
+                        _ => part1_hand_type.clone()
                     }
                 },
                 1 => {
@@ -135,14 +141,19 @@ fn hand_type_handle_wild(hand@Hand(h, _): &Hand) -> HandType {
                         HandType::TwoPair => HandType::FullHouse,
                         HandType::OnePair => HandType::ThreeOfAKind,
                         HandType::HighCard => HandType::OnePair,
-                        _ => part1_hand_type
+                        _ => part1_hand_type.clone()
                     }
                 }
-                0 => part1_hand_type,
+                0 => part1_hand_type.clone(),
                 _ => panic!("had more than 5 jokers somehow")
             }
         }
-    }
+    };
+
+    //if return_hand != part1_hand_type {
+    //    println!("hand: {:?} promoted type: {:?} to type:{:?}", hand, part1_hand_type, return_hand);
+    //}
+    return_hand
 }
 
 type CharCountMap = HashMap<PuzzleCard, u32>;
@@ -204,11 +215,11 @@ fn card_value(c: &PuzzleCard) -> Option<u32> {
         PuzzleCard::Normal('A') => Some(14),
         PuzzleCard::Normal('K') => Some(13),
         PuzzleCard::Normal('Q') => Some(12),
-        //in part 1, a joker is of a high value
-        PuzzleCard::Wild('J') => Some(11),
+        //in part 1, a normal joker is of a high value
+        PuzzleCard::Normal('J') => Some(11),
         //in a normal card-to-card comparison, in part 2,
         //the joker is the weakest
-        PuzzleCard::Normal('J') => Some(1),
+        PuzzleCard::Wild('J') => Some(1),
         PuzzleCard::Normal('T') => Some(10),
         PuzzleCard::Normal('9') => Some(9),
         PuzzleCard::Normal('8') => Some(8),
@@ -246,7 +257,16 @@ impl Ord for Hand {
             .collect();
         for (my_c, their_c) in zipped {
             if my_c != their_c {
-                return card_value(my_c).cmp(&card_value(their_c));
+                let ord_res = card_value(my_c).cmp(&card_value(their_c));
+
+                println!("compared {:?} to {:?} with result {:?}",
+                     my_c,
+                     their_c,
+                     ord_res
+                );
+
+
+                return ord_res;
             }
         }
         std::cmp::Ordering::Equal

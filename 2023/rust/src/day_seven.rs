@@ -34,7 +34,7 @@ fn do_file(fp: &str) -> () {
     //for x in sorted {
     //    println!("\t{:?}", x);
     //}
-    let part1: u64 =sorted
+    let part1: u64 = sorted
         .iter()
         .enumerate()
         .map(|(idx, &EvaluatedHand { hand: Hand(_, bid), .. })| -> u64 {
@@ -44,8 +44,28 @@ fn do_file(fp: &str) -> () {
     println!("part 1 answer: {}", part1);
 
     println!("### part 2 ###");
+    //250688931 too high
     let (_, parsed) = nom::combinator::all_consuming(|i| parse(i, true))(&contents)
         .expect("parsed for part 2");
+    let part2_hand_ranks: Vec<EvaluatedHand> = parsed
+        .iter()
+        .map(|hand| {
+            EvaluatedHand {
+                hand: hand.clone(),
+                kind: hand_type_handle_wild(hand)
+            }
+        })
+        .collect();
+    let mut part2_sorted = part2_hand_ranks.clone();
+    part2_sorted.sort();
+    let part2: u64 = part2_sorted
+        .iter()
+        .enumerate()
+        .map(|(idx, &EvaluatedHand { hand: Hand(_, bid), ..})| -> u64 {
+            let rank: u64 = (idx as u64) + 1_u64;
+            rank * (bid as u64)
+        }).sum();
+    println!("part 2 answer: {}", part2);
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -72,8 +92,52 @@ fn hand_type_handle_wild(hand@Hand(h, _): &Hand) -> HandType {
     let wilds = char_map.get(&PuzzleCard::Wild('J'));
     match wilds {
         None => part1_hand_type,
+        //note that there are hands like this that are all jokers
+        //JJJJJ 996
         Some(num_jokers) => {
-
+            match num_jokers {
+                //five of a kind is the best you can do with 4 or 5 jokers
+                5 | 4 => HandType::FiveOfAKind,
+                3 => {
+                    //three jokers and a pair of any two other cards could be made
+                    //into a five of a kind
+                    //unless the jokers were the only pair...
+                    //three jokers is at least a three of a kind,
+                    //and could be a full house already
+                    match part1_hand_type {
+                        //if we have a three of a kind and three jokers,
+                        //then the jokers were the three of a kind because
+                        //3jokers + 3 other cards would be greater than 5 cards
+                        HandType::ThreeOfAKind => HandType::ThreeOfAKind,
+                        //3J + 1 pair is a full house, can't change that
+                        HandType::FullHouse => HandType::FullHouse,
+                        _ => part1_hand_type
+                    }
+                },
+                2 => {
+                    match part1_hand_type {
+                        HandType::FullHouse => HandType::FullHouse,
+                        //2J and 2 others could become a four of a kind
+                        HandType::TwoPair => HandType::FourOfAKind,
+                        //if I had a single 2J pair and 3 distinct other cards
+                        //I could combine the jokers with one of them to make a three of a kind
+                        HandType::OnePair => HandType::ThreeOfAKind,
+                        _ => part1_hand_type
+                    }
+                },
+                1 => {
+                    match part1_hand_type {
+                        HandType::FourOfAKind => HandType::FiveOfAKind,
+                        HandType::ThreeOfAKind => HandType::FullHouse,
+                        HandType::TwoPair => HandType::FullHouse,
+                        HandType::OnePair => HandType::ThreeOfAKind,
+                        HandType::HighCard => HandType::OnePair,
+                        _ => part1_hand_type
+                    }
+                }
+                0 => part1_hand_type,
+                _ => panic!("had more than 5 jokers somehow")
+            }
         }
     }
 }
@@ -84,10 +148,10 @@ fn hand_type(Hand(h, _): &Hand) -> (HandType, CharCountMap) {
     for c in h {
         match char_map.get(c) {
             None => {
-                char_map.insert(*c, 1);
+                char_map.insert(c.clone(), 1);
             },
             Some(prev_value) => {
-                char_map.insert(*c, prev_value + 1);
+                char_map.insert(c.clone(), prev_value + 1);
             },
         }
     }
@@ -116,7 +180,7 @@ fn hand_type(Hand(h, _): &Hand) -> (HandType, CharCountMap) {
     (hand_type, char_map)
 }
 
-fn handle_weak_cards(char_map: &HashMap<char, u32>) -> HandType {
+fn handle_weak_cards(char_map: &HashMap<PuzzleCard, u32>) -> HandType {
     //two pair
     let two_matches: Vec<&u32> = char_map.values().filter(|v| **v == 2).collect();
     if two_matches.len() == 2 {
@@ -243,7 +307,13 @@ fn parse_card(i: &str, is_part_2: bool) -> IResult<&str, PuzzleCard> {
     ))(i)?;
 
     let card = match c {
-        'J' => PuzzleCard::Wild(c),
+        'J' => {
+            if is_part_2 {
+                PuzzleCard::Wild(c)
+            } else {
+                PuzzleCard::Normal(c)
+            }
+        },
         _ => PuzzleCard::Normal(c),
     };
 

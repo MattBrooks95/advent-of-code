@@ -108,15 +108,18 @@ fn hand_type_handle_wild(hand@Hand(h, _): &Hand) -> HandType {
                         //if we have a three of a kind and three jokers,
                         //then the jokers were the three of a kind because
                         //3jokers + 3 other cards would be greater than 5 cards
-                        HandType::ThreeOfAKind => HandType::ThreeOfAKind,
-                        //3J + 1 pair is a full house, can't change that
-                        HandType::FullHouse => HandType::FullHouse,
+                        //3 jokers and any other 2 unique cards could become a four of a kind
+                        HandType::ThreeOfAKind => HandType::FourOfAKind,
+                        //3J + 1 pair is a full house, could become a four of a kind
+                        HandType::FullHouse => HandType::FourOfAKind,
                         _ => part1_hand_type
                     }
                 },
                 2 => {
                     match part1_hand_type {
-                        HandType::FullHouse => HandType::FullHouse,
+                        //a full house with 2 jokers means that one of the jokers could
+                        //become the same type as the triple, making a four of a kind
+                        HandType::FullHouse => HandType::FourOfAKind,
                         //2J and 2 others could become a four of a kind
                         HandType::TwoPair => HandType::FourOfAKind,
                         //if I had a single 2J pair and 3 distinct other cards
@@ -128,7 +131,7 @@ fn hand_type_handle_wild(hand@Hand(h, _): &Hand) -> HandType {
                 1 => {
                     match part1_hand_type {
                         HandType::FourOfAKind => HandType::FiveOfAKind,
-                        HandType::ThreeOfAKind => HandType::FullHouse,
+                        HandType::ThreeOfAKind => HandType::FourOfAKind,
                         HandType::TwoPair => HandType::FullHouse,
                         HandType::OnePair => HandType::ThreeOfAKind,
                         HandType::HighCard => HandType::OnePair,
@@ -259,8 +262,8 @@ impl PartialEq for Hand {
             .iter()
             .zip(other.0.iter())
             .collect();
-        for (myC, theirC) in zipped {
-            if myC != theirC { return false }
+        for (my_c, their_c) in zipped {
+            if my_c != their_c { return false }
         }
         true
     }

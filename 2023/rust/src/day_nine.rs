@@ -23,7 +23,7 @@ fn do_file(fp: &str) -> () {
     println!("part 1 sum {}", part1_sum);
 }
 
-fn solve_step(initial: &Vec<i64>) -> i64 {
+fn find_difference_vectors(initial: &Vec<i64>) -> Vec<Vec<i64>> {
     let mut all_steps: Vec<Vec<i64>> = Vec::new();
 
     let mut new_vec: Vec<i64> = initial.clone();
@@ -32,6 +32,20 @@ fn solve_step(initial: &Vec<i64>) -> i64 {
         new_vec = get_differences(&new_vec);
         all_steps.push(new_vec.clone());
     }
+
+    all_steps
+}
+
+fn solve_step(initial: &Vec<i64>) -> i64 {
+    //let mut all_steps: Vec<Vec<i64>> = Vec::new();
+
+    //let mut new_vec: Vec<i64> = initial.clone();
+    //all_steps.push(new_vec.clone());
+    //while !all_zero(&new_vec) {
+    //    new_vec = get_differences(&new_vec);
+    //    all_steps.push(new_vec.clone());
+    //}
+    let all_steps = find_difference_vectors(initial);
 
     println!("all steps {:?}", all_steps);
     //let mut final_items: Vec<u64> = Vec::new();

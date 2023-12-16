@@ -11,10 +11,10 @@ use nom::character::complete::alpha1;
 use nom::sequence::tuple;
 
 pub fn run(fps: [&str; 2]) {
-    //do_file(fps[0]);
-    fps
-        .into_iter()
-        .for_each(do_file);
+    do_file(fps[1]);
+    //fps
+    //    .into_iter()
+    //    .for_each(do_file);
 }
 
 fn do_file(fp: &str) {
@@ -41,8 +41,8 @@ fn do_file(fp: &str) {
 
     let part2_sim_start = parsed.clone();
     println!("part2 start locs {:?}", start_nodes);
-    //let part2_final_sim = solve_p2(&part2_sim_start, start_nodes);
-    //println!("p2 answer {}", part2_final_sim.pattern_index.get());
+    let part2_final_sim = solve_p2(&part2_sim_start, &start_nodes);
+    println!("p2 answer {}", part2_final_sim.pattern_index.get());
 }
 
 fn solve_p1<'a>(s: &'a Simulation, final_dest: &String) -> &'a Simulation {
@@ -67,30 +67,44 @@ fn solve_p1<'a>(s: &'a Simulation, final_dest: &String) -> &'a Simulation {
     solve_p1(s, final_dest)
 }
 
-fn solve_p2<'a>(s: &'a Simulation, locations: Vec<&String>) -> &'a Simulation {
-    let (curr_index, mod_index) = get_pattern_indices(&s);
+fn solve_p2<'a>(s: &'a Simulation, start_locations: &Vec<&String>) -> &'a Simulation {
+    let mut locations: Vec<&String> = start_locations.clone();
 
-    if all_locs_at_z(&locations) {
-        return s
-    };
+    while !all_locs_at_z(&locations) {
+        let (curr_index, mod_index) = get_pattern_indices(&s);
+        //println!("{} {}", curr_index, mod_index);
 
-    let direction = s.pattern.get(mod_index)
-        .expect("was able to index into pattern");
-    let updated_locs: Vec<&String> = locations
-        .into_iter()
-        .map(|node_n| {
-            let Node(_, (left_edge, right_edge)): &Node = s.graph.get(node_n)
+        let direction = s.pattern.get(mod_index)
+            .expect("was able to index into pattern");
+
+        for loc in &mut locations {
+            let Node(this, (left_edge, right_edge)): &Node = s.graph.get(*loc)
                 .expect("node existed");
+            //println!("this {} left {} right {}", this, left_edge, right_edge);
             let next_node = match direction {
                 Direction::Left => left_edge,
                 Direction::Right => right_edge,
             };
-            next_node
-        }).collect();
 
-    s.pattern_index.replace(curr_index + 1);
+            //println!("loc before {}", loc);
+            *loc = &next_node;
+            //println!("loc after {}", loc);
+        }
 
-    solve_p2(s, updated_locs)
+        //let updated_locs: Vec<&String> = locations
+        //    .into_iter()
+        //    .map(|node_n| {
+        //    let Node(_, (left_edge, right_edge)): &Node = s.graph.get(node_n)
+        //        .expect("node existed");
+        //    let next_node = match direction {
+        //        Direction::Left => left_edge,
+        //        Direction::Right => right_edge,
+        //    };
+        //       next_node
+        //   }).collect();
+        s.pattern_index.replace(curr_index + 1);
+    }
+    s
 }
 
 fn all_locs_at_z(locations: &Vec<&String>) -> bool {

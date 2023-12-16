@@ -13,28 +13,38 @@ fn do_file(fp: &str) {
     let (_, parsed) = nom::combinator::all_consuming(parse)(&contents)
         .expect("parsed");
 
-    let board: Board = parsed_to_board(&parsed);
-    println!("board {:?}", board);
+    let (board, s_loc): (Board, Option<Loc>) = parsed_to_board(&parsed);
+    println!("board {:?} start location {:?}", board, s_loc);
 }
 
-type Board = HashMap<(usize, usize), Pipe>;
+type Loc = (usize, usize);
 
-fn parsed_to_board(cs: &Vec<Vec<char>>) -> Board {
+type Board = HashMap<Loc, Pipe>;
+
+/** returns a map of (row, col) => pipe type, and the location of the
+ * start pipe */
+fn parsed_to_board(cs: &Vec<Vec<char>>) -> (Board, Option<Loc>) {
     let mut board: Board = HashMap::new();
+    let mut s_loc: Option<Loc> = None;
 
     for (r_idx, row) in cs.iter().enumerate() {
-        println!("row {:?}", row);
+        //println!("row {:?}", row);
         for (c_idx, col) in row.iter().enumerate() {
+            let this_loc: Loc = (r_idx, c_idx);
             match c_to_pipe(col) {
                 None => continue,
+                Some(s@Pipe::Start) => {
+                    s_loc = Some(this_loc.clone());
+                    board.insert(this_loc, s);
+                },
                 Some(p) => {
-                    board.insert((r_idx, c_idx), p);
+                    board.insert(this_loc, p);
                 }
             }
         }
     }
 
-    board
+    (board, s_loc)
 }
 
 #[derive(Debug)]

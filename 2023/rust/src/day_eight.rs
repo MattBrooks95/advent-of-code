@@ -69,7 +69,10 @@ fn solve_p1<'a>(s: &'a Simulation, final_dest: &String) -> &'a Simulation {
 
 fn solve_p2<'a>(s: &'a Simulation, start_locations: &Vec<&String>) -> &'a Simulation {
     let mut locations: Vec<&String> = start_locations.clone();
+    //let mut count = 0;
+    //let stop: usize = 1 * (10 as usize).pow(4);
 
+    //while !all_locs_at_z(&locations) && count < stop {
     while !all_locs_at_z(&locations) {
         let (curr_index, mod_index) = get_pattern_indices(&s);
         //println!("{} {}", curr_index, mod_index);
@@ -90,6 +93,7 @@ fn solve_p2<'a>(s: &'a Simulation, start_locations: &Vec<&String>) -> &'a Simula
             *loc = &next_node;
             //println!("loc after {}", loc);
         }
+        //println!("locations after update {:?}", locations);
 
         //let updated_locs: Vec<&String> = locations
         //    .into_iter()
@@ -103,6 +107,7 @@ fn solve_p2<'a>(s: &'a Simulation, start_locations: &Vec<&String>) -> &'a Simula
         //       next_node
         //   }).collect();
         s.pattern_index.replace(curr_index + 1);
+        //count += 1
     }
     s
 }

@@ -1,3 +1,6 @@
+use std::cell::Cell;
+use std::cell::RefCell;
+
 use nom::IResult;
 use nom::character::complete::multispace1;
 use nom::character::complete::newline;
@@ -19,8 +22,35 @@ fn do_file(fp: &str) {
         .expect("read file");
     let (_, parsed) = nom::combinator::all_consuming(parse)(&contents)
         .expect("parsed input file");
-    println!("parsed {:?}", parsed);
+    //println!("parsed {:?}", parsed);
+
+    let target: String = "ZZZ".into();
         
+    let final_sim = solve_p1(&parsed, &target);
+    println!("made {} moves", final_sim.pattern_index.get());
+}
+
+fn solve_p1<'a>(s: &'a Simulation, final_dest: &String) -> &'a Simulation {
+    let curr_index = s.pattern_index.get();
+    let mod_index: usize = curr_index % s.pattern.len();
+    let current_node_name = s.current_node.borrow().clone();
+    if *current_node_name == *final_dest {
+        return s;
+    }
+
+    let direction = s.pattern.get(mod_index)
+        .expect("was able to index into pattern");
+
+    let Node(_, (left_edge, right_edge)): &Node = s.graph.get(&current_node_name)
+        .expect("node existed");
+    let next_node = match direction {
+        Direction::Left => left_edge,
+        Direction::Right => right_edge,
+    };
+
+    s.pattern_index.replace(curr_index + 1);
+    s.current_node.replace(next_node.clone());
+    solve_p1(s, final_dest)
 }
 
 #[derive(Debug)]
@@ -36,7 +66,8 @@ struct Node(String, (String, String));
 struct Simulation {
     pattern: Vec<Direction>,
     graph: std::collections::HashMap<String, Node>,
-    patternIndex: u64,
+    pattern_index: Cell<usize>,
+    current_node: RefCell<String>,
 }
 
 fn parse(i: &str) -> IResult<&str, Simulation> {
@@ -62,7 +93,8 @@ fn parse(i: &str) -> IResult<&str, Simulation> {
     Ok((rem, Simulation {
         pattern: directions,
         graph: node_map,
-        patternIndex: 0,
+        pattern_index: Cell::new(0),
+        current_node: RefCell::new(String::from("AAA")),
     }))
 }
 

@@ -17,7 +17,8 @@ fn main() {
     //day_five();
     //day_six();
     //day_seven();
-    day_eight();
+    //day_eight();
+    day_nine();
 }
 
 fn day_one() {

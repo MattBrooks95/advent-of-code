@@ -28,11 +28,25 @@ fn do_file(fp: &str) {
         
     let final_sim = solve_p1(&parsed, &target);
     println!("made {} moves", final_sim.pattern_index.get());
+    println!("part 2");
+    let start_nodes: Vec<&String> = parsed.graph
+        .iter()
+        .filter(|n| {
+            match n.0.chars().last() {
+                None => panic!("empty location string"),
+                Some(last_c) => last_c == 'A'
+            }
+        }).map(|n| n.0)
+        .collect();
+
+    let part2_sim_start = parsed.clone();
+    println!("part2 start locs {:?}", start_nodes);
+    //let part2_final_sim = solve_p2(&part2_sim_start, start_nodes);
+    //println!("p2 answer {}", part2_final_sim.pattern_index.get());
 }
 
 fn solve_p1<'a>(s: &'a Simulation, final_dest: &String) -> &'a Simulation {
-    let curr_index = s.pattern_index.get();
-    let mod_index: usize = curr_index % s.pattern.len();
+    let (curr_index, mod_index) = get_pattern_indices(&s);
     let current_node_name = s.current_node.borrow().clone();
     if *current_node_name == *final_dest {
         return s;
@@ -53,7 +67,53 @@ fn solve_p1<'a>(s: &'a Simulation, final_dest: &String) -> &'a Simulation {
     solve_p1(s, final_dest)
 }
 
-#[derive(Debug)]
+fn solve_p2<'a>(s: &'a Simulation, locations: Vec<&String>) -> &'a Simulation {
+    let (curr_index, mod_index) = get_pattern_indices(&s);
+
+    if all_locs_at_z(&locations) {
+        return s
+    };
+
+    let direction = s.pattern.get(mod_index)
+        .expect("was able to index into pattern");
+    let updated_locs: Vec<&String> = locations
+        .into_iter()
+        .map(|node_n| {
+            let Node(_, (left_edge, right_edge)): &Node = s.graph.get(node_n)
+                .expect("node existed");
+            let next_node = match direction {
+                Direction::Left => left_edge,
+                Direction::Right => right_edge,
+            };
+            next_node
+        }).collect();
+
+    s.pattern_index.replace(curr_index + 1);
+
+    solve_p2(s, updated_locs)
+}
+
+fn all_locs_at_z(locations: &Vec<&String>) -> bool {
+    for loc in locations {
+        let c = match loc.chars().last() {
+            None => panic!("string should be nonempty"),
+            Some(_c) => _c,
+        };
+
+        if c != 'Z' {
+            return false;
+        }
+    }
+    true
+}
+
+/** gets the current index and the modulo of that index w/ the length of the vector */
+fn get_pattern_indices(sim: &Simulation) -> (usize, usize) {
+    let curr_pattern_index = sim.pattern_index.get();
+    (curr_pattern_index, curr_pattern_index % sim.pattern.len())
+}
+
+#[derive(Debug, Clone)]
 enum Direction {
     Left,
     Right
@@ -62,7 +122,7 @@ enum Direction {
 #[derive(Debug, Clone)]
 struct Node(String, (String, String));
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Simulation {
     pattern: Vec<Direction>,
     graph: std::collections::HashMap<String, Node>,

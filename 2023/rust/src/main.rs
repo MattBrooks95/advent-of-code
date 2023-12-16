@@ -7,6 +7,7 @@ mod day_six;
 mod day_seven;
 mod day_eight;
 mod day_nine;
+mod day_ten;
 
 fn main() {
 	println!("Hello, world!");
@@ -18,7 +19,8 @@ fn main() {
     //day_six();
     //day_seven();
     //day_eight();
-    day_nine();
+    //day_nine();
+    day_ten();
 }
 
 fn day_one() {
@@ -81,5 +83,12 @@ fn day_nine() {
     day_nine::run([
         "../inputs/day9-short.txt",
         "../inputs/day9.txt",
+    ]);
+}
+
+fn day_ten() {
+    day_ten::run([
+        "../inputs/day10-short.txt",
+        "../inputs/day10.txt",
     ]);
 }

@@ -38,7 +38,7 @@ fn do_file(fp: &str) {
 
 fn part_one(parsed: Vec<Vec<char>>) -> () {
     println!("part1");
-    let galaxies = get_galaxies(&parsed);
+    let mut galaxies = get_galaxies(&parsed);
     let expand_rows = get_expand_rows(&parsed);
     let expand_cols = get_expand_cols(&parsed);
 
@@ -48,6 +48,26 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
         expand_rows,
         expand_cols,
     );
+
+    expand_rows.iter().for_each(|expand_row_index| {
+        galaxies
+            .values_mut()
+            .for_each(|Galaxy { loc: (r_idx, _), .. }| {
+                if *r_idx > *expand_row_index {
+                    *r_idx += 1
+                }
+            });
+    });
+    expand_cols.iter().for_each(|expand_col_index| {
+        galaxies
+            .values_mut()
+            .for_each(|Galaxy { loc: (_, c_idx), .. }| {
+                if *c_idx > *expand_col_index {
+                    *c_idx += 1
+                }
+            });
+    });
+    println!("adjusted galaxies {:?}", galaxies);
 }
 
 fn get_expand_cols(parsed: &Vec<Vec<char>>) -> Vec<usize> {

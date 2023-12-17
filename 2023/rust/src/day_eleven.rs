@@ -40,6 +40,8 @@ fn do_file(fp: &str) {
 fn part_one(parsed: Vec<Vec<char>>) -> () {
     println!("part1");
     let mut galaxies = get_galaxies(&parsed);
+
+    let orig_galaxies = galaxies.clone();
     let expand_rows = get_expand_rows(&parsed);
     let expand_cols = get_expand_cols(&parsed);
 
@@ -53,22 +55,35 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
         println!("galaxy {:?}", g);
     }
 
-
+    //need to consider the original coordinates of the galaxy
+    //when seeing if it needs to be slid down 1, because these
+    //`expand_row_index`s were calculated from the pre-expanded universe
     expand_rows.iter().for_each(|expand_row_index| {
         galaxies
             .values_mut()
-            .for_each(|Galaxy { loc: (r_idx, _), .. }| {
-                if *r_idx > *expand_row_index {
-                    *r_idx += 1
+            .for_each(|Galaxy { id, loc: (curr_r_idx, _) }| {
+                //let (Galaxy { (r_idx, _): loc, .. }) = orig_galaxies.get(id).unwrap();
+                match orig_galaxies.get(id) {
+                    None => panic!("old version of galaxy should exist"),
+                    Some(Galaxy { loc: (r_idx, _), ..}) => {
+                        if *r_idx > *expand_row_index {
+                            *curr_r_idx += 1
+                        }
+                    }
                 }
             });
     });
     expand_cols.iter().for_each(|expand_col_index| {
         galaxies
             .values_mut()
-            .for_each(|Galaxy { loc: (_, c_idx), .. }| {
-                if *c_idx > *expand_col_index {
-                    *c_idx += 1
+            .for_each(|Galaxy { loc: (_, orig_c_idx), id }| {
+                match orig_galaxies.get(id) {
+                    None => panic!("old version of galaxy should exist, expand cols"),
+                    Some(Galaxy { loc: (_, c_idx), .. }) => {
+                        if *c_idx > *expand_col_index {
+                            *orig_c_idx += 1
+                        }
+                    }
                 }
             });
     });

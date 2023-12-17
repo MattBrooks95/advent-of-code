@@ -1,5 +1,6 @@
 use nom::IResult;
 use std::collections::HashMap;
+use itertools::Itertools;
 
 pub fn run(fps: [&str; 2]) {
     do_file(fps[0]);
@@ -68,6 +69,36 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
             });
     });
     println!("adjusted galaxies {:?}", galaxies);
+    let galaxy_ids: Vec<usize> = galaxies
+        .values()
+        .map(|Galaxy { id, .. }| *id).collect();
+    //map of the distances between galaxies
+    //when the distance from g1 to g2 is calculated, the answer will be
+    //put into the map twice, at (g1, g2) and at (g2, g1) to prevent duplicating
+    //the distance calculations
+    //the distance from g1 to g2 is the same as g2 to g1
+    let mut distances_map: HashMap<(usize, usize), usize> = HashMap::new();
+    let g_id_combinations = galaxy_ids.iter().combinations(2);
+    for ids in g_id_combinations {
+        let id1: usize = **ids.first().unwrap();
+        let id2: usize = **ids.last().unwrap();
+
+        if distances_map.contains_key(&(id1, id2)) {
+            continue
+        }
+        let loc1 = 
+
+        let dist = distance(
+    }
+}
+
+fn distance((r1, c1): Loc, (r2, c2): Loc) -> i64 {
+    let y_dist: i64 = r2 as i64 - r1 as i64;
+    let x_dist: i64 = c2 as i64 - c1 as i64;
+
+
+    (y_dist + x_dist).abs()
+
 }
 
 fn get_expand_cols(parsed: &Vec<Vec<char>>) -> Vec<usize> {

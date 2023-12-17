@@ -7,7 +7,11 @@ pub fn run(fps: [&str; 2]) {
 }
 
 type Loc = (usize, usize);
-type Board = HashMap<Loc, Entity>;
+#[derive(Debug, Clone)]
+struct Galaxy {
+    id: usize,
+    loc: Loc,
+}
 
 #[derive(Debug, Clone)]
 enum Entity {
@@ -33,34 +37,31 @@ fn do_file(fp: &str) {
 }
 
 fn part_one(parsed: Vec<Vec<char>>) -> () {
-    let as_board = parsed_to_board(&parsed);
     println!("part1");
+    let galaxies = get_galaxies(&parsed);
+
+    println!("galaxies {:?}", galaxies.values());
 }
 
-fn parsed_to_board(parsed: &Vec<Vec<char>>) -> Board {
-    let mut as_map: Board = HashMap::new();
+fn get_galaxies(parsed: &Vec<Vec<char>>) -> HashMap<Loc, Galaxy> {
+    let mut galaxies: HashMap<Loc, Galaxy> = HashMap::new();
+    let mut galaxy_id: usize = 0;
 
-    let mut expanded_rows: Vec<Vec<char>> = Vec::new();
-    //I can expand the rows easily, let's do that first
     for (r_idx, row) in parsed.iter().enumerate() {
-        //if a row is empty, push in an extra empty row
-        if is_all_empty_space(row) {
-            println!("expanded row {}", r_idx);
-            expanded_rows.push(row.clone());
+        for (c_idx, char) in row.iter().enumerate() {
+            match char {
+                '#' => {
+                    let loc = (r_idx, c_idx);
+                    galaxies.insert(loc, Galaxy { id: galaxy_id, loc });
+                    galaxy_id += 1
+                },
+                _ => ()
+            }
+
         }
-        expanded_rows.push(row.clone());
     }
 
-    let mut column_order: Vec<Vec<char>> = Vec::new();
-    //loop over the chars in the first row
-    for (column_idx, _) in expanded_rows.first().unwrap().iter().enumerate() {
-    }
-    //for (row_idx, row) in expanded_rows.iter().enumerate() {
-    //    for (col_idx, col) in row.iter().enumerate() {
-    //    }
-    //}
-
-    as_map
+    galaxies
 }
 
 fn is_all_empty_space(v: &Vec<char>) -> bool {

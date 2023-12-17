@@ -51,50 +51,59 @@ fn decorate_distances<'a>(
     b: &Board,
     visit_list: &mut HashSet<Loc>,
     curr_distances: &'a mut PipeDistances,
-    curr_loc: Loc,
-    curr_dist: usize
+    start_loc: Loc,
+    start_dist: usize
 ) -> &'a PipeDistances {
-    println!("curr loc {:?} curr dist {:?}", curr_loc, curr_dist);
-    let node = match b.get(&curr_loc) {
-        None => panic!("pushed an illegal index into the visit queue"),
-        Some(x) => x,
+    let mut curr_loc: Loc = start_loc;
+    let mut curr_dist: usize = start_dist;
+    loop {
+        let node = match b.get(&curr_loc) {
+            None => panic!("pushed an illegal index into the visit queue"),
+            Some(x) => x,
+        };
+
+        println!("curr loc {:?} curr dist {:?}", curr_loc, curr_dist);
+
+        let is_start = match node { Pipe::Start => true, _ => false };
+
+        //found start again, leave
+        if is_start && curr_dist != 0 {
+            println!("found start {:?}", curr_loc);
+            return curr_distances;
+        }
+
+        let possible_neighbors = get_neighbors(b, &curr_loc);
+        //we are in a loop (the puzzle input map), so we can pick one
+        let can_go_to: Vec<_> = can_go(&possible_neighbors, node.clone())
+            .into_iter()
+            .filter(|x| {
+                !visit_list.contains(x)
+            })
+            .collect();
+
+        curr_distances.insert(curr_loc, curr_dist as u64);
+
+        //nowhere to go
+        if can_go_to.is_empty() {
+            println!("nowhere to go {:?} || nowhere to go except start", curr_loc);
+            return curr_distances;
+        }
+
+        //mark this node as visited
+        visit_list.insert(curr_loc);
+
+        //prepare for next loop iteration
+        curr_loc = can_go_to.first().unwrap().clone();
+        curr_dist += 1
     };
 
-    let is_start = match node { Pipe::Start => true, _ => false };
-
-    //found start again, leave
-    if is_start && curr_dist != 0 {
-        println!("found start {:?}", curr_loc);
-        return curr_distances;
-    }
-
-    let possible_neighbors = get_neighbors(b, &curr_loc);
-    //we are in a loop (the puzzle input map), so we can pick one
-    let can_go_to: Vec<_> = can_go(&possible_neighbors, node.clone())
-        .into_iter()
-        .filter(|x| {
-            !visit_list.contains(x)
-        })
-        .collect();
-
-    curr_distances.insert(curr_loc, curr_dist as u64);
-
-    //nowhere to go
-    if can_go_to.is_empty() {
-        println!("nowhere to go {:?} || nowhere to go except start", curr_loc);
-        return curr_distances;
-    }
-
-    //mark this node as visited
-    visit_list.insert(curr_loc);
-
-    decorate_distances(
-        b,
-        visit_list,
-        curr_distances,
-        can_go_to.first().unwrap().clone(),
-        curr_dist + 1
-    )
+    //decorate_distances(
+    //    b,
+    //    visit_list,
+    //    curr_distances,
+    //    can_go_to.first().unwrap().clone(),
+    //    curr_dist + 1
+    //)
 }
 
 type Neighbors = (Option<Neighbor>, Option<Neighbor>, Option<Neighbor>, Option<Neighbor>);

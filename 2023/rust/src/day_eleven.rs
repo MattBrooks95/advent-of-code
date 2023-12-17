@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use itertools::Itertools;
 
 pub fn run(fps: [&str; 2]) {
-    do_file(fps[0]);
-    //fps.iter().for_each(do_file);
+    //do_file(fps[0]);
+    fps.into_iter().for_each(do_file);
 }
 
 type Loc = (usize, usize);
@@ -33,7 +33,7 @@ fn do_file(fp: &str) {
         .expect("read file");
     let (_, parsed) = nom::combinator::all_consuming(parse)(&contents)
         .expect("parsed");
-    println!("parsed {:?}", parsed);
+    //println!("parsed {:?}", parsed);
     part_one(parsed);
 }
 
@@ -45,11 +45,11 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
     let expand_rows = get_expand_rows(&parsed);
     let expand_cols = get_expand_cols(&parsed);
 
-    println!(
-        "expand rows {:?}\nexpand cols:{:?}",
-        expand_rows,
-        expand_cols,
-    );
+    //println!(
+    //    "expand rows {:?}\nexpand cols:{:?}",
+    //    expand_rows,
+    //    expand_cols,
+    //);
 
     for g in galaxies.values() {
         println!("galaxy {:?}", g);
@@ -87,9 +87,9 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
                 }
             });
     });
-    for g in galaxies.values() {
-        println!("adjusted galaxy {:?}", g);
-    }
+    //for g in galaxies.values() {
+    //    println!("adjusted galaxy {:?}", g);
+    //}
     let galaxy_ids: Vec<usize> = galaxies
         .values()
         .map(|Galaxy { id, .. }| *id).collect();
@@ -99,9 +99,9 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
     //when you key into the hashmap
     let mut distances_map: HashMap<(usize, usize), i64> = HashMap::new();
     let g_id_combinations = galaxy_ids.iter().combinations(2);
-    for combo in g_id_combinations.clone() {
-        println!("combo {:?}", combo);
-    }
+    //for combo in g_id_combinations.clone() {
+    //    println!("combo {:?}", combo);
+    //}
     for ids in g_id_combinations {
         let id1: usize = **ids.first().unwrap();
         let id2: usize = **ids.last().unwrap();
@@ -119,9 +119,9 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
 
     let sum: i64 = distances_map.values().sum();
 
-    for (k, dist) in distances_map.iter() {
-        println!("key {:?} dist {}", k, dist);
-    }
+    //for (k, dist) in distances_map.iter() {
+    //    println!("key {:?} dist {}", k, dist);
+    //}
     println!("sum {}", sum);
 }
 

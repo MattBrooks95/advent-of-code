@@ -34,10 +34,14 @@ fn do_file(fp: &str) {
     let (_, parsed) = nom::combinator::all_consuming(parse)(&contents)
         .expect("parsed");
     //println!("parsed {:?}", parsed);
-    part_one(parsed);
+    part_one(parsed.clone(), 1);
+    //part 2
+    //630729056210 too high  <- It was a f****** off by one error b/c I added 1_000_000
+    //630728425490
+    part_one(parsed, 999_999);
 }
 
-fn part_one(parsed: Vec<Vec<char>>) -> () {
+fn part_one(parsed: Vec<Vec<char>>, expand_factor: usize) -> () {
     println!("part1");
     let mut galaxies = get_galaxies(&parsed);
 
@@ -67,7 +71,7 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
                     None => panic!("old version of galaxy should exist"),
                     Some(Galaxy { loc: (r_idx, _), ..}) => {
                         if *r_idx > *expand_row_index {
-                            *curr_r_idx += 1
+                            *curr_r_idx += expand_factor
                         }
                     }
                 }
@@ -81,7 +85,7 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
                     None => panic!("old version of galaxy should exist, expand cols"),
                     Some(Galaxy { loc: (_, c_idx), .. }) => {
                         if *c_idx > *expand_col_index {
-                            *orig_c_idx += 1
+                            *orig_c_idx += expand_factor
                         }
                     }
                 }

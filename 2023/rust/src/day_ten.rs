@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 pub fn run(fps: [&str; 2]) {
-    //fps.iter().for_each(do_file);
-    do_file(fps[0]);
+    fps.into_iter().for_each(do_file);
+    //do_file(fps[0]);
 }
 
 fn do_file(fp: &str) {
@@ -20,8 +20,25 @@ fn do_file(fp: &str) {
         None => panic!("couldn't find starting node"),
         Some(s) => s
     };
-    let pipe_distances = decorate_distances(&board, s_loc);
+
+    let mut visit_list: HashSet<Loc> = HashSet::new();
+    let mut distances: PipeDistances = HashMap::new();
+    let pipe_distances = decorate_distances(
+        &board,
+        &mut visit_list,
+        &mut distances,
+        s_loc,
+        0
+    );
     println!("pipe distances {:?}", pipe_distances);
+    let max_dist = pipe_distances
+        .values()
+        .max()
+        .unwrap();
+    let as_float: f64 = *max_dist as f64;
+
+    //+1 is because decorate_distances stops before looking at the start again
+    println!("half distance {}", ((as_float + 1.0) / 2_f64));
 }
 
 type Loc = (i64, i64);
@@ -30,59 +47,54 @@ type Board = HashMap<Loc, Pipe>;
 
 type PipeDistances = HashMap<Loc, u64>;
 
-fn decorate_distances(b: &Board, start_loc: Loc) -> PipeDistances {
-    let mut p_dist = HashMap::new();
+fn decorate_distances<'a>(
+    b: &Board,
+    visit_list: &mut HashSet<Loc>,
+    curr_distances: &'a mut PipeDistances,
+    curr_loc: Loc,
+    curr_dist: usize
+) -> &'a PipeDistances {
+    println!("curr loc {:?} curr dist {:?}", curr_loc, curr_dist);
+    let node = match b.get(&curr_loc) {
+        None => panic!("pushed an illegal index into the visit queue"),
+        Some(x) => x,
+    };
 
-    let mut visit_list: HashSet<Loc> = HashSet::new();
-    let mut visit_q: Vec<Loc> = Vec::new();
-    visit_q.push(start_loc);
+    let is_start = match node { Pipe::Start => true, _ => false };
 
-    let mut distance: u64 = 0;
-
-    let mut found_loop = false;
-
-    while !found_loop {
-        //process all the nodes at the current distance, adding their
-        //neighbors to the queue
-        let mut visit_nodes: Vec<_> = visit_q.into_iter().collect();
-        visit_q = Vec::new();
-        while !visit_nodes.is_empty() {
-            //get the next node off the process queue
-            let this_loc = match visit_nodes.pop() {
-                None => panic!("popped off an empty q"),
-                Some(x) => x,
-            };
-
-            println!("visiting {:?}", this_loc);
-            if visit_list.contains(&this_loc) {
-                found_loop = true;
-                println!("found loop");
-            } else {
-                visit_list.insert(this_loc);
-            }
-
-            //mark the node we're visitting with its distance
-            p_dist.insert(this_loc, distance);
-
-            let node = match b.get(&this_loc) {
-                None => panic!("pushed an illegal index into the visit queue"),
-                Some(x) => x,
-            };
-
-            let neighbors = get_neighbors(b, &this_loc);
-            //push the available neighbors into the visit queue
-            can_go(&neighbors, node.clone())
-                .iter()
-                .for_each(|x| {
-                    if !visit_list.contains(&x.0) {
-                        visit_q.push(x.0);
-                    }
-                });
-        }
-        distance += 1;
+    //found start again, leave
+    if is_start && curr_dist != 0 {
+        println!("found start {:?}", curr_loc);
+        return curr_distances;
     }
 
-    p_dist
+    let possible_neighbors = get_neighbors(b, &curr_loc);
+    //we are in a loop (the puzzle input map), so we can pick one
+    let can_go_to: Vec<_> = can_go(&possible_neighbors, node.clone())
+        .into_iter()
+        .filter(|x| {
+            !visit_list.contains(x)
+        })
+        .collect();
+
+    curr_distances.insert(curr_loc, curr_dist as u64);
+
+    //nowhere to go
+    if can_go_to.is_empty() {
+        println!("nowhere to go {:?} || nowhere to go except start", curr_loc);
+        return curr_distances;
+    }
+
+    //mark this node as visited
+    visit_list.insert(curr_loc);
+
+    decorate_distances(
+        b,
+        visit_list,
+        curr_distances,
+        can_go_to.first().unwrap().clone(),
+        curr_dist + 1
+    )
 }
 
 type Neighbors = (Option<Neighbor>, Option<Neighbor>, Option<Neighbor>, Option<Neighbor>);
@@ -112,7 +124,7 @@ fn get_neighbors(
     )
 }
 
-fn can_go((n, e, s, w): &Neighbors, node: Pipe) -> Vec<(Loc, Pipe)> {
+fn can_go((n, e, s, w): &Neighbors, node: Pipe) -> Vec<Loc> {
     let mut possible: Vec<Option<(Loc, Pipe)>> = Vec::new();
     match node {
         Pipe::NorthSouth => {
@@ -181,9 +193,12 @@ fn can_go((n, e, s, w): &Neighbors, node: Pipe) -> Vec<(Loc, Pipe)> {
         },
     };
     possible
-        .iter()
-        .filter(|x| Option::is_some(*x))
-        .map(|x| Option::unwrap(x.clone()))
+        .into_iter()
+        .filter(|x| Option::is_some(x))
+        .map(Option::unwrap)
+        .map(|(loc, _)| {
+            loc
+        })
         .collect()
 }
 

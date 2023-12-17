@@ -39,8 +39,41 @@ fn do_file(fp: &str) {
 fn part_one(parsed: Vec<Vec<char>>) -> () {
     println!("part1");
     let galaxies = get_galaxies(&parsed);
+    let expand_rows = get_expand_rows(&parsed);
+    let expand_cols = get_expand_cols(&parsed);
 
-    println!("galaxies {:?}", galaxies.values());
+    println!(
+        "galaxies {:?}\nexpand rows {:?}\nexpand cols:{:?}",
+        galaxies.values(),
+        expand_rows,
+        expand_cols,
+    );
+}
+
+fn get_expand_cols(parsed: &Vec<Vec<char>>) -> Vec<usize> {
+    let mut needs_expand_columns: Vec<usize> = Vec::new();
+    let first_row_len = parsed.first().unwrap().len();
+    for idx in 0..first_row_len {
+        let chars_in_col: Vec<char> = parsed
+            .iter()
+            .map(|r| r[idx])
+            .collect();
+        if is_all_empty_space(&chars_in_col) {
+            needs_expand_columns.push(idx)
+        }
+    }
+
+    needs_expand_columns
+}
+
+fn get_expand_rows(parsed: &Vec<Vec<char>>) -> Vec<usize> {
+    let needs_expanded: Vec<usize> = parsed
+        .iter()
+        .enumerate()
+        .filter(|(_, r)| is_all_empty_space(&r))
+        .map(|(idx, _)| idx)
+        .collect();
+    needs_expanded
 }
 
 fn get_galaxies(parsed: &Vec<Vec<char>>) -> HashMap<Loc, Galaxy> {

@@ -62,13 +62,13 @@ fn decorate_distances<'a>(
             Some(x) => x,
         };
 
-        println!("curr loc {:?} curr dist {:?}", curr_loc, curr_dist);
+        //println!("curr loc {:?} curr dist {:?}", curr_loc, curr_dist);
 
         let is_start = match node { Pipe::Start => true, _ => false };
 
         //found start again, leave
         if is_start && curr_dist != 0 {
-            println!("found start {:?}", curr_loc);
+            //println!("found start {:?}", curr_loc);
             return curr_distances;
         }
 
@@ -85,7 +85,7 @@ fn decorate_distances<'a>(
 
         //nowhere to go
         if can_go_to.is_empty() {
-            println!("nowhere to go {:?} || nowhere to go except start", curr_loc);
+            //println!("nowhere to go {:?} || nowhere to go except start", curr_loc);
             return curr_distances;
         }
 
@@ -274,7 +274,7 @@ fn parse(i: &str) -> IResult<&str, Vec<Vec<char>>> {
         nom::character::complete::newline,
         nom::multi::many1(nom::character::complete::one_of(".F7|SJL-")),
     )(i)?;
-    println!("parsed body ({})", rem);
+    //println!("parsed body ({})", rem);
 
     let (rem, _) = nom::sequence::tuple((
             nom::character::complete::newline,

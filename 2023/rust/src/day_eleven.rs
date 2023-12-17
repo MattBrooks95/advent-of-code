@@ -44,11 +44,15 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
     let expand_cols = get_expand_cols(&parsed);
 
     println!(
-        "galaxies {:?}\nexpand rows {:?}\nexpand cols:{:?}",
-        galaxies.values(),
+        "expand rows {:?}\nexpand cols:{:?}",
         expand_rows,
         expand_cols,
     );
+
+    for g in galaxies.values() {
+        println!("galaxy {:?}", g);
+    }
+
 
     expand_rows.iter().for_each(|expand_row_index| {
         galaxies
@@ -68,28 +72,42 @@ fn part_one(parsed: Vec<Vec<char>>) -> () {
                 }
             });
     });
-    println!("adjusted galaxies {:?}", galaxies);
+    for g in galaxies.values() {
+        println!("adjusted galaxy {:?}", g);
+    }
     let galaxy_ids: Vec<usize> = galaxies
         .values()
         .map(|Galaxy { id, .. }| *id).collect();
     //map of the distances between galaxies
-    //when the distance from g1 to g2 is calculated, the answer will be
-    //put into the map twice, at (g1, g2) and at (g2, g1) to prevent duplicating
-    //the distance calculations
-    //the distance from g1 to g2 is the same as g2 to g1
-    let mut distances_map: HashMap<(usize, usize), usize> = HashMap::new();
+    //g1 to g2 is the same distance as g2 to g1, so
+    //when you check if a combo has already been calculated, check both orders
+    //when you key into the hashmap
+    let mut distances_map: HashMap<(usize, usize), i64> = HashMap::new();
     let g_id_combinations = galaxy_ids.iter().combinations(2);
+    for combo in g_id_combinations.clone() {
+        println!("combo {:?}", combo);
+    }
     for ids in g_id_combinations {
         let id1: usize = **ids.first().unwrap();
         let id2: usize = **ids.last().unwrap();
 
-        if distances_map.contains_key(&(id1, id2)) {
+        if distances_map.contains_key(&(id1, id2))
+            || distances_map.contains_key(&(id2, id1)) {
             continue
         }
-        let loc1 = 
+        let g1 = galaxies.get(&id1).unwrap();
+        let g2 = galaxies.get(&id2).unwrap();
 
-        let dist = distance(
+        let dist = distance(g1.loc, g2.loc);
+        distances_map.insert((id1, id2), dist);
     }
+
+    let sum: i64 = distances_map.values().sum();
+
+    for (k, dist) in distances_map.iter() {
+        println!("key {:?} dist {}", k, dist);
+    }
+    println!("sum {}", sum);
 }
 
 fn distance((r1, c1): Loc, (r2, c2): Loc) -> i64 {
@@ -97,7 +115,7 @@ fn distance((r1, c1): Loc, (r2, c2): Loc) -> i64 {
     let x_dist: i64 = c2 as i64 - c1 as i64;
 
 
-    (y_dist + x_dist).abs()
+    y_dist.abs() + x_dist.abs()
 
 }
 
@@ -127,8 +145,8 @@ fn get_expand_rows(parsed: &Vec<Vec<char>>) -> Vec<usize> {
     needs_expanded
 }
 
-fn get_galaxies(parsed: &Vec<Vec<char>>) -> HashMap<Loc, Galaxy> {
-    let mut galaxies: HashMap<Loc, Galaxy> = HashMap::new();
+fn get_galaxies(parsed: &Vec<Vec<char>>) -> HashMap<usize, Galaxy> {
+    let mut galaxies: HashMap<usize, Galaxy> = HashMap::new();
     let mut galaxy_id: usize = 0;
 
     for (r_idx, row) in parsed.iter().enumerate() {
@@ -136,7 +154,7 @@ fn get_galaxies(parsed: &Vec<Vec<char>>) -> HashMap<Loc, Galaxy> {
             match char {
                 '#' => {
                     let loc = (r_idx, c_idx);
-                    galaxies.insert(loc, Galaxy { id: galaxy_id, loc });
+                    galaxies.insert(galaxy_id, Galaxy { id: galaxy_id, loc });
                     galaxy_id += 1
                 },
                 _ => ()
